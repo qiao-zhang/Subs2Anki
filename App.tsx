@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Subtitle, AnkiCard, ProcessingState } from './types';
-import { parseSubtitles } from './utils/srtParser';
-import { formatTime } from './utils/time';
-import VideoPlayer, { VideoPlayerHandle } from './components/VideoPlayer';
-import CardItem from './components/CardItem';
+import { parseSubtitles } from './core/parser';
+import { formatTime } from './core/time';
+import VideoPlayer, { VideoPlayerHandle } from './ui/components/VideoPlayer';
+import CardItem from './ui/components/CardItem';
 import { analyzeSubtitle } from './services/gemini';
 import JSZip from 'jszip';
 import saveAs from 'file-saver';

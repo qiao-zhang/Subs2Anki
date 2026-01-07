@@ -3,36 +3,32 @@ import { parseVTTTime } from './time';
 
 /**
  * Parses raw subtitle file content (SRT or VTT) into structured objects.
- * 
+ *
  * This parser is designed to be robust against slight format variations.
  * It handles both standard SRT (index -> time -> text) and VTT formats.
- * 
+ *
  * @param content - The raw text content of the subtitle file
  * @returns Array of Subtitle objects
  */
 export const parseSubtitles = (content: string): Subtitle[] => {
   // Normalize line endings to LF to handle Windows/Linux differences
   const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  
+
   // Split by double newlines, which standardly separate subtitle blocks
   const blocks = normalized.split('\n\n');
-  
+
   const subtitles: Subtitle[] = [];
   let idCounter = 1;
 
   blocks.forEach(block => {
     if (!block.trim()) return;
-    
+
     const lines = block.split('\n');
     if (lines.length < 2) return;
 
-    let timeLineIndex = 0;
-    
-    // Heuristic: Check if first line is just a number. 
+    // Heuristic: Check if first line is just a number.
     // SRT files start with an index number. VTT files might not.
-    if (lines[0].match(/^\d+$/)) {
-      timeLineIndex = 1;
-    }
+    const timeLineIndex = lines[0].match(/^\d+$/) ? 1 : 0;
 
     const timeLine = lines[timeLineIndex];
     // Verify it looks like a timeline (contains the arrow '-->')

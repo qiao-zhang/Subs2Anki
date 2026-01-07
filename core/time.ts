@@ -8,7 +8,7 @@
 export const formatTime = (seconds: number): string => {
   const date = new Date(0);
   date.setSeconds(seconds);
-  const iso = date.toISOString().substr(11, 8);
+  const iso = date.toISOString().substring(11, 8);
   // Remove leading hours if 00 to make it look cleaner for shorter videos
   return iso.startsWith('00:') ? iso.slice(3) : iso;
 };
