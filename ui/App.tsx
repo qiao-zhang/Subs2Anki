@@ -15,7 +15,8 @@ import {
   Video as VideoIcon,
   Clock,
   Save,
-  Upload
+  Upload,
+  X
 } from 'lucide-react';
 
 /**
@@ -30,8 +31,11 @@ const App: React.FC = () => {
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [videoName, setVideoName] = useState<string>('');
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
-  const [offsetMs, setOffsetMs] = useState<number>(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  // Offset Modal State
+  const [isOffsetModalOpen, setIsOffsetModalOpen] = useState<boolean>(false);
+  const [tempOffsetMs, setTempOffsetMs] = useState<number>(0);
 
   // Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -48,27 +52,11 @@ const App: React.FC = () => {
   });
 
   // --- Refs ---
-  // Reference to video player for imperative commands (seek, pause, capture)
   const videoRef = useRef<VideoPlayerHandle>(null);
-  // Reference to the subtitle list container for auto-scrolling
   const subtitleListRef = useRef<HTMLDivElement>(null);
-
-  // --- Derived State ---
-  const adjustedSubtitles = useMemo(() => {
-    if (offsetMs === 0) return subtitles;
-    return subtitles.map((s: Subtitle) => ({
-      ...s,
-      startTime: s.startTime + (offsetMs / 1000),
-      endTime: s.endTime + (offsetMs / 1000)
-    }));
-  }, [subtitles, offsetMs]);
 
   // --- Handlers ---
 
-  /**
-   * Handles local video file selection.
-   * Creates a blob URL for the video player.
-   */
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -78,10 +66,6 @@ const App: React.FC = () => {
     }
   };
 
-  /**
-   * Handles subtitle file (SRT/VTT) selection.
-   * Reads file as text and parses it into objects.
-   */
   const handleSubtitleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -96,36 +80,36 @@ const App: React.FC = () => {
     }
   };
 
-  /**
-   * Updates a single subtitle line in the state.
-   */
   const handleSubtitleTextChange = (id: number, newText: string) => {
     setSubtitles((prev: Subtitle[]) => prev.map((s: Subtitle) => s.id === id ? { ...s, text: newText } : s));
     setHasUnsavedChanges(true);
   };
 
   /**
-   * Commits current edits as the new baseline.
+   * Applies the time offset to all subtitles in the baseline state.
    */
-  const handleSaveSubtitles = () => {
-    setHasUnsavedChanges(false);
-    // In a production app, we might persist to IndexedDB here.
+  const applyOffset = () => {
+    const offsetSec = tempOffsetMs / 1000;
+    setSubtitles((prev) => prev.map(s => ({
+      ...s,
+      startTime: Math.max(0, s.startTime + offsetSec),
+      endTime: Math.max(0, s.endTime + offsetSec)
+    })));
+    setHasUnsavedChanges(true);
+    setIsOffsetModalOpen(false);
+    setTempOffsetMs(0); // Reset for next use
   };
 
-  /**
-   * Syncs subtitle list with video time.
-   * Highlights the current line and scrolls it into view.
-   */
+  const handleSaveSubtitles = () => {
+    setHasUnsavedChanges(false);
+  };
+
   const handleTimeUpdate = (time: number) => {
     setCurrentTime(time);
-
-    // Find the subtitle active at the current timestamp
-    const active = adjustedSubtitles.find(s => time >= s.startTime && time <= s.endTime);
+    const active = subtitles.find(s => time >= s.startTime && time <= s.endTime);
 
     if (active && active.id !== activeSubtitleId) {
       setActiveSubtitleId(active.id);
-
-      // Auto-scroll logic: scroll the active element into the center of the list
       const el = document.getElementById(`sub-${active.id}`);
       if (el && subtitleListRef.current) {
         el.scrollIntoView({behavior: 'smooth', block: 'center'});
@@ -135,9 +119,6 @@ const App: React.FC = () => {
     }
   };
 
-  /**
-   * Seeks the video to the start of a clicked subtitle.
-   */
   const handleSubtitleClick = (sub: Subtitle) => {
     if (videoRef.current) {
       videoRef.current.seekTo(sub.startTime);
@@ -145,22 +126,13 @@ const App: React.FC = () => {
     }
   };
 
-  /**
-   * Creates a new Anki card from a subtitle line.
-   */
   const createCard = (sub: Subtitle) => {
     if (!videoRef.current) return;
-
-    // Pause to ensure clean capture
     videoRef.current.pause();
-
-    // Seek to middle for better screenshot context usually
     videoRef.current.seekTo(sub.startTime + (sub.endTime - sub.startTime) / 2);
 
-    // Allow a split second for the video element to seek and render the frame
     setTimeout(() => {
       const screenshot = videoRef.current?.captureFrame();
-
       const newCard: AnkiCard = {
         id: crypto.randomUUID(),
         subtitleId: sub.id,
@@ -171,20 +143,15 @@ const App: React.FC = () => {
         audioBlob: null,
         timestampStr: formatTime(sub.startTime)
       };
-
       setCards(prev => [newCard, ...prev]);
     }, 200);
   };
 
-  /**
-   * Triggers AI analysis for a specific card.
-   */
   const analyzeCard = async (card: AnkiCard) => {
     setProcessing(prev => ({...prev, isAnalyzing: true}));
-
-    const subIndex = adjustedSubtitles.findIndex(s => s.id === card.subtitleId);
-    const prevText = adjustedSubtitles[subIndex - 1]?.text || "";
-    const nextText = adjustedSubtitles[subIndex + 1]?.text || "";
+    const subIndex = subtitles.findIndex(s => s.id === card.subtitleId);
+    const prevText = subtitles[subIndex - 1]?.text || "";
+    const nextText = subtitles[subIndex + 1]?.text || "";
 
     const result = await analyzeSubtitle(card.text, prevText, nextText);
 
@@ -198,7 +165,6 @@ const App: React.FC = () => {
       }
       return c;
     }));
-
     setProcessing(prev => ({...prev, isAnalyzing: false}));
   };
 
@@ -210,44 +176,71 @@ const App: React.FC = () => {
     await generateAnkiDeck(cards, videoName);
   };
 
-  // --- Render ---
-
   return (
     <div className="flex h-screen w-full bg-slate-950 text-slate-200">
 
+      {/* Offset Modal */}
+      {isOffsetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm p-6 overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Clock className="text-indigo-400" size={20} /> Shift Time
+              </h3>
+              <button onClick={() => setIsOffsetModalOpen(false)} className="text-slate-500 hover:text-white transition">
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-400 mb-4">
+              Shift all subtitle timestamps by milliseconds. Use positive for delay, negative for advance.
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs uppercase font-bold text-slate-500 tracking-wider">Offset (ms)</label>
+                <input
+                  type="number"
+                  autoFocus
+                  value={tempOffsetMs}
+                  onChange={(e) => setTempOffsetMs(parseInt(e.target.value) || 0)}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono text-lg"
+                  placeholder="e.g. 500 or -200"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setIsOffsetModalOpen(false)}
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 font-semibold hover:bg-slate-700 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={applyOffset}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Left Sidebar: Controls & Card List */}
       <aside className="w-96 flex flex-col border-r border-slate-800 bg-slate-900/50">
-
-        {/* Header and File Inputs */}
         <div className="p-4 border-b border-slate-800">
-          <h1
-            className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2 mb-4">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2 mb-4">
             <Layers className="text-indigo-500"/> Sub2Anki AI
           </h1>
 
           <div className="space-y-3">
-            <label
-              className="flex items-center gap-2 w-full p-2 bg-slate-800 hover:bg-slate-700 rounded cursor-pointer transition text-sm">
+            <label className="flex items-center gap-2 w-full p-2 bg-slate-800 hover:bg-slate-700 rounded cursor-pointer transition text-sm">
               <VideoIcon size={16}/>
               <span className="truncate">{videoName || "Select Video File"}</span>
               <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden"/>
             </label>
-
-            {/* Subtitle Offset Input */}
-            <div
-              className="flex items-center gap-2 w-full p-2 bg-slate-800 rounded border border-slate-700/50">
-              <Clock size={16} className="text-slate-400"/>
-              <div className="flex-1 flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Offset (ms)</span>
-                <input
-                  type="number"
-                  value={offsetMs}
-                  onChange={(e) => setOffsetMs(parseInt(e.target.value) || 0)}
-                  className="bg-transparent text-sm text-white focus:outline-none w-full placeholder-slate-600 font-mono"
-                  placeholder="e.g. 500 or -500"
-                />
-              </div>
-            </div>
           </div>
         </div>
 
@@ -268,8 +261,7 @@ const App: React.FC = () => {
           {cards.length === 0 ? (
             <div className="text-center py-10 text-slate-600">
               <p className="mb-2">No cards created yet.</p>
-              <p className="text-xs">Load media, then click the (+) button on a line to
-                start.</p>
+              <p className="text-xs">Load media, then click the (+) button on a line to start.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -289,15 +281,10 @@ const App: React.FC = () => {
 
       {/* Main Content: Video & Subtitle Browser */}
       <main className="flex-1 flex flex-col min-w-0">
-
         {/* Top: Video Player */}
         <div className="p-4 bg-black/20 border-b border-slate-800 flex justify-center">
           <div className="w-full max-w-4xl">
-            <VideoPlayer
-              ref={videoRef}
-              src={videoSrc}
-              onTimeUpdate={handleTimeUpdate}
-            />
+            <VideoPlayer ref={videoRef} src={videoSrc} onTimeUpdate={handleTimeUpdate} />
           </div>
         </div>
 
@@ -312,10 +299,23 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Subtitle Upload Button */}
-              <label
-                className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-sm"
+              {/* Offset Button */}
+              <button
+                onClick={() => setIsOffsetModalOpen(true)}
+                disabled={subtitles.length === 0}
+                className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md transition-all border ${
+                  subtitles.length > 0
+                    ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                    : 'bg-slate-800/50 border-slate-800 text-slate-600 cursor-not-allowed'
+                }`}
+                title="Shift all timestamps"
               >
+                <Clock size={14} />
+                <span>Shift Time</span>
+              </button>
+
+              {/* Subtitle Upload Button */}
+              <label className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-sm">
                 <Upload size={14} />
                 <span>{subtitles.length > 0 ? `${subtitles.length} lines` : "Select Subtitle"}</span>
                 <input type="file" accept=".srt,.vtt" onChange={handleSubtitleUpload} className="hidden" />
@@ -336,19 +336,17 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Gradient fade at top for visual polish */}
-          <div
-            className="absolute top-12 left-0 w-full h-8 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
+          <div className="absolute top-12 left-0 w-full h-8 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
 
           <div ref={subtitleListRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
-            {adjustedSubtitles.length === 0 && (
+            {subtitles.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
                 <AlertCircle size={32}/>
                 <p>Please load a subtitle file to view dialogue.</p>
               </div>
             )}
 
-            {adjustedSubtitles.map(sub => {
+            {subtitles.map(sub => {
               const isActive = sub.id === activeSubtitleId;
               return (
                 <div
@@ -361,13 +359,10 @@ const App: React.FC = () => {
                   }`}
                   onClick={() => handleSubtitleClick(sub)}
                 >
-                  {/* Timestamp */}
-                  <span
-                    className={`text-xs font-mono w-16 flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>
+                  <span className={`text-xs font-mono w-16 flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>
                     {formatTime(sub.startTime)}
                   </span>
 
-                  {/* Dialogue Text (Editable) */}
                   <div className="flex-1 min-w-0">
                     <textarea
                       value={sub.text}
@@ -386,14 +381,13 @@ const App: React.FC = () => {
                     />
                   </div>
 
-                  {/* 'Create Card' Button (visible on hover) */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       createCard(sub);
                     }}
                     className={`opacity-0 group-hover:opacity-100 p-2 rounded-full transition-all flex-shrink-0
-                                    ${isActive
+                      ${isActive
                       ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                       : 'bg-slate-700 text-slate-300 hover:bg-indigo-600 hover:text-white'
                     }`}
@@ -406,9 +400,7 @@ const App: React.FC = () => {
             })}
           </div>
 
-          {/* Gradient fade at bottom */}
-          <div
-            className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-slate-900 to-transparent z-10 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-slate-900 to-transparent z-10 pointer-events-none"></div>
         </div>
       </main>
     </div>
