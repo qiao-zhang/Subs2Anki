@@ -13,7 +13,9 @@ import {
   Layers,
   AlertCircle,
   Video as VideoIcon,
-  Clock
+  Clock,
+  Save,
+  Upload
 } from 'lucide-react';
 
 /**
@@ -29,6 +31,7 @@ const App: React.FC = () => {
   const [videoName, setVideoName] = useState<string>('');
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [offsetMs, setOffsetMs] = useState<number>(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
   // Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -53,7 +56,7 @@ const App: React.FC = () => {
   // --- Derived State ---
   const adjustedSubtitles = useMemo(() => {
     if (offsetMs === 0) return subtitles;
-    return subtitles.map((s : Subtitle) => ({
+    return subtitles.map((s: Subtitle) => ({
       ...s,
       startTime: s.startTime + (offsetMs / 1000),
       endTime: s.endTime + (offsetMs / 1000)
@@ -87,9 +90,26 @@ const App: React.FC = () => {
         const content = e.target?.result as string;
         const parsed = parseSubtitles(content);
         setSubtitles(parsed);
+        setHasUnsavedChanges(false);
       };
       reader.readAsText(file);
     }
+  };
+
+  /**
+   * Updates a single subtitle line in the state.
+   */
+  const handleSubtitleTextChange = (id: number, newText: string) => {
+    setSubtitles((prev: Subtitle[]) => prev.map((s: Subtitle) => s.id === id ? { ...s, text: newText } : s));
+    setHasUnsavedChanges(true);
+  };
+
+  /**
+   * Commits current edits as the new baseline.
+   */
+  const handleSaveSubtitles = () => {
+    setHasUnsavedChanges(false);
+    // In a production app, we might persist to IndexedDB here.
   };
 
   /**
@@ -127,13 +147,6 @@ const App: React.FC = () => {
 
   /**
    * Creates a new Anki card from a subtitle line.
-   *
-   * Workflow:
-   * 1. Pauses video.
-   * 2. Seeks to the middle of the subtitle duration (often the best frame).
-   * 3. Waits briefly for frame rendering.
-   * 4. Captures screenshot.
-   * 5. Adds new card to state.
    */
   const createCard = (sub: Subtitle) => {
     if (!videoRef.current) return;
@@ -165,21 +178,16 @@ const App: React.FC = () => {
 
   /**
    * Triggers AI analysis for a specific card.
-   * Fetches context (prev/next lines) to help the AI.
    */
   const analyzeCard = async (card: AnkiCard) => {
     setProcessing(prev => ({...prev, isAnalyzing: true}));
 
-    // Find context from the full subtitle list
-    // Use adjustedSubtitles to maintain consistency, though text is identical to subtitles
     const subIndex = adjustedSubtitles.findIndex(s => s.id === card.subtitleId);
     const prevText = adjustedSubtitles[subIndex - 1]?.text || "";
     const nextText = adjustedSubtitles[subIndex + 1]?.text || "";
 
-    // Call Gemini Service
     const result = await analyzeSubtitle(card.text, prevText, nextText);
 
-    // Update the card with results
     setCards(prev => prev.map(c => {
       if (c.id === card.id) {
         return {
@@ -225,13 +233,6 @@ const App: React.FC = () => {
               <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden"/>
             </label>
 
-            <label
-              className="flex items-center gap-2 w-full p-2 bg-slate-800 hover:bg-slate-700 rounded cursor-pointer transition text-sm">
-              <FileText size={16}/>
-              <span>{subtitles.length > 0 ? `${subtitles.length} lines loaded` : "Select Subtitle (.srt/.vtt)"}</span>
-              <input type="file" accept=".srt,.vtt" onChange={handleSubtitleUpload} className="hidden"/>
-            </label>
-
             {/* Subtitle Offset Input */}
             <div
               className="flex items-center gap-2 w-full p-2 bg-slate-800 rounded border border-slate-700/50">
@@ -267,7 +268,7 @@ const App: React.FC = () => {
           {cards.length === 0 ? (
             <div className="text-center py-10 text-slate-600">
               <p className="mb-2">No cards created yet.</p>
-              <p className="text-xs">Load a video and subtitles, then click the (+) button on a line to
+              <p className="text-xs">Load media, then click the (+) button on a line to
                 start.</p>
             </div>
           ) : (
@@ -302,9 +303,42 @@ const App: React.FC = () => {
 
         {/* Bottom: Subtitle List */}
         <div className="flex-1 overflow-hidden flex flex-col relative bg-slate-900">
+
+          {/* Subtitle Browser Toolbar */}
+          <div className="px-6 py-3 border-b border-slate-800 bg-slate-900/80 flex justify-between items-center z-20">
+            <div className="flex items-center gap-2 text-slate-400">
+              <FileText size={16} />
+              <span className="text-sm font-semibold uppercase tracking-widest">Subtitle Editor</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Subtitle Upload Button */}
+              <label
+                className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-sm"
+              >
+                <Upload size={14} />
+                <span>{subtitles.length > 0 ? `${subtitles.length} lines` : "Select Subtitle"}</span>
+                <input type="file" accept=".srt,.vtt" onChange={handleSubtitleUpload} className="hidden" />
+              </label>
+
+              {/* Save Button */}
+              <button
+                onClick={handleSaveSubtitles}
+                disabled={!hasUnsavedChanges}
+                className={`flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border ${
+                  hasUnsavedChanges
+                    ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20'
+                    : 'bg-slate-800 border-slate-700 text-slate-600 cursor-not-allowed'
+                }`}
+              >
+                <Save size={14} /> {hasUnsavedChanges ? 'Save Changes' : 'All Saved'}
+              </button>
+            </div>
+          </div>
+
           {/* Gradient fade at top for visual polish */}
           <div
-            className="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
+            className="absolute top-12 left-0 w-full h-8 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
 
           <div ref={subtitleListRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
             {adjustedSubtitles.length === 0 && (
@@ -330,14 +364,27 @@ const App: React.FC = () => {
                   {/* Timestamp */}
                   <span
                     className={`text-xs font-mono w-16 flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>
-                                {formatTime(sub.startTime)}
-                            </span>
+                    {formatTime(sub.startTime)}
+                  </span>
 
-                  {/* Dialogue Text */}
-                  <p
-                    className={`flex-1 text-lg leading-relaxed ${isActive ? 'text-white font-medium' : 'text-slate-400'}`}>
-                    {sub.text}
-                  </p>
+                  {/* Dialogue Text (Editable) */}
+                  <div className="flex-1 min-w-0">
+                    <textarea
+                      value={sub.text}
+                      onChange={(e) => handleSubtitleTextChange(sub.id, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      rows={1}
+                      className={`w-full bg-transparent resize-none focus:outline-none transition-colors border-b border-transparent focus:border-indigo-500/30 py-1 ${
+                        isActive ? 'text-white font-medium' : 'text-slate-400 group-hover:text-slate-300'
+                      } text-lg leading-relaxed overflow-hidden`}
+                      style={{ height: 'auto' }}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                        target.style.height = `${target.scrollHeight}px`;
+                      }}
+                    />
+                  </div>
 
                   {/* 'Create Card' Button (visible on hover) */}
                   <button
