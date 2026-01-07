@@ -4,7 +4,16 @@ import { describe, it, expect, vi } from 'vitest';
 import CardItem from '../../ui/components/CardItem';
 import { AnkiCard } from '../../core/types';
 
+/**
+ * Test Suite for CardItem Component.
+ * 
+ * Verifies:
+ * 1. UI Rendering: Correct text, images, and timestamps are displayed.
+ * 2. Conditional Rendering: Placeholders appear when data is missing.
+ * 3. User Interaction: Buttons trigger the correct prop callbacks.
+ */
 describe('CardItem Component', () => {
+  // Standard Mock Data used across tests
   const mockCard: AnkiCard = {
     id: '123',
     subtitleId: 1,
@@ -16,6 +25,7 @@ describe('CardItem Component', () => {
     timestampStr: '00:05'
   };
 
+  // Mock callback functions
   const mockDelete = vi.fn();
   const mockAnalyze = vi.fn();
 
@@ -29,6 +39,7 @@ describe('CardItem Component', () => {
       />
     );
 
+    // Verify all key information is visible to the user
     expect(screen.getByText('Hello World')).toBeInTheDocument();
     expect(screen.getByText('Hola Mundo')).toBeInTheDocument();
     expect(screen.getByText('A greeting')).toBeInTheDocument();
@@ -36,6 +47,7 @@ describe('CardItem Component', () => {
   });
 
   it('renders placeholder when translation is missing', () => {
+    // Create a card with no AI analysis data
     const emptyCard = { ...mockCard, translation: '', notes: '' };
     render(
       <CardItem 
@@ -46,6 +58,7 @@ describe('CardItem Component', () => {
       />
     );
 
+    // Verify the placeholder text appears
     expect(screen.getByText('No analysis data yet.')).toBeInTheDocument();
   });
 
@@ -59,8 +72,11 @@ describe('CardItem Component', () => {
       />
     );
 
+    // Find button by title attribute (accessibility practice)
     const deleteBtn = screen.getByTitle('Delete Card');
     fireEvent.click(deleteBtn);
+    
+    // Verify callback was fired with correct ID
     expect(mockDelete).toHaveBeenCalledWith('123');
   });
 
@@ -76,6 +92,8 @@ describe('CardItem Component', () => {
 
     const analyzeBtn = screen.getByTitle('AI Analyze');
     fireEvent.click(analyzeBtn);
+    
+    // Verify callback was fired with the card object
     expect(mockAnalyze).toHaveBeenCalledWith(mockCard);
   });
 
@@ -85,11 +103,12 @@ describe('CardItem Component', () => {
         card={mockCard} 
         onDelete={mockDelete} 
         onAnalyze={mockAnalyze} 
-        isAnalyzing={true} 
+        isAnalyzing={true} // Simulate loading state
       />
     );
 
     const analyzeBtn = screen.getByTitle('AI Analyze');
+    // Verify button cannot be clicked again while loading
     expect(analyzeBtn).toBeDisabled();
   });
 });
