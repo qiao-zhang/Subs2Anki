@@ -15,14 +15,25 @@ import {
   Video as VideoIcon
 } from 'lucide-react';
 
+/**
+ * Main Application Component.
+ * 
+ * Orchestrates the video playback, subtitle syncing, card creation, and export workflows.
+ */
 const App: React.FC = () => {
-  // --- State ---
+  // --- State Management ---
+  
+  // Video & Subtitle Source State
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [videoName, setVideoName] = useState<string>('');
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
+  
+  // Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [cards, setCards] = useState<AnkiCard[]>([]);
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
+
+  // Deck Management State
+  const [cards, setCards] = useState<AnkiCard[]>([]);
   
   // AI Processing State
   const [processing, setProcessing] = useState<ProcessingState>({
@@ -31,12 +42,18 @@ const App: React.FC = () => {
     total: 0
   });
 
-  // Refs
+  // --- Refs ---
+  // Reference to video player for imperative commands (seek, pause, capture)
   const videoRef = useRef<VideoPlayerHandle>(null);
+  // Reference to the subtitle list container for auto-scrolling
   const subtitleListRef = useRef<HTMLDivElement>(null);
 
   // --- Handlers ---
 
+  /**
+   * Handles local video file selection.
+   * Creates a blob URL for the video player.
+   */
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -46,6 +63,10 @@ const App: React.FC = () => {
     }
   };
 
+  /**
+   * Handles subtitle file (SRT/VTT) selection.
+   * Reads file as text and parses it into objects.
+   */
   const handleSubtitleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -59,13 +80,20 @@ const App: React.FC = () => {
     }
   };
 
+  /**
+   * Syncs subtitle list with video time.
+   * Highlights the current line and scrolls it into view.
+   */
   const handleTimeUpdate = (time: number) => {
     setCurrentTime(time);
-    // Find active subtitle
+    
+    // Find the subtitle active at the current timestamp
     const active = subtitles.find(s => time >= s.startTime && time <= s.endTime);
+    
     if (active && active.id !== activeSubtitleId) {
       setActiveSubtitleId(active.id);
-      // Auto-scroll logic could go here
+      
+      // Auto-scroll logic: scroll the active element into the center of the list
       const el = document.getElementById(`sub-${active.id}`);
       if (el && subtitleListRef.current) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -75,6 +103,9 @@ const App: React.FC = () => {
     }
   };
 
+  /**
+   * Seeks the video to the start of a clicked subtitle.
+   */
   const handleSubtitleClick = (sub: Subtitle) => {
     if (videoRef.current) {
       videoRef.current.seekTo(sub.startTime);
@@ -82,14 +113,26 @@ const App: React.FC = () => {
     }
   };
 
+  /**
+   * Creates a new Anki card from a subtitle line.
+   * 
+   * Workflow:
+   * 1. Pauses video.
+   * 2. Seeks to the middle of the subtitle duration (often the best frame).
+   * 3. Waits briefly for frame rendering.
+   * 4. Captures screenshot.
+   * 5. Adds new card to state.
+   */
   const createCard = (sub: Subtitle) => {
     if (!videoRef.current) return;
     
     // Pause to ensure clean capture
     videoRef.current.pause();
-    videoRef.current.seekTo(sub.startTime + (sub.endTime - sub.startTime) / 2); // Seek to middle for better screenshot context usually
     
-    // Allow a split second for seek to render frame
+    // Seek to middle for better screenshot context usually
+    videoRef.current.seekTo(sub.startTime + (sub.endTime - sub.startTime) / 2); 
+    
+    // Allow a split second for the video element to seek and render the frame
     setTimeout(() => {
         const screenshot = videoRef.current?.captureFrame();
         
@@ -108,16 +151,22 @@ const App: React.FC = () => {
     }, 200);
   };
 
+  /**
+   * Triggers AI analysis for a specific card.
+   * Fetches context (prev/next lines) to help the AI.
+   */
   const analyzeCard = async (card: AnkiCard) => {
     setProcessing(prev => ({ ...prev, isAnalyzing: true }));
     
-    // Find context
+    // Find context from the full subtitle list
     const subIndex = subtitles.findIndex(s => s.id === card.subtitleId);
     const prevText = subtitles[subIndex - 1]?.text || "";
     const nextText = subtitles[subIndex + 1]?.text || "";
 
+    // Call Gemini Service
     const result = await analyzeSubtitle(card.text, prevText, nextText);
 
+    // Update the card with results
     setCards(prev => prev.map(c => {
       if (c.id === card.id) {
         return {
@@ -147,6 +196,8 @@ const App: React.FC = () => {
       
       {/* Left Sidebar: Controls & Card List */}
       <aside className="w-96 flex flex-col border-r border-slate-800 bg-slate-900/50">
+        
+        {/* Header and File Inputs */}
         <div className="p-4 border-b border-slate-800">
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2 mb-4">
                 <Layers className="text-indigo-500" /> Sub2Anki AI
@@ -167,7 +218,7 @@ const App: React.FC = () => {
             </div>
         </div>
 
-        {/* Deck / Cards Area */}
+        {/* Deck / Cards Scroll Area */}
         <div className="flex-1 overflow-y-auto p-4">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="font-semibold text-slate-300">Your Deck ({cards.length})</h2>
@@ -218,6 +269,7 @@ const App: React.FC = () => {
 
         {/* Bottom: Subtitle List */}
         <div className="flex-1 overflow-hidden flex flex-col relative bg-slate-900">
+             {/* Gradient fade at top for visual polish */}
              <div className="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
              
              <div ref={subtitleListRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
@@ -227,6 +279,7 @@ const App: React.FC = () => {
                         <p>Please load a subtitle file to view dialogue.</p>
                     </div>
                 )}
+                
                 {subtitles.map(sub => {
                     const isActive = sub.id === activeSubtitleId;
                     return (
@@ -240,14 +293,17 @@ const App: React.FC = () => {
                             }`}
                             onClick={() => handleSubtitleClick(sub)}
                         >
+                            {/* Timestamp */}
                             <span className={`text-xs font-mono w-16 flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>
                                 {formatTime(sub.startTime)}
                             </span>
                             
+                            {/* Dialogue Text */}
                             <p className={`flex-1 text-lg leading-relaxed ${isActive ? 'text-white font-medium' : 'text-slate-400'}`}>
                                 {sub.text}
                             </p>
 
+                            {/* 'Create Card' Button (visible on hover) */}
                             <button 
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -267,6 +323,7 @@ const App: React.FC = () => {
                 })}
              </div>
              
+             {/* Gradient fade at bottom */}
              <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-slate-900 to-transparent z-10 pointer-events-none"></div>
         </div>
       </main>

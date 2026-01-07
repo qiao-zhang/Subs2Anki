@@ -9,11 +9,20 @@ interface CardItemProps {
   isAnalyzing: boolean;
 }
 
+/**
+ * Displays a single Flashcard in the deck list.
+ * 
+ * Shows:
+ * - Screenshot thumbnail.
+ * - Dialogue text.
+ * - AI Analysis results (Translation, Notes).
+ * - Action buttons (Delete, Analyze).
+ */
 const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, isAnalyzing }) => {
   return (
     <div className="bg-slate-800 rounded-lg p-4 mb-3 border border-slate-700 shadow-sm hover:border-slate-600 transition-colors">
       <div className="flex gap-4">
-        {/* Screenshot Thumbnail */}
+        {/* Screenshot Thumbnail Section */}
         <div className="w-32 h-20 bg-black rounded overflow-hidden flex-shrink-0 relative border border-slate-700">
           {card.screenshotDataUrl ? (
             <img 
@@ -26,12 +35,13 @@ const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, isAnalyz
               <ImageIcon className="w-6 h-6 text-slate-600" />
             </div>
           )}
+          {/* Timestamp overlay */}
           <div className="absolute bottom-0 right-0 bg-black/60 text-xs px-1 text-white">
             {card.timestampStr}
           </div>
         </div>
 
-        {/* Content */}
+        {/* Content Section: Text and Analysis */}
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-white text-lg leading-tight mb-1 truncate">
             {card.text}
@@ -50,7 +60,7 @@ const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, isAnalyz
           )}
         </div>
 
-        {/* Actions */}
+        {/* Action Buttons Section */}
         <div className="flex flex-col gap-2 justify-start">
           <button
             onClick={() => onDelete(card.id)}
@@ -59,6 +69,8 @@ const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, isAnalyz
           >
             <Trash2 size={18} />
           </button>
+          
+          {/* Analysis Button: Disabled during processing */}
           <button
             onClick={() => onAnalyze(card)}
             disabled={isAnalyzing}

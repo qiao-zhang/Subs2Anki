@@ -1,17 +1,38 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+/**
+ * Initializes the Google GenAI client using the environment variable API key.
+ */
 const getClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API Key not found");
   return new GoogleGenAI({ apiKey });
 };
 
+/**
+ * Structure of the response expected from the AI model.
+ */
 export interface AnalysisResult {
   translation: string;
   notes: string;
   keyWords: string[];
 }
 
+/**
+ * Sends a subtitle text to the Gemini model for analysis.
+ * 
+ * It asks for:
+ * 1. A translation.
+ * 2. Grammatical/cultural notes.
+ * 3. Key vocabulary.
+ * 
+ * It uses Structured Output (JSON schema) to ensure a consistent return format.
+ * 
+ * @param text - The target subtitle text
+ * @param contextPrev - The preceding line for context
+ * @param contextNext - The following line for context
+ * @returns Parsed AnalysisResult
+ */
 export const analyzeSubtitle = async (
   text: string, 
   contextPrev: string = "", 
@@ -59,6 +80,7 @@ export const analyzeSubtitle = async (
 
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
+    // Return a fallback error object so the UI doesn't crash
     return {
       translation: "Error generating translation.",
       notes: "Could not analyze.",
