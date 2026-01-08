@@ -1,5 +1,5 @@
 import React, {useState, useRef, useMemo} from 'react';
-import {SubtitleLine, AnkiCard, ProcessingState} from '../core/types';
+import {SubtitleLine, AnkiCard, ProcessingState, AnkiNoteType} from '../core/types';
 import {parseSubtitles, serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
 import {analyzeSubtitle} from '../core/gemini';
@@ -8,6 +8,7 @@ import saveAs from 'file-saver';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
 import CardItem from './components/CardItem';
+import TemplateEditorModal from './components/TemplateEditorModal';
 import {
   FileText,
   Download,
@@ -22,8 +23,45 @@ import {
   ChevronUp,
   ChevronDown,
   Lock,
-  Unlock
+  Unlock,
+  Settings
 } from 'lucide-react';
+
+// Default Anki Note Type Configuration
+const DEFAULT_NOTE_TYPE: AnkiNoteType = {
+  id: 123456789, // This will be dynamic in real usage or random
+  name: "Sub2Anki Basic",
+  css: `.card {
+ font-family: arial;
+ font-size: 20px;
+ text-align: center;
+ color: black;
+ background-color: white;
+}
+.sentence { font-size: 24px; color: #2d3748; margin-bottom: 20px; }
+.translation { color: #047857; font-weight: bold; }
+.notes { font-size: 16px; color: #4a5568; margin-top: 15px; text-align: left; }
+.image { margin-top: 20px; }
+img { max-width: 100%; border-radius: 8px; }`,
+  fields: [
+    { name: "Sentence", source: 'Text' },
+    { name: "Meaning", source: 'Translation' },
+    { name: "Notes", source: 'Notes' },
+    { name: "Image", source: 'Image' },
+    { name: "Audio", source: 'Audio' },
+    { name: "Time", source: 'Time' }
+  ],
+  templates: [{
+    Name: "Card 1",
+    Front: `<div class="sentence">{{Sentence}}</div>`,
+    Back: `<div class="sentence">{{Sentence}}</div>
+<hr>
+<div class="translation">{{Meaning}}</div>
+<div class="notes">{{Notes}}</div>
+<div class="image">{{Image}}</div>
+<div class="time"><small>{{Time}}</small></div>`
+  }]
+};
 
 /**
  * Main Application Component.
@@ -52,6 +90,10 @@ const App: React.FC = () => {
 
   //Ql Save Menu State
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState<boolean>(false);
+
+  // Anki Template Modal State
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+  const [ankiConfig, setAnkiConfig] = useState<AnkiNoteType>(DEFAULT_NOTE_TYPE);
 
   // Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -164,9 +206,6 @@ const App: React.FC = () => {
     setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) =>
       s.id === id ? { ...s, locked: !s.locked } : s
     ));
-    // Locking/Unlocking might not be considered a "content" change that needs saving to file immediately,
-    // but if we want to persist lock state (if format allows, or just session state), we can treat it as change.
-    // For standard SRT/VTT, lock state isn't saved, so maybe don't setHasUnsaved changes here unless we implement custom metadata.
   };
 
   /**
@@ -353,11 +392,19 @@ const App: React.FC = () => {
   };
 
   const handleExport = async () => {
-    await generateAnkiDeck(ankiCards, videoName);
+    await generateAnkiDeck(ankiCards, videoName, ankiConfig);
   };
 
   return (
     <div className="flex h-screen w-full bg-slate-950 text-slate-200">
+
+      {/* Template Editor Modal */}
+      <TemplateEditorModal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        config={ankiConfig}
+        onSave={setAnkiConfig}
+      />
 
       {/* Offset Modal */}
       {isOffsetModalOpen && (
@@ -428,14 +475,23 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-semibold text-slate-300">Your Deck ({ankiCards.length})</h2>
-            {ankiCards.length > 0 && (
+            <div className="flex gap-2">
               <button
-                onClick={handleExport}
-                className="flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-full transition"
+                onClick={() => setIsTemplateModalOpen(true)}
+                className="flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded transition"
+                title="Configure Anki Note Type"
               >
-                <Download size={14}/> Export
+                <Settings size={14} />
               </button>
-            )}
+              {ankiCards.length > 0 && (
+                <button
+                  onClick={handleExport}
+                  className="flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-full transition"
+                >
+                  <Download size={14}/> Export
+                </button>
+              )}
+            </div>
           </div>
 
           {ankiCards.length === 0 ? (

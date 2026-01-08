@@ -10,7 +10,7 @@ export interface SubtitleLine {
 }
 
 /**
- *HZ Represents a Flashcard to be exported to Anki.
+ * Represents a Flashcard to be exported to Anki.
  */
 export interface AnkiCard {
   id: string;               // Unique internal ID (UUID)
@@ -30,4 +30,38 @@ export interface ProcessingState {
   isAnalyzing: boolean; // Whether an AI request is currently in flight
   progress: number;     // Current progress percentage (if batch processing)
   total: number;        // Total items to process
+}
+
+/**
+ * Available data sources that can be mapped to Anki fields.
+ */
+export type AnkiFieldSource = 'Text' | 'Translation' | 'Notes' | 'Image' | 'Audio' | 'Gif' | 'Time';
+
+/**
+ * Anki Note Type Definition
+ */
+export interface AnkiField {
+  name: string;
+  source?: AnkiFieldSource; // The data source mapped to this field
+}
+
+export interface AnkiCardTemplate {
+  Name: string;
+  Front: string;
+  Back: string;
+}
+
+export interface AnkiNoteType {
+  id: number;
+  name: string;
+  css: string;
+  fields: AnkiField[];
+  templates: AnkiCardTemplate[];
+}
+
+/**
+ * Maps app data keys to Anki Field names
+ */
+export interface FieldMapping {
+  [ankiFieldName: string]: keyof AnkiCard | 'custom';
 }
