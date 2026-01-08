@@ -35,7 +35,7 @@ export interface ProcessingState {
 /**
  * Available data sources that can be mapped to Anki fields.
  */
-export type AnkiFieldSource = 'Text' | 'Translation' | 'Notes' | 'Image' | 'Audio' | 'Gif' | 'Time';
+export type AnkiFieldSource = 'Text' | 'Translation' | 'Notes' | 'Image' | 'Audio' | 'Time';
 
 /**
  * Anki Note Type Definition

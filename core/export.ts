@@ -41,19 +41,27 @@ export const generateAnkiDeck = async (
 
   // 2. Process Media
   cards.forEach((card, index) => {
+    // Process Screenshot Image
     if (card.screenshotDataUrl) {
       const extension = "jpg";
       const filename = `sub2anki_${index}_${Date.now()}.${extension}`;
-
-      // Add file to zip (Anki .apkg expects files at root named by integer index mostly,
-      // but mapping allows strings. However, standard convention uses string filenames in DB and mapping.)
-      // Actually: In .apkg, files are stored as "0", "1", "2" in the zip root,
-      // and the "media" file maps {"0": "myimage.jpg"}.
 
       const zipName = mediaIndex.toString();
       const base64Data = card.screenshotDataUrl.split(',')[1];
 
       zip.file(zipName, base64Data, { base64: true });
+
+      mediaMap[zipName] = filename;
+      mediaIndex++;
+    }
+
+    // Process Audio Blob
+    if (card.audioBlob) {
+      const extension = "wav";
+      const filename = `sub2anki_audio_${index}_${Date.now()}.${extension}`;
+
+      const zipName = mediaIndex.toString();
+      zip.file(zipName, card.audioBlob);
 
       mediaMap[zipName] = filename;
       mediaIndex++;

@@ -1,9 +1,10 @@
-import React, {useState, useRef, useMemo} from 'react';
+import React, {useState, useRef, useEffect, useMemo} from 'react';
 import {SubtitleLine, AnkiCard, ProcessingState, AnkiNoteType} from '../core/types';
 import {parseSubtitles, serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
 import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
+import {loadAudioBuffer, sliceAudioBuffer} from '../core/media-utils';
 import saveAs from 'file-saver';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
@@ -53,7 +54,8 @@ img { max-width: 100%; border-radius: 8px; }`,
   ],
   templates: [{
     Name: "Card 1",
-    Front: `<div class="sentence">{{Sentence}}</div>`,
+    Front: `<div class="sentence">{{Sentence}}</div>
+<div class="audio">{{Audio}}</div>`,
     Back: `<div class="sentence">{{Sentence}}</div>
 <hr>
 <div class="translation">{{Meaning}}</div>
@@ -74,6 +76,8 @@ const App: React.FC = () => {
   // Video & Subtitle Source State
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [videoName, setVideoName] = useState<string>('');
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+
   const [subtitleLines, setSubtitleLines] = useState<SubtitleLine[]>([]);
   const [subtitleFileName, setSubtitleFileName] = useState<string>('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
@@ -124,8 +128,18 @@ const App: React.FC = () => {
       setVideoSrc(url);
       setVideoName(file.name);
       setIsVideoVisible(true); // Auto-show video on upload
+      setAudioBuffer(null); // Reset audio buffer while loading new one
     }
   };
+
+  // Load Audio Buffer when video source changes
+  useEffect(() => {
+    if (videoSrc) {
+      loadAudioBuffer(videoSrc)
+        .then(setAudioBuffer)
+        .catch(err => console.error("Failed to load audio track", err));
+    }
+  }, [videoSrc]);
 
   const handleOpenSubtitle = async () => {
     try {
@@ -339,31 +353,37 @@ const App: React.FC = () => {
     }
   };
 
-  const createCard = (sub: SubtitleLine) => {
-    // Since video is in DOM, captureFrame works even if the video player is hidden (in most modern browsers).
+  const createCard = async (sub: SubtitleLine) => {
     if (!videoRef.current) return;
-    videoRef.current.pause();
 
-    // Clear any pending pause action since we just manually paused
-    setPauseAtTime(null);
+    // 1. Audio Capture
+    // Slice the audio buffer for the duration of the subtitle
+    let audioBlob: Blob | null = null;
+    if (audioBuffer) {
+      audioBlob = sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime);
+    }
 
-    videoRef.current.seekTo(sub.startTime + (sub.endTime - sub.startTime) / 2);
+    // 2. Frame Capture
+    // We use captureFrameAt which seeks to the precise start time, waits for seek, and captures.
+    // This works even if the video is hidden (assuming the video element is mounted in DOM).
+    // Note: We pause any current playback logic to perform the capture.
+    setPauseAtTime(null); // Clear auto-pause so it doesn't interfere
 
-    setTimeout(() => {
-      const screenshot = videoRef.current?.captureFrame();
+    // Capture the frame
+    const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
 
-      const newCard: AnkiCard = {
-        id: crypto.randomUUID(),
-        subtitleId: sub.id,
-        text: sub.text,
-        translation: '',
-        notes: '',
-        screenshotDataUrl: screenshot || null,
-        audioBlob: null,
-        timestampStr: formatTime(sub.startTime)
-      };
-      setAnkiCards((prev: AnkiCard[]) => [newCard, ...prev]);
-    }, 200);
+    const newCard: AnkiCard = {
+      id: crypto.randomUUID(),
+      subtitleId: sub.id,
+      text: sub.text,
+      translation: '',
+      notes: '',
+      screenshotDataUrl: screenshot || null,
+      audioBlob: audioBlob,
+      timestampStr: formatTime(sub.startTime)
+    };
+
+    setAnkiCards((prev: AnkiCard[]) => [newCard, ...prev]);
   };
 
   const analyzeCard = async (card: AnkiCard) => {

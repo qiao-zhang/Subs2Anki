@@ -14,15 +14,17 @@ export interface VideoPlayerHandle {
   play: () => void;
   pause: () => void;
   captureFrame: () => string | null;
+  captureFrameAt: (time: number) => Promise<string | null>;
   getCurrentTime: () => number;
 }
 
 /**
  * A wrapper around the HTML5 video element.
- * 
+ *
  * Features:
  * - Exposes imperative handle for control (seek, play, pause).
  * - Implements frame capture logic using an internal Canvas.
+ * - Supports capturing frames at specific timestamps regardless of visibility.
  */
 const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ src, onTimeUpdate }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -36,25 +38,57 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ src, onTi
     play: () => videoRef.current?.play(),
     pause: () => videoRef.current?.pause(),
     getCurrentTime: () => videoRef.current?.currentTime || 0,
-    
+
     /**
      * Captures the current frame of the video as a base64 JPEG image.
-     * Draws the video element onto a temporary canvas.
      */
     captureFrame: () => {
       if (!videoRef.current) return null;
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        // Returns a data URL (base64 string) with 0.85 quality JPEG compression
-        return canvas.toDataURL('image/jpeg', 0.85); 
-      }
-      return null;
+      return captureImageFromVideo(videoRef.current);
+    },
+
+    /**
+     * Captures a frame at a specific timestamp.
+     * Pauses, seeks, waits for seek to complete, captures, and effectively leaves the video at that timestamp (paused).
+     */
+    captureFrameAt: async (time: number) => {
+      const video = videoRef.current;
+      if (!video) return null;
+
+      // Ensure paused to prevent race conditions during seek
+      video.pause();
+
+      return new Promise((resolve) => {
+        const onSeeked = () => {
+          video.removeEventListener('seeked', onSeeked);
+          const dataUrl = captureImageFromVideo(video);
+          resolve(dataUrl);
+        };
+
+        // Attach event listener before triggering seek
+        video.addEventListener('seeked', onSeeked, { once: true });
+
+        // Trigger seek
+        video.currentTime = time;
+      });
     }
   }));
+
+  const captureImageFromVideo = (video: HTMLVideoElement): string | null => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.85);
+      }
+    } catch (e) {
+      console.error("Frame capture failed", e);
+    }
+    return null;
+  };
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-lg border border-slate-800">
@@ -65,6 +99,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ src, onTi
           className="w-full h-full object-contain"
           controls
           onTimeUpdate={(e) => onTimeUpdate(e.currentTarget.currentTime)}
+          crossOrigin="anonymous" // Important for canvas tainting if loading from some sources
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-slate-500">

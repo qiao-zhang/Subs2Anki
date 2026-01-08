@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AnkiNoteType, AnkiFieldSource, AnkiCardTemplate } from '../../core/types';
-import { X, Plus, Trash2, Layout, Type, Palette, GripVertical, Image as ImageIcon, Mic, Film, Clock, BookOpen, Languages } from 'lucide-react';
+import { X, Plus, Trash2, Layout, Type, Palette, GripVertical, Image as ImageIcon, Mic, Clock, BookOpen, Languages } from 'lucide-react';
 
 interface TemplateEditorModalProps {
   isOpen: boolean;
@@ -15,7 +15,6 @@ const SOURCES: { type: AnkiFieldSource; label: string; icon: React.ReactNode; co
   { type: 'Notes', label: 'Notes', icon: <BookOpen size={14} />, color: 'bg-amber-600' },
   { type: 'Image', label: 'Image', icon: <ImageIcon size={14} />, color: 'bg-purple-600' },
   { type: 'Audio', label: 'Audio', icon: <Mic size={14} />, color: 'bg-rose-600' },
-  { type: 'Gif', label: 'Gif', icon: <Film size={14} />, color: 'bg-pink-600' },
   { type: 'Time', label: 'Time', icon: <Clock size={14} />, color: 'bg-slate-600' },
 ];
 
