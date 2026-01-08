@@ -5,6 +5,7 @@ import {formatTime} from '../core/time';
 import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
+import WaveformDisplay from './components/WaveformDisplay';
 import CardItem from './components/CardItem';
 import {
   FileText,
@@ -90,7 +91,7 @@ const App: React.FC = () => {
    */
   const applyOffset = () => {
     const offsetSec = tempOffsetMs / 1000;
-    setSubtitles((prev) => prev.map(s => ({
+    setSubtitles((prev: Subtitle[]) => prev.map(s => ({
       ...s,
       startTime: Math.max(0, s.startTime + offsetSec),
       endTime: Math.max(0, s.endTime + offsetSec)
@@ -106,7 +107,7 @@ const App: React.FC = () => {
 
   const handleTimeUpdate = (time: number) => {
     setCurrentTime(time);
-    const active = subtitles.find(s => time >= s.startTime && time <= s.endTime);
+    const active = subtitles.find((s: Subtitle) => time >= s.startTime && time <= s.endTime);
 
     if (active && active.id !== activeSubtitleId) {
       setActiveSubtitleId(active.id);
@@ -116,6 +117,12 @@ const App: React.FC = () => {
       }
     } else if (!active) {
       setActiveSubtitleId(null);
+    }
+  };
+
+  const handleSeek = (time: number) => {
+    if (videoRef.current) {
+      videoRef.current.seekTo(time);
     }
   };
 
@@ -143,19 +150,19 @@ const App: React.FC = () => {
         audioBlob: null,
         timestampStr: formatTime(sub.startTime)
       };
-      setCards(prev => [newCard, ...prev]);
+      setCards((prev: AnkiCard[]) => [newCard, ...prev]);
     }, 200);
   };
 
   const analyzeCard = async (card: AnkiCard) => {
-    setProcessing(prev => ({...prev, isAnalyzing: true}));
-    const subIndex = subtitles.findIndex(s => s.id === card.subtitleId);
+    setProcessing((prev: ProcessingState) => ({...prev, isAnalyzing: true}));
+    const subIndex = subtitles.findIndex((s: Subtitle) => s.id === card.subtitleId);
     const prevText = subtitles[subIndex - 1]?.text || "";
     const nextText = subtitles[subIndex + 1]?.text || "";
 
     const result = await analyzeSubtitle(card.text, prevText, nextText);
 
-    setCards(prev => prev.map(c => {
+    setCards((prev: AnkiCard[]) => prev.map(c => {
       if (c.id === card.id) {
         return {
           ...c,
@@ -165,11 +172,11 @@ const App: React.FC = () => {
       }
       return c;
     }));
-    setProcessing(prev => ({...prev, isAnalyzing: false}));
+    setProcessing((prev: ProcessingState) => ({...prev, isAnalyzing: false}));
   };
 
   const deleteCard = (id: string) => {
-    setCards(prev => prev.filter(c => c.id !== id));
+    setCards((prev: AnkiCard[]) => prev.filter(c => c.id !== id));
   };
 
   const handleExport = async () => {
@@ -282,10 +289,21 @@ const App: React.FC = () => {
       {/* Main Content: Video & Subtitle Browser */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Top: Video Player */}
-        <div className="p-4 bg-black/20 border-b border-slate-800 flex justify-center">
-          <div className="w-full max-w-4xl">
-            <VideoPlayer ref={videoRef} src={videoSrc} onTimeUpdate={handleTimeUpdate} />
+        <div className="bg-black/20 flex flex-col">
+          <div className="p-4 border-b border-slate-800 flex justify-center">
+            <div className="w-full max-w-4xl">
+              <VideoPlayer ref={videoRef} src={videoSrc} onTimeUpdate={handleTimeUpdate} />
+            </div>
           </div>
+
+          {/* Waveform Visualization (Shows only when video is loaded) */}
+          {videoSrc && (
+            <WaveformDisplay
+              audioSrc={videoSrc}
+              currentTime={currentTime}
+              onSeek={handleSeek}
+            />
+          )}
         </div>
 
         {/* Bottom: Subtitle List */}
