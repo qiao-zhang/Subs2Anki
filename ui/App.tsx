@@ -31,37 +31,115 @@ import {
 // Default Anki Note Type Configuration
 const DEFAULT_NOTE_TYPE: AnkiNoteType = {
   id: 123456789, // This will be dynamic in real usage or random
-  name: "Sub2Anki Basic",
+  name: "Sub2Anki Advanced",
   css: `.card {
- font-family: arial;
- font-size: 20px;
+ font-family:Arial ;
+font-size:36px;
  text-align: center;
- color: black;
- background-color: white;
+ color:black;
+ background-color:white;
 }
-.sentence { font-size: 24px; color: #2d3748; margin-bottom: 20px; }
-.translation { color: #047857; font-weight: bold; }
-.notes { font-size: 16px; color: #4a5568; margin-top: 15px; text-align: left; }
-.image { margin-top: 20px; }
-img { max-width: 100%; border-radius: 8px; }`,
+
+.before{
+	font-size: 18px;
+	text-align: left;
+	color: grey;
+}
+
+.after {
+	font-size: 18px;
+	text-align: left;
+	color: grey;
+}
+
+.tags {
+  font-size:15px;
+  text-align: left;
+  color:grey;
+}
+
+.notes {
+  font-size:21px;
+  text-align: left;
+  color:grey;
+}`,
   fields: [
-    { name: "Sentence", source: 'Text' },
-    { name: "Meaning", source: 'Translation' },
-    { name: "Notes", source: 'Notes' },
-    { name: "Image", source: 'Image' },
+    { name: "Sequence", source: 'Sequence' },
+    { name: "Before" },
+    { name: "BeforeAudio" },
+    { name: "CurrentFront", source: 'Text' },
+    { name: "CurrentBack", source: 'Text' },
     { name: "Audio", source: 'Audio' },
-    { name: "Time", source: 'Time' }
+    { name: "After" },
+    { name: "AfterAudio" },
+    { name: "Meaning", source: 'Translation' },
+    { name: "Media", source: 'Image' },
+    { name: "Notes", source: 'Notes' }
   ],
   templates: [{
     Name: "Card 1",
-    Front: `<div class="sentence">{{Sentence}}</div>
-<div class="audio">{{Audio}}</div>`,
-    Back: `<div class="sentence">{{Sentence}}</div>
-<hr>
-<div class="translation">{{Meaning}}</div>
-<div class="notes">{{Notes}}</div>
-<div class="image">{{Image}}</div>
-<div class="time"><small>{{Time}}</small></div>`
+    Front: `{{#Tags}}
+
+<div class="tags"><span>🏷️</span> {{Tags}}</div>
+
+{{/Tags}}
+
+
+<span class='media'>{{Media}}</span>
+
+</br>
+
+{{#Before}}
+
+<div class="before"><span>⬅️</span> {{furigana:Before}}<span id="before-audio">{{BeforeAudio}}</span></div>
+{{/Before}}
+
+<div class='expression'>{{furigana:CurrentFront}}</div>
+
+
+{{#After}}
+<div class="after"><span>➡️</span> {{furigana:After}}</div>
+{{/After}}
+
+    <script>
+      var title = document.getElementById("before-audio");
+      if (title) {
+        var button = title.querySelector(".replay-button.soundLink");
+        if (button) button.click();
+      }
+    </script>`,
+    Back: `{{#Tags}}
+
+<div class="tags"><span>🏷️</span> {{Tags}}</div>
+
+{{/Tags}}
+<span class='media'>{{Media}}</span>
+
+</br>
+
+{{#Before}}
+
+<div class="before"><span>⬅️</span> {{furigana:Before}}<span id="before-audio">{{BeforeAudio}}</span></div>
+{{/Before}}
+
+<div class='reading'>{{furigana:CurrentBack}}<span id="current-audio">{{Audio}}</span></div>
+
+<div class='meaning'>{{Meaning}}</div>
+{{#After}}
+
+<div class="after"><span>➡️</span> {{furigana:After}}<span id="after-audio">{{AfterAudio}}</span></div>
+{{/After}}
+<br>
+<div class='notes'>{{Notes}}</div>
+
+
+    <script>
+      var title = document.getElementById("current-audio");
+      if (title) {
+        var button = title.querySelector(".replay-button.soundLink");
+        if (button) button.click();
+      }
+    </script>`
   }]
 };
 

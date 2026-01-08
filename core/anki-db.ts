@@ -10,7 +10,8 @@ const ANKI_SEP = '\x1f'; // Unit separator for fields
 export const createAnkiDatabase = async (
   cards: AnkiCard[],
   deckName: string,
-  noteType: AnkiNoteType
+  noteType: AnkiNoteType,
+  creationTime: number // New parameter to synchronize filenames
 ): Promise<Uint8Array> => {
   const SQL = await initSqlJs({
     // In a real build, you might need to point to the wasm file.
@@ -90,13 +91,14 @@ export const createAnkiDatabase = async (
   `);
 
   // 2. Create Deck Configuration (dconf) and Decks
-  const deckId = new Date().getTime();
+  // Use creationTime for deck ID as well for consistency, though not strictly required
+  const deckId = creationTime;
   const finalDeckName = deckName || "Sub2Anki Export";
 
   const decks = {
     [deckId]: {
       id: deckId,
-      mod: Math.floor(Date.now() / 1000),
+      mod: Math.floor(creationTime / 1000),
       name: finalDeckName,
       usn: -1,
       lrnToday: [0, 0],
@@ -174,7 +176,7 @@ export const createAnkiDatabase = async (
       id: noteType.id,
       name: noteType.name,
       type: 0,
-      mod: Math.floor(Date.now() / 1000),
+      mod: Math.floor(creationTime / 1000),
       usn: -1,
       sortf: 0,
       did: deckId,
@@ -192,9 +194,9 @@ export const createAnkiDatabase = async (
   const colStmt = db.prepare(`INSERT INTO col VALUES (:id, :crt, :mod, :scm, :ver, :dty, :usn, :ls, :conf, :models, :decks, :dconf, :tags)`);
   colStmt.run({
     ':id': 1,
-    ':crt': Math.floor(Date.now() / 1000),
-    ':mod': Math.floor(Date.now() / 1000),
-    ':scm': Math.floor(Date.now() / 1000),
+    ':crt': Math.floor(creationTime / 1000),
+    ':mod': Math.floor(creationTime / 1000),
+    ':scm': Math.floor(creationTime / 1000),
     ':ver': 11,
     ':dty': 0,
     ':usn': 0,
@@ -211,14 +213,14 @@ export const createAnkiDatabase = async (
   const noteStmt = db.prepare(`INSERT INTO notes VALUES (:id, :guid, :mid, :mod, :usn, :tags, :flds, :sfld, :csum, :flags, :data)`);
   const cardStmt = db.prepare(`INSERT INTO cards VALUES (:id, :nid, :did, :ord, :mod, :usn, :type, :queue, :due, :ivl, :factor, :reps, :lapses, :left, :odue, :odid, :flags, :data)`);
 
-  let now = Date.now();
-
+  // Use the passed creationTime to ensure filenames match what is in the zip media map
   cards.forEach((card, index) => {
     // Generate filenames for media
-    const safeImageFilename = card.screenshotDataUrl ? `sub2anki_${index}_${now}.jpg` : '';
-    const imageTag = safeImageFilename ? `<img src="${safeImageFilename}">` : '';
+    const safeImageFilename = card.screenshotDataUrl ? `sub2anki_${index}_${creationTime}.jpg` : '';
+    // Force max height to 270px for images in the Media field
+    const imageTag = safeImageFilename ? `<img src="${safeImageFilename}" style="max-height: 270px;">` : '';
 
-    const safeAudioFilename = card.audioBlob ? `sub2anki_audio_${index}_${now}.wav` : '';
+    const safeAudioFilename = card.audioBlob ? `sub2anki_audio_${index}_${creationTime}.wav` : '';
     const audioTag = safeAudioFilename ? `[sound:${safeAudioFilename}]` : '';
 
     // Prepare fields array based on the model definition and mappings
@@ -232,17 +234,19 @@ export const createAnkiDatabase = async (
           case 'Image': return imageTag;
           case 'Time': return card.timestampStr;
           case 'Audio': return audioTag;
+          case 'Sequence': return `${safeAudioFilename} ${card.timestampStr}`;
           default: return '';
         }
       }
 
       // Legacy Fallback (Name Heuristics) if no source is mapped
       const name = f.name.toLowerCase();
+      if (name.includes('sequence')) return `${safeAudioFilename} ${card.timestampStr}`;
       if (name.includes('text') || name.includes('sentence') || name.includes('front')) return card.text;
       if (name.includes('translation')) return card.translation;
       if (name.includes('notes')) return card.notes;
       if (name.includes('meaning')) return `${card.translation}<br><small>${card.notes}</small>`;
-      if (name.includes('image') || name.includes('screenshot') || name.includes('picture')) return imageTag;
+      if (name.includes('image') || name.includes('screenshot') || name.includes('picture') || name.includes('media')) return imageTag;
       if (name.includes('audio') || name.includes('sound')) return audioTag;
       if (name.includes('time')) return card.timestampStr;
 
@@ -250,14 +254,14 @@ export const createAnkiDatabase = async (
     });
 
     const fldsStr = fieldValues.join(ANKI_SEP);
-    const noteId = now + index * 100;
+    const noteId = creationTime + index * 100; // Use creationTime for ID generation too
     const guid = generateGUID(noteId.toString());
 
     noteStmt.run({
       ':id': noteId,
       ':guid': guid,
       ':mid': noteType.id,
-      ':mod': Math.floor(now / 1000),
+      ':mod': Math.floor(creationTime / 1000),
       ':usn': -1,
       ':tags': "Sub2AnkiAI",
       ':flds': fldsStr,
@@ -274,7 +278,7 @@ export const createAnkiDatabase = async (
         ':nid': noteId,
         ':did': deckId,
         ':ord': tplIdx,
-        ':mod': Math.floor(now / 1000),
+        ':mod': Math.floor(creationTime / 1000),
         ':usn': -1,
         ':type': 0,
         ':queue': 0,

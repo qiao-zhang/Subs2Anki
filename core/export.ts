@@ -29,9 +29,13 @@ export const generateAnkiDeck = async (
   const mediaMap: Record<string, string> = {};
   let mediaIndex = 0;
 
+  // Capture a single timestamp for this export session to ensure consistency
+  // between the SQLite DB (which uses this for filenames) and the Zip media map.
+  const creationTime = Date.now();
+
   // 1. Generate SQLite Database
   try {
-    const dbData = await createAnkiDatabase(cards, deckName, noteType);
+    const dbData = await createAnkiDatabase(cards, deckName, noteType, creationTime);
     zip.file("collection.anki2", dbData);
   } catch (e) {
     console.error("Failed to generate Anki database", e);
@@ -44,7 +48,7 @@ export const generateAnkiDeck = async (
     // Process Screenshot Image
     if (card.screenshotDataUrl) {
       const extension = "jpg";
-      const filename = `sub2anki_${index}_${Date.now()}.${extension}`;
+      const filename = `sub2anki_${index}_${creationTime}.${extension}`;
 
       const zipName = mediaIndex.toString();
       const base64Data = card.screenshotDataUrl.split(',')[1];
@@ -58,7 +62,7 @@ export const generateAnkiDeck = async (
     // Process Audio Blob
     if (card.audioBlob) {
       const extension = "wav";
-      const filename = `sub2anki_audio_${index}_${Date.now()}.${extension}`;
+      const filename = `sub2anki_audio_${index}_${creationTime}.${extension}`;
 
       const zipName = mediaIndex.toString();
       zip.file(zipName, card.audioBlob);

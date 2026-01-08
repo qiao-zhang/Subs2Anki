@@ -18,6 +18,7 @@ export const loadAudioBuffer = async (srcUrl: string): Promise<AudioBuffer> => {
 
 /**
  * Slices a segment from an AudioBuffer and returns it as a WAV Blob.
+ * Uses OfflineAudioContext to avoid the limit on the number of AudioContexts.
  *
  * @param buffer - The source AudioBuffer
  * @param startTime - Start time in seconds
@@ -34,9 +35,12 @@ export const sliceAudioBuffer = (buffer: AudioBuffer, startTime: number, endTime
     return new Blob([], { type: 'audio/wav' });
   }
 
-  // Create a new buffer for the slice
+  // Use OfflineAudioContext to create a buffer.
+  // It is more robust for non-playback tasks and avoids running out of hardware contexts.
+  // The OfflineAudioContext constructor takes arguments: (numberOfChannels, length, sampleRate)
   const numberOfChannels = buffer.numberOfChannels;
-  const sliceBuffer = new AudioContext().createBuffer(numberOfChannels, frameCount, sampleRate);
+  const offlineCtx = new OfflineAudioContext(numberOfChannels, frameCount, sampleRate);
+  const sliceBuffer = offlineCtx.createBuffer(numberOfChannels, frameCount, sampleRate);
 
   // Copy data
   for (let channel = 0; channel < numberOfChannels; channel++) {

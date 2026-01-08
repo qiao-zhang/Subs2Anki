@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AnkiNoteType, AnkiFieldSource, AnkiCardTemplate } from '../../core/types';
-import { X, Plus, Trash2, Layout, Type, Palette, GripVertical, Image as ImageIcon, Mic, Clock, BookOpen, Languages } from 'lucide-react';
+import { X, Plus, Trash2, Layout, Type, Palette, GripVertical, Image as ImageIcon, Mic, Clock, BookOpen, Languages, SortAsc } from 'lucide-react';
 
 interface TemplateEditorModalProps {
   isOpen: boolean;
@@ -16,6 +16,7 @@ const SOURCES: { type: AnkiFieldSource; label: string; icon: React.ReactNode; co
   { type: 'Image', label: 'Image', icon: <ImageIcon size={14} />, color: 'bg-purple-600' },
   { type: 'Audio', label: 'Audio', icon: <Mic size={14} />, color: 'bg-rose-600' },
   { type: 'Time', label: 'Time', icon: <Clock size={14} />, color: 'bg-slate-600' },
+  { type: 'Sequence', label: 'Sequence', icon: <SortAsc size={14} />, color: 'bg-cyan-600' },
 ];
 
 const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClose, config, onSave }) => {
