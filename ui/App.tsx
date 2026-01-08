@@ -90,6 +90,13 @@ const App: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
+  const handleSubtitleTimeChange = (id: number, start: number, end: number) => {
+    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) =>
+      s.id === id ? { ...s, startTime: start, endTime: end } : s
+    ));
+    setHasUnsavedChanges(true);
+  };
+
   /**
    * Applies the time offset to all subtitles in the baseline state.
    */
@@ -324,6 +331,8 @@ const App: React.FC = () => {
             audioSrc={videoSrc}
             currentTime={currentTime}
             onSeek={handleSeek}
+            subtitles={subtitleLines}
+            onSubtitleChange={handleSubtitleTimeChange}
           />
         )}
 
