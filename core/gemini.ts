@@ -1,10 +1,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+export interface LLMSettings {
+  provider: 'gemini' | 'openai-compatible' | 'chrome-ai';
+  apiKey: string;
+  model: string;
+  autoAnalyze: boolean;
+  baseUrl?: string;
+}
+
 /**
  * Initializes the Google GenAI client using the environment variable API key.
  */
-const getClient = () => {
-  const apiKey = process.env.API_KEY;
+const getClient = (apiKeyOverride?: string) => {
+  const apiKey = apiKeyOverride || process.env.API_KEY;
   if (!apiKey) throw new Error("API Key not found");
   return new GoogleGenAI({ apiKey });
 };
@@ -31,16 +39,22 @@ export interface AnalysisResult {
  * @param text - The target subtitle text
  * @param contextPrev - The preceding line for context
  * @param contextNext - The following line for context
+ * @param settings - Optional settings for the LLM configuration
  * @returns Parsed AnalysisResult
  */
 export const analyzeSubtitle = async (
   text: string, 
   contextPrev: string = "", 
-  contextNext: string = ""
+  contextNext: string = "",
+  settings?: LLMSettings
 ): Promise<AnalysisResult> => {
   try {
-    const ai = getClient();
+    const apiKey = settings?.provider === 'gemini' && settings.apiKey ? settings.apiKey : undefined;
+    const ai = getClient(apiKey);
     
+    // Use model from settings or default to gemini-3-flash-preview as per guidelines for basic text tasks
+    const modelName = settings?.model || "gemini-3-flash-preview";
+
     const prompt = `
       Analyze the following subtitle line from a video. 
       Target Line: "${text}"
@@ -54,7 +68,7 @@ export const analyzeSubtitle = async (
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: modelName,
       contents: prompt,
       config: {
         responseMimeType: "application/json",

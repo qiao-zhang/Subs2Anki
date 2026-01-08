@@ -34,7 +34,6 @@ export const formatTimestamp = (seconds: number, useComma: boolean = false): str
 
   const pad = (num: number, size: number) => num.toString().padStart(size, '0');
   const separator = useComma ? ',' : '.';
-
   return `${pad(h, 2)}:${pad(m, 2)}:${pad(s, 2)}${separator}${pad(ms, 3)}`;
 };
 

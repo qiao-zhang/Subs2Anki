@@ -2,7 +2,7 @@ import React, {useState, useRef, useEffect, useMemo} from 'react';
 import {SubtitleLine, AnkiCard, ProcessingState, AnkiNoteType} from '../core/types';
 import {parseSubtitles, serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
-import {analyzeSubtitle} from '../core/gemini';
+import {analyzeSubtitle, LLMSettings} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
 import {loadAudioBuffer, sliceAudioBuffer} from '../core/media-utils';
 import saveAs from 'file-saver';
@@ -10,6 +10,7 @@ import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
 import CardItem from './components/CardItem';
 import TemplateEditorModal from './components/TemplateEditorModal';
+import NewSubtitleModal from './components/NewSubtitleModal';
 import {
   FileText,
   Download,
@@ -25,7 +26,8 @@ import {
   ChevronDown,
   Lock,
   Unlock,
-  Settings
+  Settings,
+  Bot
 } from 'lucide-react';
 
 // Default Anki Note Type Configuration
@@ -170,12 +172,25 @@ const App: React.FC = () => {
   const [isOffsetModalOpen, setIsOffsetModalOpen] = useState<boolean>(false);
   const [tempOffsetMs, setTempOffsetMs] = useState<number>(0);
 
+  // New Subtitle Modal State
+  const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
+  const [newSubtitleTimes, setNewSubtitleTimes] = useState<{start: number, end: number}>({start: 0, end: 0});
+
   //Ql Save Menu State
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState<boolean>(false);
 
   // Anki Template Modal State
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [ankiConfig, setAnkiConfig] = useState<AnkiNoteType>(DEFAULT_NOTE_TYPE);
+
+  // LLM Settings Modal State
+  const [isLLMSettingsOpen, setIsLLMSettingsOpen] = useState<boolean>(false);
+  const [llmSettings, setLlmSettings] = useState<LLMSettings>({
+    provider: 'gemini',
+    apiKey: process.env.API_KEY || '',
+    model: 'gemini-2.5-flash',
+    autoAnalyze: false
+  });
 
   // Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -197,7 +212,29 @@ const App: React.FC = () => {
   const subtitleListRef = useRef<HTMLDivElement>(null);
   const subtitleInputRef = useRef<HTMLInputElement>(null);
 
+  // --- Load Settings from LocalStorage ---
+  useEffect(() => {
+    const saved = localStorage.getItem('sub2anki_llm_settings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Preserve env var key if local storage is empty for gemini
+        if (!parsed.apiKey && parsed.provider === 'gemini') {
+            parsed.apiKey = process.env.API_KEY || '';
+        }
+        setLlmSettings(parsed);
+      } catch (e) {
+        console.error("Failed to load settings", e);
+      }
+    }
+  }, []);
+
   // --- Handlers ---
+
+  const handleSaveLLMSettings = (newSettings: LLMSettings) => {
+    setLlmSettings(newSettings);
+    localStorage.setItem('sub2anki_llm_settings', JSON.stringify(newSettings));
+  };
 
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -291,6 +328,34 @@ const App: React.FC = () => {
       if (s.id === id && s.locked) return s;
       return s.id === id ? { ...s, startTime: start, endTime: end } : s;
     }));
+    setHasUnsavedChanges(true);
+  };
+
+  // Called when user drags to select a new region on the waveform
+  const handleNewSegmentSelection = (start: number, end: number) => {
+    if (videoRef.current) videoRef.current.pause();
+    setNewSubtitleTimes({ start, end });
+    setIsNewSubtitleModalOpen(true);
+  };
+
+  // Called when user confirms text in the New Subtitle Modal
+  const handleAddNewSubtitle = (text: string) => {
+    // Generate new ID (max + 1)
+    const maxId = subtitleLines.reduce((max, s) => Math.max(max, s.id), 0);
+    const newId = maxId + 1;
+
+    const newSubtitle: SubtitleLine = {
+      id: newId,
+      startTime: newSubtitleTimes.start,
+      endTime: newSubtitleTimes.end,
+      text: text,
+      locked: false
+    };
+
+    // Insert and Sort
+    const updated = [...subtitleLines, newSubtitle].sort((a, b) => a.startTime - b.startTime);
+    
+    setSubtitleLines(updated);
     setHasUnsavedChanges(true);
   };
 
@@ -462,15 +527,21 @@ const App: React.FC = () => {
     };
     
     setAnkiCards((prev: AnkiCard[]) => [newCard, ...prev]);
+
+    // 3. Auto Analyze if enabled
+    if (llmSettings.autoAnalyze) {
+      analyzeCard(newCard);
+    }
   };
 
   const analyzeCard = async (card: AnkiCard) => {
     setProcessing((prev: ProcessingState) => ({...prev, isAnalyzing: true}));
+    
     const subIndex = subtitleLines.findIndex((s: SubtitleLine) => s.id === card.subtitleId);
     const prevText = subtitleLines[subIndex - 1]?.text || "";
     const nextText = subtitleLines[subIndex + 1]?.text || "";
 
-    const result = await analyzeSubtitle(card.text, prevText, nextText);
+    const result = await analyzeSubtitle(card.text, prevText, nextText, llmSettings);
 
     setAnkiCards((prev: AnkiCard[]) => prev.map(c => {
       if (c.id === card.id) {
@@ -502,6 +573,15 @@ const App: React.FC = () => {
         onClose={() => setIsTemplateModalOpen(false)}
         config={ankiConfig}
         onSave={setAnkiConfig}
+      />
+
+      {/* New Subtitle Modal */}
+      <NewSubtitleModal
+        isOpen={isNewSubtitleModalOpen}
+        onClose={() => setIsNewSubtitleModalOpen(false)}
+        startTime={newSubtitleTimes.start}
+        endTime={newSubtitleTimes.end}
+        onSave={handleAddNewSubtitle}
       />
 
       {/* Offset Modal */}
@@ -646,6 +726,7 @@ const App: React.FC = () => {
             onSeek={handleSeek}
             subtitles={subtitleLines}
             onSubtitleChange={handleSubtitleTimeChange}
+            onNewSegment={handleNewSegmentSelection}
           />
         )}
 
@@ -662,6 +743,22 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* LLM Settings Button */}
+              <button
+                onClick={() => setIsLLMSettingsOpen(true)}
+                className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md transition-all border ${
+                   llmSettings.apiKey || llmSettings.provider === 'chrome-ai' || llmSettings.baseUrl?.includes('localhost')
+                    ? 'bg-slate-800 border-indigo-900/50 text-indigo-300 hover:bg-slate-700' 
+                    : 'bg-red-950/20 border-red-900/50 text-red-400'
+                }`}
+                title="Configure AI Model (DeepSeek, Gemini, etc.)"
+              >
+                <Bot size={14} />
+                <span>{llmSettings.provider === 'openai-compatible' ? 'Custom AI' : llmSettings.provider === 'chrome-ai' ? 'Chrome AI' : 'Gemini'}</span>
+              </button>
+
+              <div className="w-px h-6 bg-slate-700 mx-2"></div>
+
               {/* Offset Button */}
               <button
                 onClick={() => setIsOffsetModalOpen(true)}
@@ -677,7 +774,7 @@ const App: React.FC = () => {
                 <span>Shift Time</span>
               </button>
 
-              {/* Open Subtitle Button (Replaces simple file input to support native saving) */}
+              {/*Ql Open Subtitle Button (Replaces simple file input to support native saving) */}
               <button
                 onClick={handleOpenSubtitle}
                 className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 shadow-sm"
