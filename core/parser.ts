@@ -50,7 +50,8 @@ export const parseSubtitles = (content: string): SubtitleLine[] => {
         id: idCounter++,
         startTime,
         endTime,
-        text
+        text,
+        locked: false // Default to unlocked
       });
     }
   });

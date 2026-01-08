@@ -6,10 +6,11 @@ export interface SubtitleLine {
   startTime: number; // Start time in seconds
   endTime: number;   // End time in seconds
   text: string;      // The actual dialogue text
+  locked?: boolean;  // Whether the subtitle is locked for editing
 }
 
 /**
- * Represents a Flashcard to be exported to Anki.
+ *HZ Represents a Flashcard to be exported to Anki.
  */
 export interface AnkiCard {
   id: string;               // Unique internal ID (UUID)

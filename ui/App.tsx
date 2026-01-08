@@ -20,7 +20,9 @@ import {
   FolderOpen,
   X,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 /**
@@ -141,15 +143,30 @@ const App: React.FC = () => {
   };
 
   const handleSubtitleTextChange = (id: number, newText: string) => {
-    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) => s.id === id ? { ...s, text: newText } : s));
+    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) => {
+      // If locked, do not update text
+      if (s.id === id && s.locked) return s;
+      return s.id === id ? { ...s, text: newText } : s;
+    }));
     setHasUnsavedChanges(true);
   };
 
   const handleSubtitleTimeChange = (id: number, start: number, end: number) => {
-    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) =>
-      s.id === id ? { ...s, startTime: start, endTime: end } : s
-    ));
+    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) => {
+      // If locked, do not update times
+      if (s.id === id && s.locked) return s;
+      return s.id === id ? { ...s, startTime: start, endTime: end } : s;
+    }));
     setHasUnsavedChanges(true);
+  };
+
+  const toggleSubtitleLock = (id: number) => {
+    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) =>
+      s.id === id ? { ...s, locked: !s.locked } : s
+    ));
+    // Locking/Unlocking might not be considered a "content" change that needs saving to file immediately,
+    // but if we want to persist lock state (if format allows, or just session state), we can treat it as change.
+    // For standard SRT/VTT, lock state isn't saved, so maybe don't setHasUnsaved changes here unless we implement custom metadata.
   };
 
   /**
@@ -157,11 +174,14 @@ const App: React.FC = () => {
    */
   const applyOffset = () => {
     const offsetSec = tempOffsetMs / 1000;
-    setSubtitleLines((prev: SubtitleLine[]) => prev.map(s => ({
-      ...s,
-      startTime: Math.max(0, s.startTime + offsetSec),
-      endTime: Math.max(0, s.endTime + offsetSec)
-    })));
+    setSubtitleLines((prev: SubtitleLine[]) => prev.map(s => {
+      if (s.locked) return s; // Do not shift locked subtitles
+      return {
+        ...s,
+        startTime: Math.max(0, s.startTime + offsetSec),
+        endTime: Math.max(0, s.endTime + offsetSec)
+      };
+    }));
     setHasUnsavedChanges(true);
     setIsOffsetModalOpen(false);
     setTempOffsetMs(0); // Reset for next use
@@ -506,7 +526,7 @@ const App: React.FC = () => {
               {/* Open Subtitle Button (Replaces simple file input to support native saving) */}
               <button
                 onClick={handleOpenSubtitle}
-                className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold borderQP border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 shadow-sm"
+                className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 shadow-sm"
               >
                 <FolderOpen size={14} />
                 <span>{subtitleLines.length > 0 ? `${subtitleLines.length} lines` : "Open Subtitle"}</span>
@@ -608,9 +628,25 @@ const App: React.FC = () => {
                     isActive
                       ? 'bg-slate-800 border-indigo-500/50 shadow-md transform scale-[1.01]'
                       : 'hover:bg-slate-800/50 border-transparent hover:border-slate-700'
-                  }`}
+                  } ${sub.locked ? 'opacity-80' : ''}`}
                   onClick={() => handleSubtitleClick(sub)}
                 >
+                  {/* Lock/Unlock Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSubtitleLock(sub.id);
+                    }}
+                    className={`p-1.5 rounded transition-all flex-shrink-0 ${
+                      sub.locked
+                        ? 'text-red-400 bg-red-950/20 hover:bg-red-950/40'
+                        : 'text-slate-600 opacity-0 group-hover:opacity-100 hover:text-indigo-400 hover:bg-slate-700'
+                    }`}
+                    title={sub.locked ? "Unlock Subtitle" : "Lock Subtitle"}
+                  >
+                    {sub.locked ? <Lock size={14} /> : <Unlock size={14} />}
+                  </button>
+
                   <span className={`text-xs font-mono w-16 flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>
                     {formatTime(sub.startTime)}
                   </span>
@@ -621,7 +657,12 @@ const App: React.FC = () => {
                       onChange={(e) => handleSubtitleTextChange(sub.id, e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                       rows={1}
-                      className={`w-full bg-transparent resize-none focus:outline-none transition-colors border-b border-transparent focus:border-indigo-500/30 py-1 ${
+                      readOnly={sub.locked}
+                      className={`w-full bg-transparent resize-none focus:outline-none transition-colors border-b border-transparent py-1 ${
+                        sub.locked
+                          ? 'text-slate-500 cursor-not-allowed border-none'
+                          : 'focus:border-indigo-500/30'
+                      } ${
                         isActive ? 'text-white font-medium' : 'text-slate-400 group-hover:text-slate-300'
                       } text-lg leading-relaxed overflow-hidden`}
                       style={{ height: 'auto' }}

@@ -132,9 +132,9 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         start: sub.startTime,
         end: sub.endTime,
         content: sub.text.substring(0, 15) + (sub.text.length > 15 ? '...' : ''),
-        color: 'rgba(99, 102, 241, 0.2)', // Indigo-500 with low opacity
-        drag: true,
-        resize: true,
+        color: sub.locked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.2)', // Red if locked, Indigo if unlocked
+        drag: !sub.locked,
+        resize: !sub.locked,
       });
     });
 
@@ -186,6 +186,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           background-color: rgba(99, 102, 241, 0.3) !important;
           z-index: 10;
         }
+        /* Locked regions specific styling if needed */
+        
         /* Style the label content inside region */
         .wavesurfer-region::before {
            /* Content is inserted by plugin, just styling text color */
