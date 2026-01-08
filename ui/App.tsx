@@ -1,5 +1,5 @@
 import React, {useState, useRef, useMemo} from 'react';
-import {Subtitle, AnkiCard, ProcessingState} from '../core/types';
+import {SubtitleLine, AnkiCard, ProcessingState} from '../core/types';
 import {parseSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
 import {analyzeSubtitle} from '../core/gemini';
@@ -17,7 +17,9 @@ import {
   Clock,
   Save,
   Upload,
-  X
+  X,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
 /**
@@ -31,7 +33,7 @@ const App: React.FC = () => {
   // Video & Subtitle Source State
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [videoName, setVideoName] = useState<string>('');
-  const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
+  const [subtitleLines, setSubtitleLines] = useState<SubtitleLine[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
   // Offset Modal State
@@ -41,9 +43,10 @@ const App: React.FC = () => {
   // Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
+  const [isVideoVisible, setIsVideoVisible] = useState<boolean>(true);
 
   // Deck Management State
-  const [cards, setCards] = useState<AnkiCard[]>([]);
+  const [ankiCards, setAnkiCards] = useState<AnkiCard[]>([]);
 
   // AI Processing State
   const [processing, setProcessing] = useState<ProcessingState>({
@@ -64,6 +67,7 @@ const App: React.FC = () => {
       const url = URL.createObjectURL(file);
       setVideoSrc(url);
       setVideoName(file.name);
+      setIsVideoVisible(true); // Auto-show video on upload
     }
   };
 
@@ -74,7 +78,7 @@ const App: React.FC = () => {
       reader.onload = (e) => {
         const content = e.target?.result as string;
         const parsed = parseSubtitles(content);
-        setSubtitles(parsed);
+        setSubtitleLines(parsed);
         setHasUnsavedChanges(false);
       };
       reader.readAsText(file);
@@ -82,7 +86,7 @@ const App: React.FC = () => {
   };
 
   const handleSubtitleTextChange = (id: number, newText: string) => {
-    setSubtitles((prev: Subtitle[]) => prev.map((s: Subtitle) => s.id === id ? { ...s, text: newText } : s));
+    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) => s.id === id ? { ...s, text: newText } : s));
     setHasUnsavedChanges(true);
   };
 
@@ -91,7 +95,7 @@ const App: React.FC = () => {
    */
   const applyOffset = () => {
     const offsetSec = tempOffsetMs / 1000;
-    setSubtitles((prev: Subtitle[]) => prev.map(s => ({
+    setSubtitleLines((prev: SubtitleLine[]) => prev.map(s => ({
       ...s,
       startTime: Math.max(0, s.startTime + offsetSec),
       endTime: Math.max(0, s.endTime + offsetSec)
@@ -107,7 +111,7 @@ const App: React.FC = () => {
 
   const handleTimeUpdate = (time: number) => {
     setCurrentTime(time);
-    const active = subtitles.find((s: Subtitle) => time >= s.startTime && time <= s.endTime);
+    const active = subtitleLines.find((s: SubtitleLine) => time >= s.startTime && time <= s.endTime);
 
     if (active && active.id !== activeSubtitleId) {
       setActiveSubtitleId(active.id);
@@ -126,20 +130,23 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSubtitleClick = (sub: Subtitle) => {
+  const handleSubtitleClick = (sub: SubtitleLine) => {
+    // Even if hidden, the video player exists in DOM, so we can control it.
     if (videoRef.current) {
       videoRef.current.seekTo(sub.startTime);
       videoRef.current.play();
     }
   };
 
-  const createCard = (sub: Subtitle) => {
+  const createCard = (sub: SubtitleLine) => {
+    // Since video is in DOM, captureFrame works even if the video player is hidden (in most modern browsers).
     if (!videoRef.current) return;
     videoRef.current.pause();
     videoRef.current.seekTo(sub.startTime + (sub.endTime - sub.startTime) / 2);
 
     setTimeout(() => {
       const screenshot = videoRef.current?.captureFrame();
+
       const newCard: AnkiCard = {
         id: crypto.randomUUID(),
         subtitleId: sub.id,
@@ -150,19 +157,19 @@ const App: React.FC = () => {
         audioBlob: null,
         timestampStr: formatTime(sub.startTime)
       };
-      setCards((prev: AnkiCard[]) => [newCard, ...prev]);
+      setAnkiCards((prev: AnkiCard[]) => [newCard, ...prev]);
     }, 200);
   };
 
   const analyzeCard = async (card: AnkiCard) => {
     setProcessing((prev: ProcessingState) => ({...prev, isAnalyzing: true}));
-    const subIndex = subtitles.findIndex((s: Subtitle) => s.id === card.subtitleId);
-    const prevText = subtitles[subIndex - 1]?.text || "";
-    const nextText = subtitles[subIndex + 1]?.text || "";
+    const subIndex = subtitleLines.findIndex((s: SubtitleLine) => s.id === card.subtitleId);
+    const prevText = subtitleLines[subIndex - 1]?.text || "";
+    const nextText = subtitleLines[subIndex + 1]?.text || "";
 
     const result = await analyzeSubtitle(card.text, prevText, nextText);
 
-    setCards((prev: AnkiCard[]) => prev.map(c => {
+    setAnkiCards((prev: AnkiCard[]) => prev.map(c => {
       if (c.id === card.id) {
         return {
           ...c,
@@ -176,11 +183,11 @@ const App: React.FC = () => {
   };
 
   const deleteCard = (id: string) => {
-    setCards((prev: AnkiCard[]) => prev.filter(c => c.id !== id));
+    setAnkiCards((prev: AnkiCard[]) => prev.filter(c => c.id !== id));
   };
 
   const handleExport = async () => {
-    await generateAnkiDeck(cards, videoName);
+    await generateAnkiDeck(ankiCards, videoName);
   };
 
   return (
@@ -254,8 +261,8 @@ const App: React.FC = () => {
         {/* Deck / Cards Scroll Area */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-semibold text-slate-300">Your Deck ({cards.length})</h2>
-            {cards.length > 0 && (
+            <h2 className="font-semibold text-slate-300">Your Deck ({ankiCards.length})</h2>
+            {ankiCards.length > 0 && (
               <button
                 onClick={handleExport}
                 className="flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-full transition"
@@ -265,14 +272,14 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {cards.length === 0 ? (
+          {ankiCards.length === 0 ? (
             <div className="text-center py-10 text-slate-600">
               <p className="mb-2">No cards created yet.</p>
               <p className="text-xs">Load media, then click the (+) button on a line to start.</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {cards.map(card => (
+              {ankiCards.map(card => (
                 <CardItem
                   key={card.id}
                   card={card}
@@ -287,42 +294,58 @@ const App: React.FC = () => {
       </aside>
 
       {/* Main Content: Video & Subtitle Browser */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* Top: Video Player */}
-        <div className="bg-black/20 flex flex-col">
+      <main className="flex-1 flex flex-col min-w-0 relative">
+
+        {/* Toggle Arrow Handle */}
+        <div
+          onClick={() => setIsVideoVisible(!isVideoVisible)}
+          className="w-full h-6 bg-slate-900 border-b border-slate-800 hover:bg-slate-800 flex items-center justify-center cursor-pointer transition-colors z-30 shadow-sm"
+          title={isVideoVisible ? "Collapse Video Area" : "Expand Video Area"}
+        >
+          {isVideoVisible ? (
+            <ChevronUp size={16} className="text-slate-500 group-hover:text-slate-300" />
+          ) : (
+            <ChevronDown size={16} className="text-slate-500 group-hover:text-slate-300" />
+          )}
+        </div>
+
+        {/* Top: Video Player - Hidden from UI when collapsed but remains in DOM */}
+        <div className={`bg-black/20 flex flex-col transition-all ${isVideoVisible ? '' : 'hidden'}`}>
           <div className="p-4 border-b border-slate-800 flex justify-center">
             <div className="w-full max-w-4xl">
               <VideoPlayer ref={videoRef} src={videoSrc} onTimeUpdate={handleTimeUpdate} />
             </div>
           </div>
-
-          {/* Waveform Visualization (Shows only when video is loaded) */}
-          {videoSrc && (
-            <WaveformDisplay
-              audioSrc={videoSrc}
-              currentTime={currentTime}
-              onSeek={handleSeek}
-            />
-          )}
         </div>
+
+        {/* Waveform Visualization (Always visible if video loaded) */}
+        {videoSrc && (
+          <WaveformDisplay
+            audioSrc={videoSrc}
+            currentTime={currentTime}
+            onSeek={handleSeek}
+          />
+        )}
 
         {/* Bottom: Subtitle List */}
         <div className="flex-1 overflow-hidden flex flex-col relative bg-slate-900">
 
           {/* Subtitle Browser Toolbar */}
           <div className="px-6 py-3 border-b border-slate-800 bg-slate-900/80 flex justify-between items-center z-20">
-            <div className="flex items-center gap-2 text-slate-400">
-              <FileText size={16} />
-              <span className="text-sm font-semibold uppercase tracking-widest">Subtitle Editor</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-slate-400">
+                <FileText size={16} />
+                <span className="text-sm font-semibold uppercase tracking-widest">Subtitle Editor</span>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
               {/* Offset Button */}
               <button
                 onClick={() => setIsOffsetModalOpen(true)}
-                disabled={subtitles.length === 0}
+                disabled={subtitleLines.length === 0}
                 className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md transition-all border ${
-                  subtitles.length > 0
+                  subtitleLines.length > 0
                     ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
                     : 'bg-slate-800/50 border-slate-800 text-slate-600 cursor-not-allowed'
                 }`}
@@ -335,7 +358,7 @@ const App: React.FC = () => {
               {/* Subtitle Upload Button */}
               <label className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-sm">
                 <Upload size={14} />
-                <span>{subtitles.length > 0 ? `${subtitles.length} lines` : "Select Subtitle"}</span>
+                <span>{subtitleLines.length > 0 ? `${subtitleLines.length} lines` : "Select Subtitle"}</span>
                 <input type="file" accept=".srt,.vtt" onChange={handleSubtitleUpload} className="hidden" />
               </label>
 
@@ -357,14 +380,14 @@ const App: React.FC = () => {
           <div className="absolute top-12 left-0 w-full h-8 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
 
           <div ref={subtitleListRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
-            {subtitles.length === 0 && (
+            {subtitleLines.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
                 <AlertCircle size={32}/>
                 <p>Please load a subtitle file to view dialogue.</p>
               </div>
             )}
 
-            {subtitles.map(sub => {
+            {subtitleLines.map(sub => {
               const isActive = sub.id === activeSubtitleId;
               return (
                 <div

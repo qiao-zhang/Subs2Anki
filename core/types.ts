@@ -1,7 +1,7 @@
 /**
  * Represents a single subtitle line parsed from a file.
  */
-export interface Subtitle {
+export interface SubtitleLine {
   id: number;
   startTime: number; // Start time in seconds
   endTime: number;   // End time in seconds

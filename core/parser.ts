@@ -1,4 +1,4 @@
-import { Subtitle } from './types';
+import { SubtitleLine } from './types';
 import { parseVTTTime } from './time';
 
 /**
@@ -10,14 +10,14 @@ import { parseVTTTime } from './time';
  * @param content - The raw text content of the subtitle file
  * @returns Array of Subtitle objects
  */
-export const parseSubtitles = (content: string): Subtitle[] => {
+export const parseSubtitles = (content: string): SubtitleLine[] => {
   // Normalize line endings to LF to handle Windows/Linux differences
   const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   // Split by double newlines, which standardly separate subtitle blocks
   const blocks = normalized.split('\n\n');
 
-  const subtitles: Subtitle[] = [];
+  const subtitles: SubtitleLine[] = [];
   let idCounter = 1;
 
   blocks.forEach(block => {
