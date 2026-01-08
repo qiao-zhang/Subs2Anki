@@ -155,7 +155,7 @@ const App: React.FC = () => {
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [videoName, setVideoName] = useState<string>('');
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
-
+  
   const [subtitleLines, setSubtitleLines] = useState<SubtitleLine[]>([]);
   const [subtitleFileName, setSubtitleFileName] = useState<string>('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
@@ -213,9 +213,9 @@ const App: React.FC = () => {
   // Load Audio Buffer when video source changes
   useEffect(() => {
     if (videoSrc) {
-      loadAudioBuffer(videoSrc)
-        .then(setAudioBuffer)
-        .catch(err => console.error("Failed to load audio track", err));
+       loadAudioBuffer(videoSrc)
+         .then(setAudioBuffer)
+         .catch(err => console.error("Failed to load audio track", err));
     }
   }, [videoSrc]);
 
@@ -295,7 +295,7 @@ const App: React.FC = () => {
   };
 
   const toggleSubtitleLock = (id: number) => {
-    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) =>
+    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) => 
       s.id === id ? { ...s, locked: !s.locked } : s
     ));
   };
@@ -438,7 +438,7 @@ const App: React.FC = () => {
     // Slice the audio buffer for the duration of the subtitle
     let audioBlob: Blob | null = null;
     if (audioBuffer) {
-      audioBlob = sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime);
+        audioBlob = sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime);
     }
 
     // 2. Frame Capture
@@ -446,7 +446,7 @@ const App: React.FC = () => {
     // This works even if the video is hidden (assuming the video element is mounted in DOM).
     // Note: We pause any current playback logic to perform the capture.
     setPauseAtTime(null); // Clear auto-pause so it doesn't interfere
-
+    
     // Capture the frame
     const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
 
@@ -460,7 +460,7 @@ const App: React.FC = () => {
       audioBlob: audioBlob,
       timestampStr: formatTime(sub.startTime)
     };
-
+    
     setAnkiCards((prev: AnkiCard[]) => [newCard, ...prev]);
   };
 
@@ -495,9 +495,9 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-slate-950 text-slate-200">
-
+      
       {/* Template Editor Modal */}
-      <TemplateEditorModal
+      <TemplateEditorModal 
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         config={ankiConfig}
@@ -785,8 +785,8 @@ const App: React.FC = () => {
                   } ${sub.locked ? 'opacity-80' : ''}`}
                   onClick={() => handleSubtitleClick(sub)}
                 >
-                  {/* Lock/Unlock Button */}
-                  <button
+                   {/* Lock/Unlock Button */}
+                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleSubtitleLock(sub.id);
@@ -813,8 +813,8 @@ const App: React.FC = () => {
                       rows={1}
                       readOnly={sub.locked}
                       className={`w-full bg-transparent resize-none focus:outline-none transition-colors border-b border-transparent py-1 ${
-                        sub.locked
-                          ? 'text-slate-500 cursor-not-allowed border-none'
+                        sub.locked 
+                          ? 'text-slate-500 cursor-not-allowed border-none' 
                           : 'focus:border-indigo-500/30'
                       } ${
                         isActive ? 'text-white font-medium' : 'text-slate-400 group-hover:text-slate-300'

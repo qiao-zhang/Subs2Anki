@@ -5,18 +5,18 @@ import { createAnkiDatabase } from './anki-db';
 
 /**
  * Generates an Anki-compatible .apkg file.
- *
+ * 
  * The .apkg is a ZIP file containing:
  * 1. 'collection.anki2' - The SQLite database.
  * 2. 'media' - A JSON file mapping numeric indices to filenames.
  * 3. Actual media files referenced in the database.
- *
+ * 
  * @param cards - The list of cards to export
  * @param deckName - The name to be used for the filename and deck inside Anki
  * @param noteType - The definition of the Note Type (fields, templates)
  */
 export const generateAnkiDeck = async (
-  cards: AnkiCard[],
+  cards: AnkiCard[], 
   deckName: string,
   noteType: AnkiNoteType
 ) => {
@@ -28,7 +28,7 @@ export const generateAnkiDeck = async (
   const zip = new JSZip();
   const mediaMap: Record<string, string> = {};
   let mediaIndex = 0;
-
+  
   // Capture a single timestamp for this export session to ensure consistency
   // between the SQLite DB (which uses this for filenames) and the Zip media map.
   const creationTime = Date.now();
@@ -49,12 +49,12 @@ export const generateAnkiDeck = async (
     if (card.screenshotDataUrl) {
       const extension = "jpg";
       const filename = `sub2anki_${index}_${creationTime}.${extension}`;
-
+      
       const zipName = mediaIndex.toString();
       const base64Data = card.screenshotDataUrl.split(',')[1];
-
+      
       zip.file(zipName, base64Data, { base64: true });
-
+      
       mediaMap[zipName] = filename;
       mediaIndex++;
     }

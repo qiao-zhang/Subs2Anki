@@ -1,5 +1,5 @@
-import initSqlJs, { Database } from 'sql.js';
-import { AnkiCard, AnkiNoteType } from './types';
+import initSqlJs, {Database} from 'sql.js';
+import {AnkiCard, AnkiNoteType} from './types';
 
 // Constants for Anki Database
 const ANKI_SEP = '\x1f'; // Unit separator for fields
@@ -16,78 +16,84 @@ export const createAnkiDatabase = async (
   const SQL = await initSqlJs({
     // In a real build, you might need to point to the wasm file.
     // esm.sh usually handles this, or we might need a CDN URL.
-    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/${file}`
   });
 
   const db = new SQL.Database();
 
   // 1. Create Schema
   db.run(`
-    CREATE TABLE col (
-                       id integer primary key,
-                       crt integer not null,
-                       mod integer not null,
-                       scm integer not null,
-                       ver integer not null,
-                       dty integer not null,
-                       usn integer not null,
-                       ls integer not null,
-                       conf text not null,
-                       models text not null,
-                       decks text not null,
-                       dconf text not null,
-                       tags text not null
+    CREATE TABLE col
+    (
+      id     integer primary key,
+      crt    integer not null,
+      mod    integer not null,
+      scm    integer not null,
+      ver    integer not null,
+      dty    integer not null,
+      usn    integer not null,
+      ls     integer not null,
+      conf   text    not null,
+      models text    not null,
+      decks  text    not null,
+      dconf  text    not null,
+      tags   text    not null
     );
-    CREATE TABLE notes (
-                         id integer primary key,
-                         guid text not null,
-                         mid integer not null,
-                         mod integer not null,
-                         usn integer not null,
-                         tags text not null,
-                         flds text not null,
-                         sfld integer not null,
-                         csum integer not null,
-                         flags integer not null,
-                         data text not null
+    CREATE TABLE notes
+    (
+      id    integer primary key,
+      guid  text    not null,
+      mid   integer not null,
+      mod   integer not null,
+      usn   integer not null,
+      tags  text    not null,
+      flds  text    not null,
+      sfld  integer not null,
+      csum  integer not null,
+      flags integer not null,
+      data  text    not null
     );
-    CREATE TABLE cards (
-                         id integer primary key,
-                         nid integer not null,
-                         did integer not null,
-                         ord integer not null,
-                         mod integer not null,
-                         usn integer not null,
-                         type integer not null,
-                         queue integer not null,
-                         due integer not null,
-                         ivl integer not null,
-                         factor integer not null,
-                         reps integer not null,
-                         lapses integer not null,
-                         left integer not null,
-                         odue integer not null,
-                         odid integer not null,
-                         flags integer not null,
-                         data text not null
+    CREATE TABLE cards
+    (
+      id     integer primary key,
+      nid    integer not null,
+      did    integer not null,
+      ord    integer not null,
+      mod    integer not null,
+      usn    integer not null,
+      type   integer not null,
+      queue  integer not null,
+      due    integer not null,
+      ivl    integer not null,
+      factor integer not null,
+      reps   integer not null,
+      lapses integer not null,
+      left   integer not null,
+      odue   integer not null,
+      odid   integer not null,
+      flags  integer not null,
+      data   text    not null
     );
-    CREATE TABLE revlog (
-                          id integer primary key,
-                          cid integer not null,
-                          usn integer not null,
-                          ease integer not null,
-                          ivl integer not null,
-                          lastIvl integer not null,
-                          factor integer not null,
-                          time integer not null,
-                          type integer not null
+    CREATE TABLE revlog
+    (
+      id      integer primary key,
+      cid     integer not null,
+      usn     integer not null,
+      ease    integer not null,
+      ivl     integer not null,
+      lastIvl integer not null,
+      factor  integer not null,
+      time    integer not null,
+      type    integer not null
     );
-    CREATE TABLE graves (
-                          usn integer not null,
-                          oid integer not null,
-                          type integer not null
+    CREATE TABLE graves
+    (
+      usn  integer not null,
+      oid  integer not null,
+      type integer not null
     );
-    ANALYZE sqlite_master;
+    ANALYZE
+    sqlite_master;
   `);
 
   // 2. Create Deck Configuration (dconf) and Decks
@@ -143,9 +149,9 @@ export const createAnkiDatabase = async (
       autoplay: true,
       timer: 0,
       replayq: true,
-      new: { bury: false, delays: [1, 10], initialFactor: 2500, ints: [1, 4, 7], order: 1, perDay: 20 },
-      rev: { bury: false, ease4: 1.3, fuzz: 0.05, ivlFct: 1, maxIvl: 36500, minSpace: 1, perDay: 200 },
-      lapse: { delays: [10], leechAction: 0, leechFails: 8, minInt: 1, mult: 0 }
+      new: {bury: false, delays: [1, 10], initialFactor: 2500, ints: [1, 4, 7], order: 1, perDay: 20},
+      rev: {bury: false, ease4: 1.3, fuzz: 0.05, ivlFct: 1, maxIvl: 36500, minSpace: 1, perDay: 200},
+      lapse: {delays: [10], leechAction: 0, leechFails: 8, minInt: 1, mult: 0}
     }
   };
 
@@ -191,7 +197,9 @@ export const createAnkiDatabase = async (
   };
 
   // 4. Insert Collection
-  const colStmt = db.prepare(`INSERT INTO col VALUES (:id, :crt, :mod, :scm, :ver, :dty, :usn, :ls, :conf, :models, :decks, :dconf, :tags)`);
+  const colStmt = db.prepare(`INSERT INTO col
+                              VALUES (:id, :crt, :mod, :scm, :ver, :dty, :usn, :ls, :conf, :models, :decks, :dconf,
+                                      :tags)`);
   colStmt.run({
     ':id': 1,
     ':crt': Math.floor(creationTime / 1000),
@@ -210,8 +218,11 @@ export const createAnkiDatabase = async (
   colStmt.free();
 
   // 5. Insert Notes and Cards
-  const noteStmt = db.prepare(`INSERT INTO notes VALUES (:id, :guid, :mid, :mod, :usn, :tags, :flds, :sfld, :csum, :flags, :data)`);
-  const cardStmt = db.prepare(`INSERT INTO cards VALUES (:id, :nid, :did, :ord, :mod, :usn, :type, :queue, :due, :ivl, :factor, :reps, :lapses, :left, :odue, :odid, :flags, :data)`);
+  const noteStmt = db.prepare(`INSERT INTO notes
+                               VALUES (:id, :guid, :mid, :mod, :usn, :tags, :flds, :sfld, :csum, :flags, :data)`);
+  const cardStmt = db.prepare(`INSERT INTO cards
+                               VALUES (:id, :nid, :did, :ord, :mod, :usn, :type, :queue, :due, :ivl, :factor, :reps,
+                                       :lapses, :left, :odue, :odid, :flags, :data)`);
 
   // Use the passed creationTime to ensure filenames match what is in the zip media map
   cards.forEach((card, index) => {
@@ -228,20 +239,28 @@ export const createAnkiDatabase = async (
       // Use explicit mapping if available
       if (f.source) {
         switch (f.source) {
-          case 'Text': return card.text;
-          case 'Translation': return card.translation;
-          case 'Notes': return card.notes;
-          case 'Image': return imageTag;
-          case 'Time': return card.timestampStr;
-          case 'Audio': return audioTag;
-          case 'Sequence': return `${safeAudioFilename} ${card.timestampStr}`;
-          default: return '';
+          case 'Text':
+            return card.text;
+          case 'Translation':
+            return card.translation;
+          case 'Notes':
+            return card.notes;
+          case 'Image':
+            return imageTag;
+          case 'Time':
+            return card.timestampStr;
+          case 'Audio':
+            return audioTag;
+          case 'Sequence':
+            return `${safeAudioFilename}_${card.timestampStr}`.trim();
+          default:
+            return '';
         }
       }
 
       // Legacy Fallback (Name Heuristics) if no source is mapped
       const name = f.name.toLowerCase();
-      if (name.includes('sequence')) return `${safeAudioFilename} ${card.timestampStr}`;
+      if (name.includes('sequence')) return `${safeAudioFilename} ${card.timestampStr}`.trim();
       if (name.includes('text') || name.includes('sentence') || name.includes('front')) return card.text;
       if (name.includes('translation')) return card.translation;
       if (name.includes('notes')) return card.notes;

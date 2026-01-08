@@ -61,19 +61,19 @@ export const parseSubtitles = (content: string): SubtitleLine[] => {
 
 /**
  * Serializes subtitle objects back into a string format (SRT or VTT).
- *
+ * 
  * @param subtitles - Array of subtitle lines
  * @param format - 'srt' or 'vtt'
  * @returns Formatted string content
  */
 export const serializeSubtitles = (subtitles: SubtitleLine[], format: 'srt' | 'vtt'): string => {
   let output = '';
-
+  
   if (format === 'vtt') {
     output += 'WEBVTT\n\n';
     subtitles.forEach(sub => {
-      output += `${formatTimestamp(sub.startTime, false)} --> ${formatTimestamp(sub.endTime, false)}\n`;
-      output += `${sub.text}\n\n`;
+       output += `${formatTimestamp(sub.startTime, false)} --> ${formatTimestamp(sub.endTime, false)}\n`;
+       output += `${sub.text}\n\n`;
     });
   } else {
     // SRT
@@ -83,6 +83,6 @@ export const serializeSubtitles = (subtitles: SubtitleLine[], format: 'srt' | 'v
       output += `${sub.text}\n\n`;
     });
   }
-
+  
   return output;
 };
