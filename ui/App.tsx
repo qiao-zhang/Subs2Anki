@@ -1,9 +1,10 @@
 import React, {useState, useRef, useMemo} from 'react';
 import {SubtitleLine, AnkiCard, ProcessingState} from '../core/types';
-import {parseSubtitles} from '../core/parser';
+import {parseSubtitles, serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
 import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
+import saveAs from 'file-saver';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
 import CardItem from './components/CardItem';
@@ -16,7 +17,7 @@ import {
   Video as VideoIcon,
   Clock,
   Save,
-  Upload,
+  FolderOpen,
   X,
   ChevronUp,
   ChevronDown
@@ -34,11 +35,18 @@ const App: React.FC = () => {
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [videoName, setVideoName] = useState<string>('');
   const [subtitleLines, setSubtitleLines] = useState<SubtitleLine[]>([]);
+  const [subtitleFileName, setSubtitleFileName] = useState<string>('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  // File System Handle for saving back to original file
+  const [fileHandle, setFileHandle] = useState<any>(null);
 
   // Offset Modal State
   const [isOffsetModalOpen, setIsOffsetModalOpen] = useState<boolean>(false);
   const [tempOffsetMs, setTempOffsetMs] = useState<number>(0);
+
+  // Save Menu State
+  const [isSaveMenuOpen, setIsSaveMenuOpen] = useState<boolean>(false);
 
   // Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -58,6 +66,7 @@ const App: React.FC = () => {
   // --- Refs ---
   const videoRef = useRef<VideoPlayerHandle>(null);
   const subtitleListRef = useRef<HTMLDivElement>(null);
+  const subtitleInputRef = useRef<HTMLInputElement>(null);
 
   // --- Handlers ---
 
@@ -71,9 +80,50 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSubtitleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOpenSubtitle = async () => {
+    try {
+      // @ts-ignore - API might not be fully typed in all environments
+      if (window.showOpenFilePicker) {
+        // @ts-ignore
+        const [handle] = await window.showOpenFilePicker({
+          types: [{
+            description: 'Subtitle Files',
+            accept: {
+              'text/plain': ['.srt', '.vtt'],
+            },
+          }],
+          multiple: false,
+        });
+
+        const file = await handle.getFile();
+        const text = await file.text();
+
+        setSubtitleFileName(file.name);
+        setSubtitleLines(parseSubtitles(text));
+        setFileHandle(handle);
+        setHasUnsavedChanges(false);
+        return;
+      }
+    } catch (err) {
+      // Ignore AbortError (user cancelled)
+      if ((err as Error).name !== 'AbortError') {
+        console.error("File picker failed", err);
+      } else {
+        return;
+      }
+    }
+
+    // Fallback to hidden input if API not supported or failed
+    subtitleInputRef.current?.click();
+  };
+
+  const handleSubtitleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setSubtitleFileName(file.name);
+      // We don't have a handle for files from input, so clear it
+      setFileHandle(null);
+
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
@@ -83,6 +133,8 @@ const App: React.FC = () => {
       };
       reader.readAsText(file);
     }
+    // Reset value to allow re-selecting same file
+    event.target.value = '';
   };
 
   const handleSubtitleTextChange = (id: number, newText: string) => {
@@ -112,8 +164,74 @@ const App: React.FC = () => {
     setTempOffsetMs(0); // Reset for next use
   };
 
-  const handleSaveSubtitles = () => {
-    setHasUnsavedChanges(false);
+  /**
+   * Saves changes.
+   * If we have a file handle (from File System Access API), write directly to disk.
+   * Otherwise, just clear the dirty flag (save to memory).
+   */
+  const handleSaveSubtitles = async () => {
+    if (!subtitleFileName) return;
+
+    if (fileHandle) {
+      try {
+        const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
+        const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
+
+        const writable = await fileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        setHasUnsavedChanges(false);
+      } catch (err) {
+        console.error('Failed to save file:', err);
+        alert('Failed to save to original file.');
+      }
+    } else {
+      // "Save" to memory (just clear dirty flag)
+      setHasUnsavedChanges(false);
+    }
+  };
+
+  /**
+   * Explicitly download the current subtitle content as a file.
+   * Attempts to use the native "Save As" file picker if available.
+   */
+  const handleDownloadSubtitles = async () => {
+    if (!subtitleFileName) return;
+    const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
+    const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
+
+    try {
+      // @ts-ignore - API might not be fully typed in all environments
+      if (window.showSaveFilePicker) {
+        // @ts-ignore
+        const handle = await window.showSaveFilePicker({
+          suggestedName: subtitleFileName,
+          types: [{
+            description: 'Subtitle File',
+            accept: {
+              'text/plain': [isVtt ? '.vtt' : '.srt']
+            }
+          }],
+        });
+
+        // @ts-ignore
+        const writable = await handle.createWritable();
+        // @ts-ignore
+        await writable.write(content);
+        // @ts-ignore
+        await writable.close();
+      } else {
+        // Fallback for browsers not supporting File System Access API
+        const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
+        saveAs(blob, subtitleFileName);
+      }
+      setHasUnsavedChanges(false);
+    } catch (err) {
+      // Ignore AbortError (user cancelled)
+      if ((err as Error).name !== 'AbortError') {
+        console.error("Save failed", err);
+      }
+    }
   };
 
   const handleTimeUpdate = (time: number) => {
@@ -364,25 +482,88 @@ const App: React.FC = () => {
                 <span>Shift Time</span>
               </button>
 
-              {/* Subtitle Upload Button */}
-              <label className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shadow-sm">
-                <Upload size={14} />
-                <span>{subtitleLines.length > 0 ? `${subtitleLines.length} lines` : "Select Subtitle"}</span>
-                <input type="file" accept=".srt,.vtt" onChange={handleSubtitleUpload} className="hidden" />
-              </label>
-
-              {/* Save Button */}
+              {/* Open Subtitle Button (Replaces simple file input to support native saving) */}
               <button
-                onClick={handleSaveSubtitles}
-                disabled={!hasUnsavedChanges}
-                className={`flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border ${
-                  hasUnsavedChanges
-                    ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20'
-                    : 'bg-slate-800 border-slate-700 text-slate-600 cursor-not-allowed'
-                }`}
+                onClick={handleOpenSubtitle}
+                className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold borderQP border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 shadow-sm"
               >
-                <Save size={14} /> {hasUnsavedChanges ? 'Save Changes' : 'All Saved'}
+                <FolderOpen size={14} />
+                <span>{subtitleLines.length > 0 ? `${subtitleLines.length} lines` : "Open Subtitle"}</span>
               </button>
+
+              {/* Hidden fallback input */}
+              <input
+                ref={subtitleInputRef}
+                type="file"
+                accept=".srt,.vtt"
+                onChange={handleSubtitleInputChange}
+                className="hidden"
+              />
+
+              {/* SAVE / DOWNLOAD LOGIC */}
+              {fileHandle ? (
+                // --- SCENARIO A: File Handle Available (Native Save Support) ---
+                <div className="relative flex items-center">
+                  {/* Main Save Button */}
+                  <button
+                    onClick={handleSaveSubtitles}
+                    disabled={!hasUnsavedChanges}
+                    className={`flex items-center gap-2 text-xs px-3 py-2 rounded-l-md transition-all duration-300 font-bold border-y border-l ${
+                      hasUnsavedChanges
+                        ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20'
+                        : 'bg-slate-800 border-slate-700 text-slate-400'
+                    }`}
+                    title={hasUnsavedChanges ? "Save changes to original file" : "No unsaved changes"}
+                  >
+                    <Save size={14} /> {hasUnsavedChanges ? 'Save' : 'Saved'}
+                  </button>
+
+                  {/* Dropdown Trigger */}
+                  <button
+                    onClick={() => setIsSaveMenuOpen(!isSaveMenuOpen)}
+                    className={`flex items-center px-1 py-2 rounded-r-md transition-all duration-300 border-y border-r border-l-0 ${
+                      hasUnsavedChanges
+                        ? 'bg-indigo-700 border-indigo-500 text-white hover:bg-indigo-600'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isSaveMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setIsSaveMenuOpen(false)}></div>
+                      <div className="absolute top-full right-0 mt-1 w-36 bg-slate-800 border border-slate-700 rounded-md shadow-xl z-20 overflow-hidden">
+                        <button
+                          onClick={() => {
+                            handleDownloadSubtitles();
+                            setIsSaveMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-2 transition-colors"
+                        >
+                          <Download size={14} /> Save As...
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                // --- SCENARIO B: No File Handle (Fallback to Download) ---
+                subtitleLines.length > 0 && (
+                  <button
+                    onClick={handleDownloadSubtitles}
+                    className={`flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border ${
+                      hasUnsavedChanges
+                        ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20'
+                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                    }`}
+                    title="Download Subtitle File"
+                  >
+                    <Download size={14} /> Download
+                  </button>
+                )
+              )}
             </div>
           </div>
 

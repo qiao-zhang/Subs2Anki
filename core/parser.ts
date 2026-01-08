@@ -1,5 +1,5 @@
 import { SubtitleLine } from './types';
-import { parseVTTTime } from './time';
+import { parseVTTTime, formatTimestamp } from './time';
 
 /**
  * Parses raw subtitle file content (SRT or VTT) into structured objects.
@@ -56,4 +56,32 @@ export const parseSubtitles = (content: string): SubtitleLine[] => {
   });
 
   return subtitles;
+};
+
+/**
+ * Serializes subtitle objects back into a string format (SRT or VTT).
+ *
+ * @param subtitles - Array of subtitle lines
+ * @param format - 'srt' or 'vtt'
+ * @returns Formatted string content
+ */
+export const serializeSubtitles = (subtitles: SubtitleLine[], format: 'srt' | 'vtt'): string => {
+  let output = '';
+
+  if (format === 'vtt') {
+    output += 'WEBVTT\n\n';
+    subtitles.forEach(sub => {
+      output += `${formatTimestamp(sub.startTime, false)} --> ${formatTimestamp(sub.endTime, false)}\n`;
+      output += `${sub.text}\n\n`;
+    });
+  } else {
+    // SRT
+    subtitles.forEach((sub, index) => {
+      output += `${index + 1}\n`;
+      output += `${formatTimestamp(sub.startTime, true)} --> ${formatTimestamp(sub.endTime, true)}\n`;
+      output += `${sub.text}\n\n`;
+    });
+  }
+
+  return output;
 };

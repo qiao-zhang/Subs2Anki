@@ -1,7 +1,7 @@
 /**
  * Formats a duration in seconds into a standard HH:MM:SS or MM:SS string.
  * Used for displaying timestamps in the UI and on cards.
- * 
+ *
  * @param seconds - Time in seconds
  * @returns Formatted time string (e.g. "01:30" or "1:05:20")
  */
@@ -14,9 +14,32 @@ export const formatTime = (seconds: number): string => {
 };
 
 /**
+ * Formats seconds into precise subtitle timestamp format.
+ * SRT: HH:MM:SS,mmm
+ * VTT: HH:MM:SS.mmm
+ *
+ * @param seconds - Time in seconds
+ * @param useComma - True for SRT (comma), False for VTT (dot)
+ */
+export const formatTimestamp = (seconds: number, useComma: boolean = false): string => {
+  const totalMs = Math.round(seconds * 1000);
+  const ms = totalMs % 1000;
+  const totalSeconds = Math.floor(totalMs / 1000);
+  const s = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const m = totalMinutes % 60;
+  const h = Math.floor(totalMinutes / 60);
+
+  const pad = (num: number, size: number) => num.toString().padStart(size, '0');
+  const separator = useComma ? ',' : '.';
+
+  return `${pad(h, 2)}:${pad(m, 2)}:${pad(s, 2)}${separator}${pad(ms, 3)}`;
+};
+
+/**
  * Parses a VTT/SRT timestamp string into seconds.
  * Supports formats like "00:00:10.500" or "01:30.000".
- * 
+ *
  * @param timeString - The timestamp string from the subtitle file
  * @returns Total seconds as a float
  */
