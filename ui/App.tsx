@@ -41,11 +41,14 @@ const App: React.FC = () => {
   // File System Handle for saving back to original file
   const [fileHandle, setFileHandle] = useState<any>(null);
 
+  //Qs for auto-pausing playback
+  const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
+
   // Offset Modal State
   const [isOffsetModalOpen, setIsOffsetModalOpen] = useState<boolean>(false);
   const [tempOffsetMs, setTempOffsetMs] = useState<number>(0);
 
-  // Save Menu State
+  //Ql Save Menu State
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState<boolean>(false);
 
   // Playback State
@@ -236,6 +239,15 @@ const App: React.FC = () => {
 
   const handleTimeUpdate = (time: number) => {
     setCurrentTime(time);
+
+    // Check if we need to auto-pause
+    if (pauseAtTime !== null && time >= pauseAtTime) {
+      if (videoRef.current) {
+        videoRef.current.pause();
+      }
+      setPauseAtTime(null); // Reset after pausing
+    }
+
     const active = subtitleLines.find((s: SubtitleLine) => time >= s.startTime && time <= s.endTime);
 
     if (active && active.id !== activeSubtitleId) {
@@ -250,6 +262,8 @@ const App: React.FC = () => {
   };
 
   const handleSeek = (time: number) => {
+    // When manually seeking via waveform, clear any auto-pause logic
+    setPauseAtTime(null);
     if (videoRef.current) {
       videoRef.current.seekTo(time);
     }
@@ -258,6 +272,9 @@ const App: React.FC = () => {
   const handleSubtitleClick = (sub: SubtitleLine) => {
     // Even if hidden, the video player exists in DOM, so we can control it.
     if (videoRef.current) {
+      // Set the point where the video should stop automatically
+      setPauseAtTime(sub.endTime);
+
       videoRef.current.seekTo(sub.startTime);
       videoRef.current.play();
     }
@@ -267,6 +284,10 @@ const App: React.FC = () => {
     // Since video is in DOM, captureFrame works even if the video player is hidden (in most modern browsers).
     if (!videoRef.current) return;
     videoRef.current.pause();
+
+    // Clear any pending pause action since we just manually paused
+    setPauseAtTime(null);
+
     videoRef.current.seekTo(sub.startTime + (sub.endTime - sub.startTime) / 2);
 
     setTimeout(() => {
