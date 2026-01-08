@@ -259,6 +259,7 @@ export const createAnkiDatabase = async (
       }
 
       // Legacy Fallback (Name Heuristics) if no source is mapped
+      /*
       const name = f.name.toLowerCase();
       if (name.includes('sequence')) return `${safeAudioFilename} ${card.timestampStr}`.trim();
       if (name.includes('text') || name.includes('sentence') || name.includes('front')) return card.text;
@@ -268,7 +269,7 @@ export const createAnkiDatabase = async (
       if (name.includes('image') || name.includes('screenshot') || name.includes('picture') || name.includes('media')) return imageTag;
       if (name.includes('audio') || name.includes('sound')) return audioTag;
       if (name.includes('time')) return card.timestampStr;
-
+      */
       return "";
     });
 
