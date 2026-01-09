@@ -1,3 +1,4 @@
+
 import React, {useState, useRef, useEffect, useMemo} from 'react';
 import {SubtitleLine, AnkiCard, ProcessingState, AnkiNoteType} from '../core/types';
 import {parseSubtitles, serializeSubtitles} from '../core/parser';
@@ -11,6 +12,7 @@ import WaveformDisplay from './components/WaveformDisplay';
 import CardItem from './components/CardItem';
 import TemplateEditorModal from './components/TemplateEditorModal';
 import NewSubtitleModal from './components/NewSubtitleModal';
+import LLMSettingsModal from './components/LLMSettingsModal';
 import {
   FileText,
   Download,
@@ -18,53 +20,18 @@ import {
   Layers,
   AlertCircle,
   Video as VideoIcon,
-  Clock,
   Save,
   FolderOpen,
-  X,
-  ChevronUp,
-  ChevronDown,
   Lock,
   Unlock,
   Settings,
-  Bot
+  Bot,
 } from 'lucide-react';
 
-// Default Anki Note Type Configuration
 const DEFAULT_NOTE_TYPE: AnkiNoteType = {
-  id: 123456789, // This will be dynamic in real usage or random
+  id: 123456789,
   name: "Sub2Anki Advanced",
-  css: `.card {
- font-family:Arial ;
-font-size:36px;
- text-align: center;
- color:black;
- background-color:white;
-}
-
-.before{
-	font-size: 18px;
-	text-align: left;
-	color: grey;
-}
-
-.after {
-	font-size: 18px;
-	text-align: left;
-	color: grey;
-}
-
-.tags {
-  font-size:15px;
-  text-align: left;
-  color:grey;
-}
-
-.notes {
-  font-size:21px;
-  text-align: left;
-  color:grey;
-}`,
+  css: `.card { font-family:Arial; font-size:36px; text-align: center; color:black; background-color:white; } .before{ font-size: 18px; text-align: left; color: grey; } .after { font-size: 18px; text-align: left; color: grey; } .tags { font-size:15px; text-align: left; color:grey; } .notes { font-size:21px; text-align: left; color:grey; }`,
   fields: [
     { name: "Sequence", source: 'Sequence' },
     { name: "Before" },
@@ -80,80 +47,13 @@ font-size:36px;
   ],
   templates: [{
     Name: "Card 1",
-    Front: `{{#Tags}}
-
-<div class="tags"><span>🏷️</span> {{Tags}}</div>
-
-{{/Tags}}
-
-
-<span class='media'>{{Media}}</span>
-
-</br>
-
-{{#Before}}
-
-<div class="before"><span>⬅️</span> {{furigana:Before}}<span id="before-audio">{{BeforeAudio}}</span></div>
-{{/Before}}
-
-<div class='expression'>{{furigana:CurrentFront}}</div>
-
-
-{{#After}}
-<div class="after"><span>➡️</span> {{furigana:After}}</div>
-{{/After}}
-
-    <script>
-      var title = document.getElementById("before-audio");
-      if (title) {
-        var button = title.querySelector(".replay-button.soundLink");
-        if (button) button.click();
-      }
-    </script>`,
-    Back: `{{#Tags}}
-
-<div class="tags"><span>🏷️</span> {{Tags}}</div>
-
-{{/Tags}}
-<span class='media'>{{Media}}</span>
-
-</br>
-
-{{#Before}}
-
-<div class="before"><span>⬅️</span> {{furigana:Before}}<span id="before-audio">{{BeforeAudio}}</span></div>
-{{/Before}}
-
-<div class='reading'>{{furigana:CurrentBack}}<span id="current-audio">{{Audio}}</span></div>
-
-<div class='meaning'>{{Meaning}}</div>
-{{#After}}
-
-<div class="after"><span>➡️</span> {{furigana:After}}<span id="after-audio">{{AfterAudio}}</span></div>
-{{/After}}
-<br>
-<div class='notes'>{{Notes}}</div>
-
-
-    <script>
-      var title = document.getElementById("current-audio");
-      if (title) {
-        var button = title.querySelector(".replay-button.soundLink");
-        if (button) button.click();
-      }
-    </script>`
+    Front: `{{#Tags}}<div class="tags"><span>🏷️</span> {{Tags}}</div>{{/Tags}}<span class='media'>{{Media}}</span></br>{{#Before}}<div class="before"><span>⬅️</span> {{furigana:Before}}<span id="before-audio">{{BeforeAudio}}</span></div>{{/Before}}<div class='expression'>{{furigana:CurrentFront}}</div>{{#After}}<div class="after"><span>➡️</span> {{furigana:After}}</div>{{/After}}<script>var title = document.getElementById("before-audio"); if (title) { var button = title.querySelector(".replay-button.soundLink"); if (button) button.click(); }</script>`,
+    Back: `{{#Tags}}<div class="tags"><span>🏷️</span> {{Tags}}</div>{{/Tags}}<span class='media'>{{Media}}</span></br>{{#Before}}<div class="before"><span>⬅️</span> {{furigana:Before}}<span id="before-audio">{{BeforeAudio}}</span></div>{{/Before}}<div class='reading'>{{furigana:CurrentBack}}<span id="current-audio">{{Audio}}</span></div><div class='meaning'>{{Meaning}}</div>{{#After}}<div class="after"><span>➡️</span> {{furigana:After}}<span id="after-audio">{{AfterAudio}}</span></div>{{/After}}<br><div class='notes'>{{Notes}}</div><script>var title = document.getElementById("current-audio"); if (title) { var button = title.querySelector(".replay-button.soundLink"); if (button) button.click(); }</script>`
   }]
 };
 
-/**
- * Main Application Component.
- *
- * Orchestrates the video playback, subtitle syncing, card creation, and export workflows.
- */
 const App: React.FC = () => {
   // --- State Management ---
-
-  // Video & Subtitle Source State
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [videoName, setVideoName] = useState<string>('');
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -161,29 +61,19 @@ const App: React.FC = () => {
   const [subtitleLines, setSubtitleLines] = useState<SubtitleLine[]>([]);
   const [subtitleFileName, setSubtitleFileName] = useState<string>('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
-
-  // File System Handle for saving back to original file
   const [fileHandle, setFileHandle] = useState<any>(null);
 
-  //Qs for auto-pausing playback
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
 
-  // Offset Modal State
-  const [isOffsetModalOpen, setIsOffsetModalOpen] = useState<boolean>(false);
-  const [tempOffsetMs, setTempOffsetMs] = useState<number>(0);
-
-  // New Subtitle Modal State
   const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
   const [newSubtitleTimes, setNewSubtitleTimes] = useState<{start: number, end: number}>({start: 0, end: 0});
+  const [editingSubId, setEditingSubId] = useState<number | null>(null);
+  const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
 
-  //Ql Save Menu State
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState<boolean>(false);
-
-  // Anki Template Modal State
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [ankiConfig, setAnkiConfig] = useState<AnkiNoteType>(DEFAULT_NOTE_TYPE);
 
-  // LLM Settings Modal State
   const [isLLMSettingsOpen, setIsLLMSettingsOpen] = useState<boolean>(false);
   const [llmSettings, setLlmSettings] = useState<LLMSettings>({
     provider: 'gemini',
@@ -192,44 +82,27 @@ const App: React.FC = () => {
     autoAnalyze: false
   });
 
-  // Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
-  const [isVideoVisible, setIsVideoVisible] = useState<boolean>(true);
-
-  // Deck Management State
   const [ankiCards, setAnkiCards] = useState<AnkiCard[]>([]);
+  const [processing, setProcessing] = useState<ProcessingState>({ isAnalyzing: false, progress: 0, total: 0 });
 
-  // AI Processing State
-  const [processing, setProcessing] = useState<ProcessingState>({
-    isAnalyzing: false,
-    progress: 0,
-    total: 0
-  });
-
-  // --- Refs ---
   const videoRef = useRef<VideoPlayerHandle>(null);
   const subtitleListRef = useRef<HTMLDivElement>(null);
   const subtitleInputRef = useRef<HTMLInputElement>(null);
 
-  // --- Load Settings from LocalStorage ---
   useEffect(() => {
     const saved = localStorage.getItem('sub2anki_llm_settings');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Preserve env var key if local storage is empty for gemini
         if (!parsed.apiKey && parsed.provider === 'gemini') {
             parsed.apiKey = process.env.API_KEY || '';
         }
         setLlmSettings(parsed);
-      } catch (e) {
-        console.error("Failed to load settings", e);
-      }
+      } catch (e) { console.error("Failed to load settings", e); }
     }
   }, []);
-
-  // --- Handlers ---
 
   const handleSaveLLMSettings = (newSettings: LLMSettings) => {
     setLlmSettings(newSettings);
@@ -242,38 +115,27 @@ const App: React.FC = () => {
       const url = URL.createObjectURL(file);
       setVideoSrc(url);
       setVideoName(file.name);
-      setIsVideoVisible(true); // Auto-show video on upload
-      setAudioBuffer(null); // Reset audio buffer while loading new one
+      setAudioBuffer(null);
     }
   };
 
-  // Load Audio Buffer when video source changes
   useEffect(() => {
     if (videoSrc) {
-       loadAudioBuffer(videoSrc)
-         .then(setAudioBuffer)
-         .catch(err => console.error("Failed to load audio track", err));
+       loadAudioBuffer(videoSrc).then(setAudioBuffer).catch(err => console.error("Failed to load audio track", err));
     }
   }, [videoSrc]);
 
   const handleOpenSubtitle = async () => {
     try {
-      // @ts-ignore - API might not be fully typed in all environments
+      // @ts-ignore
       if (window.showOpenFilePicker) {
         // @ts-ignore
         const [handle] = await window.showOpenFilePicker({
-          types: [{
-            description: 'Subtitle Files',
-            accept: {
-              'text/plain': ['.srt', '.vtt'],
-            },
-          }],
+          types: [{ description: 'Subtitle Files', accept: { 'text/plain': ['.srt', '.vtt'] } }],
           multiple: false,
         });
-
         const file = await handle.getFile();
         const text = await file.text();
-
         setSubtitleFileName(file.name);
         setSubtitleLines(parseSubtitles(text));
         setFileHandle(handle);
@@ -281,15 +143,9 @@ const App: React.FC = () => {
         return;
       }
     } catch (err) {
-      // Ignore AbortError (user cancelled)
-      if ((err as Error).name !== 'AbortError') {
-        console.error("File picker failed", err);
-      } else {
-        return;
-      }
+      if ((err as Error).name !== 'AbortError') console.error("File picker failed", err);
+      else return;
     }
-
-    // Fallback to hidden input if API not supported or failed
     subtitleInputRef.current?.click();
   };
 
@@ -297,142 +153,87 @@ const App: React.FC = () => {
     const file = event.target.files?.[0];
     if (file) {
       setSubtitleFileName(file.name);
-      // We don't have a handle for files from input, so clear it
       setFileHandle(null);
-
       const reader = new FileReader();
       reader.onload = (e) => {
-        const content = e.target?.result as string;
-        const parsed = parseSubtitles(content);
-        setSubtitleLines(parsed);
+        setSubtitleLines(parseSubtitles(e.target?.result as string));
         setHasUnsavedChanges(false);
       };
       reader.readAsText(file);
     }
-    // Reset value to allow re-selecting same file
     event.target.value = '';
   };
 
   const handleSubtitleTextChange = (id: number, newText: string) => {
-    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) => {
-      // If locked, do not update text
-      if (s.id === id && s.locked) return s;
-      return s.id === id ? { ...s, text: newText } : s;
-    }));
+    setSubtitleLines(prev => prev.map(s => (s.id === id && !s.locked) ? { ...s, text: newText } : s));
     setHasUnsavedChanges(true);
   };
 
   const handleSubtitleTimeChange = (id: number, start: number, end: number) => {
-    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) => {
-      // If locked, do not update times
-      if (s.id === id && s.locked) return s;
-      return s.id === id ? { ...s, startTime: start, endTime: end } : s;
-    }));
+    setSubtitleLines(prev => prev.map(s => (s.id === id && !s.locked) ? { ...s, startTime: start, endTime: end } : s));
     setHasUnsavedChanges(true);
   };
 
-  // Called when user drags to select a new region on the waveform
-  const handleNewSegmentSelection = (start: number, end: number) => {
-    if (videoRef.current) videoRef.current.pause();
+  const handleNewSegment = (start: number, end: number) => {
+    videoRef.current?.pause();
+    setEditingSubId(null);
     setNewSubtitleTimes({ start, end });
+    if (audioBuffer) setSubAudioBlob(sliceAudioBuffer(audioBuffer, start, end));
     setIsNewSubtitleModalOpen(true);
   };
 
-  // Called when user confirms text in the New Subtitle Modal
-  const handleAddNewSubtitle = (text: string) => {
-    // Generate new ID (max + 1)
-    const maxId = subtitleLines.reduce((max, s) => Math.max(max, s.id), 0);
-    const newId = maxId + 1;
+  const handleEditSubtitle = (id: number) => {
+    const sub = subtitleLines.find(s => s.id === id);
+    if (!sub) return;
+    videoRef.current?.pause();
+    setEditingSubId(id);
+    setNewSubtitleTimes({ start: sub.startTime, end: sub.endTime });
+    if (audioBuffer) setSubAudioBlob(sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime));
+    setIsNewSubtitleModalOpen(true);
+  };
 
-    const newSubtitle: SubtitleLine = {
-      id: newId,
-      startTime: newSubtitleTimes.start,
-      endTime: newSubtitleTimes.end,
-      text: text,
-      locked: false
-    };
-
-    // Insert and Sort
-    const updated = [...subtitleLines, newSubtitle].sort((a, b) => a.startTime - b.startTime);
-    
-    setSubtitleLines(updated);
+  const handleSaveSubtitleFromModal = (text: string) => {
+    if (editingSubId !== null) {
+      setSubtitleLines(prev => prev.map(s => s.id === editingSubId ? { ...s, text } : s));
+    } else {
+      const maxId = subtitleLines.reduce((max, s) => Math.max(max, s.id), 0);
+      const newSub: SubtitleLine = { id: maxId + 1, startTime: newSubtitleTimes.start, endTime: newSubtitleTimes.end, text, locked: false };
+      setSubtitleLines(prev => [...prev, newSub].sort((a, b) => a.startTime - b.startTime));
+    }
     setHasUnsavedChanges(true);
   };
 
   const toggleSubtitleLock = (id: number) => {
-    setSubtitleLines((prev: SubtitleLine[]) => prev.map((s: SubtitleLine) => 
-      s.id === id ? { ...s, locked: !s.locked } : s
-    ));
+    setSubtitleLines(prev => prev.map(s => s.id === id ? { ...s, locked: !s.locked } : s));
   };
 
-  /**
-   * Applies the time offset to all subtitles in the baseline state.
-   */
-  const applyOffset = () => {
-    const offsetSec = tempOffsetMs / 1000;
-    setSubtitleLines((prev: SubtitleLine[]) => prev.map(s => {
-      if (s.locked) return s; // Do not shift locked subtitles
-      return {
-        ...s,
-        startTime: Math.max(0, s.startTime + offsetSec),
-        endTime: Math.max(0, s.endTime + offsetSec)
-      };
-    }));
-    setHasUnsavedChanges(true);
-    setIsOffsetModalOpen(false);
-    setTempOffsetMs(0); // Reset for next use
-  };
-
-  /**
-   * Saves changes.
-   * If we have a file handle (from File System Access API), write directly to disk.
-   * Otherwise, just clear the dirty flag (save to memory).
-   */
   const handleSaveSubtitles = async () => {
     if (!subtitleFileName) return;
-
     if (fileHandle) {
       try {
         const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
         const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
-
+        // @ts-ignore
         const writable = await fileHandle.createWritable();
+        // @ts-ignore
         await writable.write(content);
+        // @ts-ignore
         await writable.close();
         setHasUnsavedChanges(false);
-      } catch (err) {
-        console.error('Failed to save file:', err);
-        alert('Failed to save to original file.');
-      }
-    } else {
-      // "Save" to memory (just clear dirty flag)
-      setHasUnsavedChanges(false);
-    }
+      } catch (err) { alert('Failed to save file.'); }
+    } else { setHasUnsavedChanges(false); }
+    setIsSaveMenuOpen(false);
   };
 
-  /**
-   * Explicitly download the current subtitle content as a file.
-   * Attempts to use the native "Save As" file picker if available.
-   */
   const handleDownloadSubtitles = async () => {
     if (!subtitleFileName) return;
     const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
     const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
-
     try {
-      // @ts-ignore - API might not be fully typed in all environments
+      // @ts-ignore
       if (window.showSaveFilePicker) {
         // @ts-ignore
-        const handle = await window.showSaveFilePicker({
-          suggestedName: subtitleFileName,
-          types: [{
-            description: 'Subtitle File',
-            accept: {
-              'text/plain': [isVtt ? '.vtt' : '.srt']
-            }
-          }],
-        });
-
+        const handle = await window.showSaveFilePicker({ suggestedName: subtitleFileName, types: [{ description: 'Subtitle File', accept: { 'text/plain': [isVtt ? '.vtt' : '.srt'] } }] });
         // @ts-ignore
         const writable = await handle.createWritable();
         // @ts-ignore
@@ -440,513 +241,218 @@ const App: React.FC = () => {
         // @ts-ignore
         await writable.close();
       } else {
-        // Fallback for browsers not supporting File System Access API
         const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
         saveAs(blob, subtitleFileName);
+        setHasUnsavedChanges(false);
       }
-      setHasUnsavedChanges(false);
-    } catch (err) {
-      // Ignore AbortError (user cancelled)
-      if ((err as Error).name !== 'AbortError') {
-        console.error("Save failed", err);
-      }
-    }
+    } catch (err) {}
+    setIsSaveMenuOpen(false);
   };
 
   const handleTimeUpdate = (time: number) => {
     setCurrentTime(time);
-
-    // Check if we need to auto-pause
     if (pauseAtTime !== null && time >= pauseAtTime) {
-      if (videoRef.current) {
-        videoRef.current.pause();
-      }
-      setPauseAtTime(null); // Reset after pausing
+      videoRef.current?.pause();
+      setPauseAtTime(null);
     }
-
-    const active = subtitleLines.find((s: SubtitleLine) => time >= s.startTime && time <= s.endTime);
-
+    const active = subtitleLines.find(s => time >= s.startTime && time <= s.endTime);
     if (active && active.id !== activeSubtitleId) {
       setActiveSubtitleId(active.id);
       const el = document.getElementById(`sub-${active.id}`);
-      if (el && subtitleListRef.current) {
-        el.scrollIntoView({behavior: 'smooth', block: 'center'});
-      }
-    } else if (!active) {
-      setActiveSubtitleId(null);
-    }
+      if (el && subtitleListRef.current) el.scrollIntoView({behavior: 'smooth', block: 'center'});
+    } else if (!active) setActiveSubtitleId(null);
   };
 
   const handleSeek = (time: number) => {
-    // When manually seeking via waveform, clear any auto-pause logic
     setPauseAtTime(null);
-    if (videoRef.current) {
-      videoRef.current.seekTo(time);
-    }
+    videoRef.current?.seekTo(time);
   };
 
-  const handleSubtitleClick = (sub: SubtitleLine) => {
-    // Even if hidden, the video player exists in DOM, so we can control it.
-    if (videoRef.current) {
-      // Set the point where the video should stop automatically
-      setPauseAtTime(sub.endTime);
-
-      videoRef.current.seekTo(sub.startTime);
-      videoRef.current.play();
+  const handlePlaySubtitle = (id: number) => {
+    const sub = subtitleLines.find(s => s.id === id);
+    if (sub && videoRef.current) {
+        setPauseAtTime(sub.endTime);
+        videoRef.current.seekTo(sub.startTime);
+        videoRef.current.play();
     }
   };
 
   const createCard = async (sub: SubtitleLine) => {
     if (!videoRef.current) return;
-
-    // 1. Audio Capture
-    // Slice the audio buffer for the duration of the subtitle
     let audioBlob: Blob | null = null;
-    if (audioBuffer) {
-        audioBlob = sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime);
-    }
-
-    // 2. Frame Capture
-    // We use captureFrameAt which seeks to the precise start time, waits for seek, and captures.
-    // This works even if the video is hidden (assuming the video element is mounted in DOM).
-    // Note: We pause any current playback logic to perform the capture.
-    setPauseAtTime(null); // Clear auto-pause so it doesn't interfere
-    
-    // Capture the frame
+    if (audioBuffer) audioBlob = sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime);
+    setPauseAtTime(null);
     const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
-
-    const newCard: AnkiCard = {
-      id: crypto.randomUUID(),
-      subtitleId: sub.id,
-      text: sub.text,
-      translation: '',
-      notes: '',
-      screenshotDataUrl: screenshot || null,
-      audioBlob: audioBlob,
-      timestampStr: formatTime(sub.startTime)
-    };
-    
-    setAnkiCards((prev: AnkiCard[]) => [newCard, ...prev]);
-
-    // 3. Auto Analyze if enabled
-    if (llmSettings.autoAnalyze) {
-      analyzeCard(newCard);
-    }
+    const newCard: AnkiCard = { id: crypto.randomUUID(), subtitleId: sub.id, text: sub.text, translation: '', notes: '', screenshotDataUrl: screenshot || null, audioBlob: audioBlob, timestampStr: formatTime(sub.startTime) };
+    setAnkiCards(prev => [newCard, ...prev]);
+    if (llmSettings.autoAnalyze) analyzeCard(newCard);
   };
 
   const analyzeCard = async (card: AnkiCard) => {
-    setProcessing((prev: ProcessingState) => ({...prev, isAnalyzing: true}));
-    
-    const subIndex = subtitleLines.findIndex((s: SubtitleLine) => s.id === card.subtitleId);
-    const prevText = subtitleLines[subIndex - 1]?.text || "";
-    const nextText = subtitleLines[subIndex + 1]?.text || "";
-
-    const result = await analyzeSubtitle(card.text, prevText, nextText, llmSettings);
-
-    setAnkiCards((prev: AnkiCard[]) => prev.map(c => {
-      if (c.id === card.id) {
-        return {
-          ...c,
-          translation: result.translation,
-          notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}`
-        };
-      }
-      return c;
-    }));
-    setProcessing((prev: ProcessingState) => ({...prev, isAnalyzing: false}));
+    setProcessing(prev => ({...prev, isAnalyzing: true}));
+    const subIndex = subtitleLines.findIndex(s => s.id === card.subtitleId);
+    const result = await analyzeSubtitle(card.text, subtitleLines[subIndex - 1]?.text, subtitleLines[subIndex + 1]?.text, llmSettings);
+    setAnkiCards(prev => prev.map(c => c.id === card.id ? { ...c, translation: result.translation, notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}` } : c));
+    setProcessing(prev => ({...prev, isAnalyzing: false}));
   };
 
-  const deleteCard = (id: string) => {
-    setAnkiCards((prev: AnkiCard[]) => prev.filter(c => c.id !== id));
-  };
-
-  const handleExport = async () => {
-    await generateAnkiDeck(ankiCards, videoName, ankiConfig);
-  };
+  const deleteCard = (id: string) => setAnkiCards(prev => prev.filter(c => c.id !== id));
+  const handleExport = async () => await generateAnkiDeck(ankiCards, videoName, ankiConfig);
 
   return (
-    <div className="flex h-screen w-full bg-slate-950 text-slate-200">
+    <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden">
       
-      {/* Template Editor Modal */}
-      <TemplateEditorModal 
-        isOpen={isTemplateModalOpen}
-        onClose={() => setIsTemplateModalOpen(false)}
-        config={ankiConfig}
-        onSave={setAnkiConfig}
-      />
+      {/* Top Part: 3 Columns */}
+      <div className="flex flex-1 min-h-0 w-full">
+        
+        {/* COL 1: DECK (Left) */}
+        <aside className="w-80 flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900/50 z-20">
+          
+          {/* Logo Section */}
+          <div className="h-14 flex items-center px-4 border-b border-slate-800 bg-slate-950 select-none">
+             <div className="flex items-center gap-2 text-indigo-400">
+               <Layers size={20} className="text-indigo-500" />
+               <span className="text-lg font-bold tracking-tight text-slate-200">Subs2Anki</span>
+             </div>
+          </div>
 
-      {/* New Subtitle Modal */}
-      <NewSubtitleModal
-        isOpen={isNewSubtitleModalOpen}
-        onClose={() => setIsNewSubtitleModalOpen(false)}
-        startTime={newSubtitleTimes.start}
-        endTime={newSubtitleTimes.end}
-        onSave={handleAddNewSubtitle}
-      />
-
-      {/* Offset Modal */}
-      {isOffsetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm p-6 overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <Clock className="text-indigo-400" size={20} /> Shift Time
-              </h3>
-              <button onClick={() => setIsOffsetModalOpen(false)} className="text-slate-500 hover:text-white transition">
-                <X size={20} />
-              </button>
+          {/* Deck Header */}
+          <div className="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/80 backdrop-blur">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Deck ({ankiCards.length})</h2>
+            <div className="flex gap-1">
+                <button onClick={() => setIsTemplateModalOpen(true)} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition" title="Template Settings"><Settings size={14}/></button>
+                <button onClick={handleExport} disabled={ankiCards.length === 0} className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition disabled:opacity-50 disabled:bg-slate-700" title="Export Deck"><Download size={14}/></button>
             </div>
+          </div>
+          
+          {/* Deck List */}
+          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
+            {ankiCards.length === 0 ? <div className="text-center py-10 text-slate-600 text-xs">No cards yet</div> : ankiCards.map(card => <CardItem key={card.id} card={card} onDelete={deleteCard} onAnalyze={analyzeCard} isAnalyzing={processing.isAnalyzing} />)}
+          </div>
+        </aside>
 
-            <p className="text-sm text-slate-400 mb-4">
-              Shift all subtitle timestamps by milliseconds. Use positive for delay, negative for advance.
-            </p>
+        {/* COL 2: VIDEO & CONTROLS (Center) */}
+        <main className="flex-1 flex flex-col bg-slate-950 relative min-w-0">
+          {/* Video Player Area */}
+          <div className="flex-1 flex flex-col items-center justify-center p-2 bg-black/20 min-h-0">
+             <div className="w-full h-full max-w-5xl flex flex-col justify-center">
+                <VideoPlayer ref={videoRef} src={videoSrc} onTimeUpdate={handleTimeUpdate} />
+             </div>
+          </div>
 
-            <div className="space-y-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs uppercase font-bold text-slate-500 tracking-wider">Offset (ms)</label>
-                <input
-                  type="number"
-                  autoFocus
-                  value={tempOffsetMs}
-                  onChange={(e) => setTempOffsetMs(parseInt(e.target.value) || 0)}
-                  className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono text-lg"
-                  placeholder="e.g. 500 or -200"
-                />
-              </div>
+          {/* Component Island (Control Bar) */}
+          <div className="h-16 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4">
+             
+             {/* Video Selector */}
+             <label className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg cursor-pointer transition text-sm font-medium text-slate-300 border border-slate-700">
+                <VideoIcon size={16}/><span className="truncate max-w-[200px]">{videoName || "Select Video File"}</span>
+                <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden"/>
+             </label>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setIsOffsetModalOpen(false)}
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 font-semibold hover:bg-slate-700 transition"
-                >
-                  Cancel
+             <div className="h-8 w-px bg-slate-800"></div>
+
+             {/* Time Display */}
+             <div className="font-mono text-xl text-indigo-400 font-bold tracking-widest min-w-[100px] text-center">
+                {formatTime(currentTime)}
+             </div>
+
+             <div className="h-8 w-px bg-slate-800"></div>
+
+             {/* AI Settings */}
+             <button onClick={() => setIsLLMSettingsOpen(true)} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg transition border ${llmSettings.apiKey ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-red-900/20 border-red-800/50 text-red-400'}`}>
+                <Bot size={16} /> <span>{llmSettings.model.split('-')[1]?.toUpperCase() || "AI"}</span>
+             </button>
+
+          </div>
+        </main>
+
+        {/* COL 3: SUBTITLES (Right) */}
+        <aside className="w-80 flex-shrink-0 flex flex-col border-l border-slate-800 bg-slate-900/50 z-20">
+          <div className="h-14 flex items-center justify-between px-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
+             <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-wider">
+                <FileText size={16} /> Subtitles
+             </div>
+             
+             <div className="flex items-center gap-1">
+                <button onClick={handleOpenSubtitle} className="p-2 hover:bg-slate-700 rounded text-indigo-400 transition" title="Load Subtitles">
+                   <FolderOpen size={16} />
                 </button>
-                <button
-                  onClick={applyOffset}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20"
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
+                <input ref={subtitleInputRef} type="file" accept=".srt,.vtt" onChange={handleSubtitleInputChange} className="hidden" />
+                
+                {subtitleLines.length > 0 && (
+                    <div className="relative">
+                       <button onClick={() => setIsSaveMenuOpen(!isSaveMenuOpen)} className="p-2 hover:bg-slate-700 rounded text-slate-400 transition" title="Save/Download">
+                          <Save size={16} />
+                       </button>
+                       {isSaveMenuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setIsSaveMenuOpen(false)}></div>
+                          <div className="absolute top-full right-0 mt-2 w-32 bg-slate-800 border border-slate-700 rounded shadow-xl z-50 overflow-hidden">
+                             <button onClick={handleSaveSubtitles} className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2">
+                                <Save size={14} /> Save
+                             </button>
+                             <button onClick={handleDownloadSubtitles} className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2">
+                                <Download size={14} /> Download
+                             </button>
+                          </div>
+                        </>
+                       )}
+                    </div>
+                )}
+             </div>
           </div>
-        </div>
-      )}
-
-      {/* Left Sidebar: Controls & Card List */}
-      <aside className="w-96 flex flex-col border-r border-slate-800 bg-slate-900/50">
-        <div className="p-4 border-b border-slate-800">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2 mb-4">
-            <Layers className="text-indigo-500"/> Sub2Anki AI
-          </h1>
-
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 w-full p-2 bg-slate-800 hover:bg-slate-700 rounded cursor-pointer transition text-sm">
-              <VideoIcon size={16}/>
-              <span className="truncate">{videoName || "Select Video File"}</span>
-              <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden"/>
-            </label>
-          </div>
-        </div>
-
-        {/* Deck / Cards Scroll Area */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-semibold text-slate-300">Your Deck ({ankiCards.length})</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsTemplateModalOpen(true)}
-                className="flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded transition"
-                title="Configure Anki Note Type"
-              >
-                <Settings size={14} />
-              </button>
-              {ankiCards.length > 0 && (
-                <button
-                  onClick={handleExport}
-                  className="flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-full transition"
-                >
-                  <Download size={14}/> Export
-                </button>
-              )}
-            </div>
-          </div>
-
-          {ankiCards.length === 0 ? (
-            <div className="text-center py-10 text-slate-600">
-              <p className="mb-2">No cards created yet.</p>
-              <p className="text-xs">Load media, then click the (+) button on a line to start.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {ankiCards.map(card => (
-                <CardItem
-                  key={card.id}
-                  card={card}
-                  onDelete={deleteCard}
-                  onAnalyze={analyzeCard}
-                  isAnalyzing={processing.isAnalyzing}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* Main Content: Video & Subtitle Browser */}
-      <main className="flex-1 flex flex-col min-w-0 relative">
-
-        {/* Toggle Arrow Handle */}
-        <div
-          onClick={() => setIsVideoVisible(!isVideoVisible)}
-          className="w-full h-6 bg-slate-900 border-b border-slate-800 hover:bg-slate-800 flex items-center justify-center cursor-pointer transition-colors z-30 shadow-sm"
-          title={isVideoVisible ? "Collapse Video Area" : "Expand Video Area"}
-        >
-          {isVideoVisible ? (
-            <ChevronUp size={16} className="text-slate-500 group-hover:text-slate-300" />
-          ) : (
-            <ChevronDown size={16} className="text-slate-500 group-hover:text-slate-300" />
-          )}
-        </div>
-
-        {/* Top: Video Player - Hidden from UI when collapsed but remains in DOM */}
-        <div className={`bg-black/20 flex flex-col transition-all ${isVideoVisible ? '' : 'hidden'}`}>
-          <div className="p-4 border-b border-slate-800 flex justify-center">
-            <div className="w-full max-w-4xl">
-              <VideoPlayer ref={videoRef} src={videoSrc} onTimeUpdate={handleTimeUpdate} />
-            </div>
-          </div>
-        </div>
-
-        {/* Waveform Visualization (Always visible if video loaded) */}
-        {videoSrc && (
-          <WaveformDisplay
-            audioSrc={videoSrc}
-            currentTime={currentTime}
-            onSeek={handleSeek}
-            subtitles={subtitleLines}
-            onSubtitleChange={handleSubtitleTimeChange}
-            onNewSegment={handleNewSegmentSelection}
-          />
-        )}
-
-        {/* Bottom: Subtitle List */}
-        <div className="flex-1 overflow-hidden flex flex-col relative bg-slate-900">
-
-          {/* Subtitle Browser Toolbar */}
-          <div className="px-6 py-3 border-b border-slate-800 bg-slate-900/80 flex justify-between items-center z-20">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-slate-400">
-                <FileText size={16} />
-                <span className="text-sm font-semibold uppercase tracking-widest">Subtitle Editor</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* LLM Settings Button */}
-              <button
-                onClick={() => setIsLLMSettingsOpen(true)}
-                className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md transition-all border ${
-                   llmSettings.apiKey || llmSettings.provider === 'chrome-ai' || llmSettings.baseUrl?.includes('localhost')
-                    ? 'bg-slate-800 border-indigo-900/50 text-indigo-300 hover:bg-slate-700' 
-                    : 'bg-red-950/20 border-red-900/50 text-red-400'
-                }`}
-                title="Configure AI Model (DeepSeek, Gemini, etc.)"
-              >
-                <Bot size={14} />
-                <span>{llmSettings.provider === 'openai-compatible' ? 'Custom AI' : llmSettings.provider === 'chrome-ai' ? 'Chrome AI' : 'Gemini'}</span>
-              </button>
-
-              <div className="w-px h-6 bg-slate-700 mx-2"></div>
-
-              {/* Offset Button */}
-              <button
-                onClick={() => setIsOffsetModalOpen(true)}
-                disabled={subtitleLines.length === 0}
-                className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md transition-all border ${
-                  subtitleLines.length > 0
-                    ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-                    : 'bg-slate-800/50 border-slate-800 text-slate-600 cursor-not-allowed'
-                }`}
-                title="Shift all timestamps"
-              >
-                <Clock size={14} />
-                <span>Shift Time</span>
-              </button>
-
-              {/*Ql Open Subtitle Button (Replaces simple file input to support native saving) */}
-              <button
-                onClick={handleOpenSubtitle}
-                className="flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 shadow-sm"
-              >
-                <FolderOpen size={14} />
-                <span>{subtitleLines.length > 0 ? `${subtitleLines.length} lines` : "Open Subtitle"}</span>
-              </button>
-
-              {/* Hidden fallback input */}
-              <input
-                ref={subtitleInputRef}
-                type="file"
-                accept=".srt,.vtt"
-                onChange={handleSubtitleInputChange}
-                className="hidden"
-              />
-
-              {/* SAVE / DOWNLOAD LOGIC */}
-              {fileHandle ? (
-                // --- SCENARIO A: File Handle Available (Native Save Support) ---
-                <div className="relative flex items-center">
-                  {/* Main Save Button */}
-                  <button
-                    onClick={handleSaveSubtitles}
-                    disabled={!hasUnsavedChanges}
-                    className={`flex items-center gap-2 text-xs px-3 py-2 rounded-l-md transition-all duration-300 font-bold border-y border-l ${
-                      hasUnsavedChanges
-                        ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20'
-                        : 'bg-slate-800 border-slate-700 text-slate-400'
-                    }`}
-                    title={hasUnsavedChanges ? "Save changes to original file" : "No unsaved changes"}
-                  >
-                    <Save size={14} /> {hasUnsavedChanges ? 'Save' : 'Saved'}
-                  </button>
-
-                  {/* Dropdown Trigger */}
-                  <button
-                    onClick={() => setIsSaveMenuOpen(!isSaveMenuOpen)}
-                    className={`flex items-center px-1 py-2 rounded-r-md transition-all duration-300 border-y border-r border-l-0 ${
-                      hasUnsavedChanges
-                        ? 'bg-indigo-700 border-indigo-500 text-white hover:bg-indigo-600'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
-                    }`}
-                  >
-                    <ChevronDown size={14} />
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {isSaveMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setIsSaveMenuOpen(false)}></div>
-                      <div className="absolute top-full right-0 mt-1 w-36 bg-slate-800 border border-slate-700 rounded-md shadow-xl z-20 overflow-hidden">
-                        <button
-                          onClick={() => {
-                            handleDownloadSubtitles();
-                            setIsSaveMenuOpen(false);
-                          }}
-                          className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-2 transition-colors"
-                        >
-                          <Download size={14} /> Save As...
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                // --- SCENARIO B: No File Handle (Fallback to Download) ---
-                subtitleLines.length > 0 && (
-                  <button
-                    onClick={handleDownloadSubtitles}
-                    className={`flex items-center gap-2 text-xs px-4 py-2 rounded-md transition-all duration-300 font-bold border ${
-                      hasUnsavedChanges
-                        ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20'
-                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-                    }`}
-                    title="Download Subtitle File"
-                  >
-                    <Download size={14} /> Download
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
-          <div className="absolute top-12 left-0 w-full h-8 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
-
-          <div ref={subtitleListRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
-            {subtitleLines.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
-                <AlertCircle size={32}/>
-                <p>Please load a subtitle file to view dialogue.</p>
-              </div>
-            )}
-
+          
+          {/* Subtitle List */}
+          <div ref={subtitleListRef} className="flex-1 overflow-y-auto px-2 py-2 space-y-1 bg-slate-900">
+            {subtitleLines.length === 0 && <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs"><AlertCircle size={24} className="mb-2 opacity-50"/>No subtitles loaded</div>}
             {subtitleLines.map(sub => {
               const isActive = sub.id === activeSubtitleId;
               return (
-                <div
-                  key={sub.id}
-                  id={`sub-${sub.id}`}
-                  className={`group flex items-center gap-4 p-3 rounded-lg transition-all duration-200 cursor-pointer border ${
-                    isActive
-                      ? 'bg-slate-800 border-indigo-500/50 shadow-md transform scale-[1.01]'
-                      : 'hover:bg-slate-800/50 border-transparent hover:border-slate-700'
-                  } ${sub.locked ? 'opacity-80' : ''}`}
-                  onClick={() => handleSubtitleClick(sub)}
-                >
-                   {/* Lock/Unlock Button */}
-                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleSubtitleLock(sub.id);
-                    }}
-                    className={`p-1.5 rounded transition-all flex-shrink-0 ${
-                      sub.locked
-                        ? 'text-red-400 bg-red-950/20 hover:bg-red-950/40'
-                        : 'text-slate-600 opacity-0 group-hover:opacity-100 hover:text-indigo-400 hover:bg-slate-700'
-                    }`}
-                    title={sub.locked ? "Unlock Subtitle" : "Lock Subtitle"}
-                  >
-                    {sub.locked ? <Lock size={14} /> : <Unlock size={14} />}
-                  </button>
-
-                  <span className={`text-xs font-mono w-16 flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>
-                    {formatTime(sub.startTime)}
-                  </span>
-
+                <div key={sub.id} id={`sub-${sub.id}`} onClick={() => handlePlaySubtitle(sub.id)} className={`group flex items-start gap-2 p-2 rounded transition-all cursor-pointer border ${isActive ? 'bg-slate-800 border-indigo-500/50 shadow-md' : 'border-transparent hover:bg-slate-800/50'}`}>
+                  <button onClick={(e) => {e.stopPropagation(); toggleSubtitleLock(sub.id);}} className={`mt-1 ${sub.locked ? 'text-red-400' : 'text-slate-700 group-hover:text-slate-500'}`}>{sub.locked ? <Lock size={12}/> : <Unlock size={12}/>}</button>
                   <div className="flex-1 min-w-0">
-                    <textarea
-                      value={sub.text}
-                      onChange={(e) => handleSubtitleTextChange(sub.id, e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      rows={1}
-                      readOnly={sub.locked}
-                      className={`w-full bg-transparent resize-none focus:outline-none transition-colors border-b border-transparent py-1 ${
-                        sub.locked 
-                          ? 'text-slate-500 cursor-not-allowed border-none' 
-                          : 'focus:border-indigo-500/30'
-                      } ${
-                        isActive ? 'text-white font-medium' : 'text-slate-400 group-hover:text-slate-300'
-                      } text-lg leading-relaxed overflow-hidden`}
-                      style={{ height: 'auto' }}
-                      onInput={(e) => {
-                        const target = e.target as HTMLTextAreaElement;
-                        target.style.height = 'auto';
-                        target.style.height = `${target.scrollHeight}px`;
-                      }}
-                    />
+                    <div className="flex justify-between items-center mb-1">
+                       <span className={`text-[10px] font-mono ${isActive ? 'text-indigo-400' : 'text-slate-600'}`}>{formatTime(sub.startTime)}</span>
+                    </div>
+                    <textarea value={sub.text} onChange={(e) => handleSubtitleTextChange(sub.id, e.target.value)} onClick={(e) => e.stopPropagation()} rows={2} readOnly={sub.locked} className={`w-full bg-transparent resize-none outline-none text-sm leading-snug ${sub.locked ? 'text-slate-500' : isActive ? 'text-white' : 'text-slate-400 hover:text-slate-300'}`}/>
                   </div>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      createCard(sub);
-                    }}
-                    className={`opacity-0 group-hover:opacity-100 p-2 rounded-full transition-all flex-shrink-0
-                      ${isActive
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                      : 'bg-slate-700 text-slate-300 hover:bg-indigo-600 hover:text-white'
-                    }`}
-                    title="Create Card from this line"
-                  >
-                    <PlusCircle size={20}/>
-                  </button>
+                  <button onClick={(e) => {e.stopPropagation(); createCard(sub);}} className={`mt-1 text-slate-600 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition`} title="Create Card"><PlusCircle size={16}/></button>
                 </div>
               );
             })}
           </div>
+        </aside>
+      </div>
 
-          <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-slate-900 to-transparent z-10 pointer-events-none"></div>
-        </div>
-      </main>
+      {/* Bottom Part: Full-width Waveform */}
+      <div className="h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative">
+        <WaveformDisplay 
+          audioSrc={videoSrc} 
+          currentTime={currentTime} 
+          onSeek={handleSeek} 
+          subtitles={subtitleLines} 
+          onSubtitleChange={handleSubtitleTimeChange} 
+          onNewSegment={handleNewSegment}
+          onEditSubtitle={handleEditSubtitle}
+          onPlaySubtitle={handlePlaySubtitle}
+          onToggleLock={toggleSubtitleLock}
+          onCreateCard={(id) => { const s = subtitleLines.find(x => x.id === id); if(s) createCard(s); }}
+        />
+      </div>
+
+      {/* Modals */}
+      <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} config={ankiConfig} onSave={setAnkiConfig} />
+      <LLMSettingsModal isOpen={isLLMSettingsOpen} onClose={() => setIsLLMSettingsOpen(false)} settings={llmSettings} onSave={handleSaveLLMSettings} />
+      <NewSubtitleModal 
+        isOpen={isNewSubtitleModalOpen} 
+        onClose={() => setIsNewSubtitleModalOpen(false)} 
+        startTime={newSubtitleTimes.start} 
+        endTime={newSubtitleTimes.end} 
+        initialText={editingSubId !== null ? subtitleLines.find(s => s.id === editingSubId)?.text : ''}
+        audioBlob={subAudioBlob} 
+        llmSettings={llmSettings} 
+        onSave={handleSaveSubtitleFromModal} 
+      />
     </div>
   );
 };

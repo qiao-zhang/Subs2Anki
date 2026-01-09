@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { Region } from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import { ZoomIn, ZoomOut, Activity } from 'lucide-react';
-import { SubtitleLine } from '@/core/types.ts';
+import { SubtitleLine } from '../../core/types';
 
 interface WaveformDisplayProps {
   audioSrc: string;
@@ -11,6 +11,10 @@ interface WaveformDisplayProps {
   subtitles: SubtitleLine[];
   onSubtitleChange: (id: number, start: number, end: number) => void;
   onNewSegment: (start: number, end: number) => void;
+  onEditSubtitle: (id: number) => void;
+  onPlaySubtitle: (id: number) => void;
+  onToggleLock: (id: number) => void;
+  onCreateCard: (id: number) => void;
 }
 
 /**
@@ -23,7 +27,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onSeek,
                                                            subtitles,
                                                            onSubtitleChange,
-                                                           onNewSegment
+                                                           onNewSegment,
+                                                           onEditSubtitle,
+                                                           onPlaySubtitle,
+                                                           onToggleLock,
+                                                           onCreateCard
                                                          }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -104,9 +112,24 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
     });
 
+    // 3. Region Clicked -> Play Subtitle
     regions.on('region-clicked', (region: Region, e: MouseEvent) => {
       e.stopPropagation();
-      onSeek(region.start);
+      const id = parseInt(region.id);
+      if (!isNaN(id)) {
+        onPlaySubtitle(id);
+      } else {
+        onSeek(region.start);
+      }
+    });
+
+    // 4. Region Double Clicked -> Edit Subtitle
+    regions.on('region-double-clicked', (region: Region, e: MouseEvent) => {
+      e.stopPropagation();
+      const id = parseInt(region.id);
+      if (!isNaN(id)) {
+        onEditSubtitle(id);
+      }
     });
 
     wavesurfer.current = ws;
@@ -171,7 +194,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     regionsPlugin.clearRegions();
 
     subtitles.forEach(sub => {
-      regionsPlugin.addRegion({
+      const region = regionsPlugin.addRegion({
         id: sub.id.toString(),
         start: sub.startTime,
         end: sub.endTime,
@@ -180,6 +203,15 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         drag: !sub.locked,
         resize: !sub.locked,
       });
+
+      // Attach context menu listener to the region element
+      if (region.element) {
+        region.element.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          // Toggle lock on right click
+          onToggleLock(sub.id);
+        });
+      }
     });
 
     // Reset flag after a microtask to allow events to settle
@@ -187,7 +219,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       isSyncingSubtitles.current = false;
     }, 0);
 
-  }, [subtitles, isReady]);
+  }, [subtitles, isReady, onToggleLock]);
 
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));

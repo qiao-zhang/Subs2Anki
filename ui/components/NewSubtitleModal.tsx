@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, Clock } from 'lucide-react';
-import { formatTime } from '@/core/time.ts';
+import { formatTime } from '../../core/time';
+import { LLMSettings } from '../../core/gemini';
 
 interface NewSubtitleModalProps {
   isOpen: boolean;
@@ -8,21 +9,35 @@ interface NewSubtitleModalProps {
   startTime: number;
   endTime: number;
   onSave: (text: string) => void;
+  initialText?: string;
+  audioBlob?: Blob | null;
+  llmSettings?: LLMSettings;
 }
 
-const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({ isOpen, onClose, startTime, endTime, onSave }) => {
-  const [text, setText] = useState('');
+const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  startTime, 
+  endTime, 
+  onSave,
+  initialText = '',
+  audioBlob,
+  llmSettings
+}) => {
+  const [text, setText] = useState(initialText);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setText('');
+      setText(initialText);
       // Focus input after a short delay to allow animation
       setTimeout(() => {
         inputRef.current?.focus();
+        // Optionally select all text if editing
+        if (initialText) inputRef.current?.select();
       }, 100);
     }
-  }, [isOpen]);
+  }, [isOpen, initialText]);
 
   if (!isOpen) return null;
 
@@ -49,7 +64,7 @@ const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({ isOpen, onClose, st
         
         <div className="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-800">
           <h2 className="text-lg font-bold flex items-center gap-2 text-white">
-            <Clock className="text-indigo-400" size={20} /> New Subtitle Line
+            <Clock className="text-indigo-400" size={20} /> {initialText ? 'Edit Subtitle' : 'New Subtitle Line'}
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition">
             <X size={20} />
@@ -102,7 +117,7 @@ const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({ isOpen, onClose, st
               disabled={!text.trim()}
               className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Save size={16} /> Create
+              <Save size={16} /> Save
             </button>
           </div>
         </form>

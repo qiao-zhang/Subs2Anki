@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatTime, parseVTTTime } from '@/core/time.ts';
+import { formatTime, parseVTTTime } from '../../core/time';
 
 /**
  * Test Suite for Time Utilities.
