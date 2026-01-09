@@ -1,6 +1,8 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { Region } from 'wavesurfer.js/dist/plugins/regions.esm.js';
+import Minimap from 'wavesurfer.js/dist/plugins/minimap.esm.js';
 import { ZoomIn, ZoomOut, Activity } from 'lucide-react';
 import { SubtitleLine } from '../../core/types';
 
@@ -10,82 +12,93 @@ interface WaveformDisplayProps {
   onSeek: (time: number) => void;
   subtitles: SubtitleLine[];
   onSubtitleChange: (id: number, start: number, end: number) => void;
-  onNewSegment: (start: number, end: number) => void;
+  tempSegment: { start: number; end: number } | null;
+  onTempSegmentCreated: (start: number, end: number) => void;
+  onTempSegmentUpdated: (start: number, end: number) => void;
   onEditSubtitle: (id: number) => void;
   onPlaySubtitle: (id: number) => void;
+  onPlayTempSegment: () => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (id: number) => void;
 }
 
-/**
- * Visualizes the audio track of the video using WaveSurfer.js.
- * Allows seeking, zooming, editing subtitle regions, and creating new ones by dragging.
- */
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            audioSrc,
                                                            currentTime,
                                                            onSeek,
                                                            subtitles,
                                                            onSubtitleChange,
-                                                           onNewSegment,
+                                                           tempSegment,
+                                                           onTempSegmentCreated,
+                                                           onTempSegmentUpdated,
                                                            onEditSubtitle,
                                                            onPlaySubtitle,
+                                                           onPlayTempSegment,
                                                            onToggleLock,
                                                            onCreateCard
                                                          }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
   const wsRegions = useRef<RegionsPlugin | null>(null);
-  const [zoom, setZoom] = useState<number>(50); // Default pixels per second
+  const [zoom, setZoom] = useState<number>(50);
   const [isReady, setIsReady] = useState(false);
 
-  // Ref to track if we are currently programmatically syncing subtitles.
-  // This prevents the 'region-created' event from triggering new segment logic during initial load/update.
   const isSyncingSubtitles = useRef(false);
-  
-  // Ref to track the ID of the region currently being drawn by the user
+
+  // Track creation of new regions
   const activeDragRegionId = useRef<string | null>(null);
+  // Track modification of existing regions
+  const draggingRegionId = useRef<string | null>(null);
+
+  // Middle mouse dragging state
+  const isMiddleDragging = useRef(false);
+  const lastMouseX = useRef(0);
+
+  const TEMP_REGION_ID = 'temp-segment';
 
   // Initialize WaveSurfer
   useEffect(() => {
     if (!containerRef.current || !audioSrc) return;
 
     setIsReady(false);
-
-    // Initialize Regions Plugin
     const regions = RegionsPlugin.create();
     wsRegions.current = regions;
 
-    // Create WaveSurfer instance
+    // Create Minimap Plugin
+    const minimap = Minimap.create({
+      height: 30,
+      waveColor: '#4f46e5',
+      progressColor: '#818cf8',
+      overlayColor: 'rgba(255, 255, 255, 0.1)',
+      cursorWidth: 1,
+      cursorColor: '#ef4444',
+    });
+
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      waveColor: '#4f46e5', // Indigo-600
-      progressColor: '#818cf8', // Indigo-400
-      cursorColor: '#ef4444', // Red-500
+      waveColor: '#4f46e5',
+      progressColor: '#818cf8',
+      cursorColor: '#ef4444',
       barWidth: 2,
       barGap: 1,
       barRadius: 2,
-      height: 64, // Compact height
+      height: 140, // Reduced height to fit minimap
       normalize: true,
       minPxPerSec: zoom,
       fillParent: true,
-      interact: true, // Allow clicking to seek
+      interact: true,
       autoScroll: true,
-      plugins: [regions],
+      plugins: [regions, minimap],
     });
 
-    // Enable drag selection to create new regions
     regions.enableDragSelection({
-      color: 'rgba(255, 255, 255, 0.2)', // Distinct color for temporary new region
+      color: 'rgba(74, 222, 128, 0.4)',
     });
 
-    // Load audio
     ws.load(audioSrc);
 
-    // Events
     ws.on('ready', () => {
       setIsReady(true);
-      // Set initial volume to 0 so it doesn't play double audio (video plays audio)
       ws.setVolume(0);
     });
 
@@ -95,40 +108,51 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // --- Region Events ---
 
-    // 1. User starts creating a region (dragging on empty space)
     regions.on('region-created', (region: Region) => {
       if (!isSyncingSubtitles.current) {
-        // This is a user interaction, track this region
+        if (region.id === TEMP_REGION_ID) return;
         activeDragRegionId.current = region.id;
       }
     });
 
-    // 2. Existing region is modified
     regions.on('region-updated', (region: Region) => {
-      // If it's a known subtitle ID (integer), update parent
-      const id = parseInt(region.id);
-      if (!isNaN(id)) {
-        onSubtitleChange(id, region.start, region.end);
+      if (isSyncingSubtitles.current) return;
+
+      if (activeDragRegionId.current !== region.id) {
+        draggingRegionId.current = region.id;
+      }
+
+      if (region.id === TEMP_REGION_ID) {
+        onTempSegmentUpdated(region.start, region.end);
+      } else {
+        const id = parseInt(region.id);
+        if (!isNaN(id)) {
+          onSubtitleChange(id, region.start, region.end);
+        }
       }
     });
 
-    // 3. Region Clicked -> Play Subtitle
     regions.on('region-clicked', (region: Region, e: MouseEvent) => {
       e.stopPropagation();
-      const id = parseInt(region.id);
-      if (!isNaN(id)) {
-        onPlaySubtitle(id);
+      if (region.id === TEMP_REGION_ID) {
+        onPlayTempSegment();
       } else {
-        onSeek(region.start);
+        const id = parseInt(region.id);
+        if (!isNaN(id)) {
+          onPlaySubtitle(id);
+        } else {
+          onSeek(region.start);
+        }
       }
     });
 
-    // 4. Region Double Clicked -> Edit Subtitle
     regions.on('region-double-clicked', (region: Region, e: MouseEvent) => {
       e.stopPropagation();
-      const id = parseInt(region.id);
-      if (!isNaN(id)) {
-        onEditSubtitle(id);
+      if (region.id !== TEMP_REGION_ID) {
+        const id = parseInt(region.id);
+        if (!isNaN(id)) {
+          onEditSubtitle(id);
+        }
       }
     });
 
@@ -137,23 +161,89 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     return () => {
       ws.destroy();
     };
-  }, [audioSrc]); // Re-init on new audio source
+  }, [audioSrc]);
 
-  // Global Mouse Up Listener to detect end of drag creation
+  // Middle Mouse Panning Logic
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 1) { // Middle Button
+        e.preventDefault();
+        e.stopPropagation(); // Stop propagation to prevent standard scrolling triggers
+        isMiddleDragging.current = true;
+        lastMouseX.current = e.clientX;
+        container.style.cursor = 'grabbing';
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isMiddleDragging.current && wavesurfer.current) {
+        e.preventDefault();
+        const delta = lastMouseX.current - e.clientX;
+        lastMouseX.current = e.clientX;
+
+        const ws = wavesurfer.current;
+        if (typeof ws.setScroll === 'function') {
+          const current = ws.getScroll();
+          ws.setScroll(current + delta);
+        }
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (isMiddleDragging.current) {
+        isMiddleDragging.current = false;
+        if(container) container.style.cursor = 'auto';
+      }
+    };
+
+    container.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    const handleAuxClick = (e: MouseEvent) => {
+      if (e.button === 1) e.preventDefault();
+    };
+    container.addEventListener('auxclick', handleAuxClick);
+
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      container.removeEventListener('auxclick', handleAuxClick);
+    };
+  }, []);
+
+  // Global Mouse Up Listener for Regions
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (activeDragRegionId.current && wsRegions.current) {
         const region = wsRegions.current.getRegions().find(r => r.id === activeDragRegionId.current);
         if (region) {
-          // Trigger new segment callback
-          // Ensure min duration to avoid accidental clicks
+          const oldTemp = wsRegions.current.getRegions().find(r => r.id === TEMP_REGION_ID);
+          if (oldTemp) oldTemp.remove();
+
           if (region.end - region.start > 0.2) {
-             onNewSegment(region.start, region.end);
+            onTempSegmentCreated(region.start, region.end);
+            region.remove();
+          } else {
+            region.remove();
           }
-          // Remove the temporary region (App will add the real one via props)
-          region.remove();
         }
         activeDragRegionId.current = null;
+      }
+
+      if (draggingRegionId.current && wsRegions.current) {
+        const regionId = draggingRegionId.current;
+        if (regionId === TEMP_REGION_ID) {
+          onPlayTempSegment();
+        } else {
+          const id = parseInt(regionId);
+          if (!isNaN(id)) onPlaySubtitle(id);
+        }
+        draggingRegionId.current = null;
       }
     };
 
@@ -161,19 +251,18 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     return () => {
       window.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [onNewSegment]);
+  }, [onTempSegmentCreated, onPlaySubtitle, onPlayTempSegment, onSeek]);
 
-  // Handle Zoom Changes
+  // Handle Zoom
   useEffect(() => {
     if (wavesurfer.current && isReady) {
       wavesurfer.current.zoom(zoom);
     }
   }, [zoom, isReady]);
 
-  // Sync with Video Playback Time
+  // Sync Video Time
   useEffect(() => {
     if (wavesurfer.current && isReady) {
-      // Avoid jitter by checking difference
       const currentWsTime = wavesurfer.current.getCurrentTime();
       if (Math.abs(currentWsTime - currentTime) > 0.1) {
         wavesurfer.current.setTime(currentTime);
@@ -181,45 +270,82 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
   }, [currentTime, isReady]);
 
-  // Sync Regions with Subtitles prop
+  // Sync Regions
   useEffect(() => {
     if (!wsRegions.current || !isReady) return;
 
-    // Signal that we are performing programmatic updates
     isSyncingSubtitles.current = true;
-
     const regionsPlugin = wsRegions.current;
-    
-    // Clear and redraw
-    regionsPlugin.clearRegions();
+
+    const existingRegions = new Map(regionsPlugin.getRegions().map(r => [r.id, r]));
+    const processedIds = new Set<string>();
+
+    if (tempSegment) {
+      processedIds.add(TEMP_REGION_ID);
+      if (draggingRegionId.current !== TEMP_REGION_ID) {
+        const r = existingRegions.get(TEMP_REGION_ID);
+        if (r) {
+          if (Math.abs(r.start - tempSegment.start) > 0.01) r.start = tempSegment.start;
+          if (Math.abs(r.end - tempSegment.end) > 0.01) r.end = tempSegment.end;
+        } else {
+          regionsPlugin.addRegion({
+            id: TEMP_REGION_ID,
+            start: tempSegment.start,
+            end: tempSegment.end,
+            content: 'New Subtitle',
+            color: 'rgba(74, 222, 128, 0.4)',
+            drag: true,
+            resize: true,
+          });
+        }
+      }
+    }
 
     subtitles.forEach(sub => {
-      const region = regionsPlugin.addRegion({
-        id: sub.id.toString(),
-        start: sub.startTime,
-        end: sub.endTime,
-        content: sub.text.substring(0, 15) + (sub.text.length > 15 ? '...' : ''),
-        color: sub.locked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.2)', // Red if locked, Indigo if unlocked
-        drag: !sub.locked,
-        resize: !sub.locked,
-      });
+      const idStr = sub.id.toString();
+      processedIds.add(idStr);
 
-      // Attach context menu listener to the region element
-      if (region.element) {
-        region.element.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          // Toggle lock on right click
-          onToggleLock(sub.id);
+      if (draggingRegionId.current === idStr) return;
+
+      const r = existingRegions.get(idStr);
+      const color = sub.locked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.2)';
+      const content = sub.text.substring(0, 15) + (sub.text.length > 15 ? '...' : '');
+
+      if (r) {
+        if (Math.abs(r.start - sub.startTime) > 0.01) r.start = sub.startTime;
+        if (Math.abs(r.end - sub.endTime) > 0.01) r.end = sub.endTime;
+        r.setOptions({ drag: !sub.locked, resize: !sub.locked, color, content });
+      } else {
+        const newRegion = regionsPlugin.addRegion({
+          id: idStr,
+          start: sub.startTime,
+          end: sub.endTime,
+          content,
+          color,
+          drag: !sub.locked,
+          resize: !sub.locked,
         });
+        if (newRegion.element) {
+          newRegion.element.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            onToggleLock(sub.id);
+          });
+        }
       }
     });
 
-    // Reset flag after a microtask to allow events to settle
+    existingRegions.forEach((r, id) => {
+      if (id === activeDragRegionId.current) return;
+      if (!processedIds.has(id)) {
+        r.remove();
+      }
+    });
+
     setTimeout(() => {
       isSyncingSubtitles.current = false;
     }, 0);
 
-  }, [subtitles, isReady, onToggleLock]);
+  }, [subtitles, tempSegment, isReady, onToggleLock]);
 
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));
@@ -227,8 +353,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   if (!audioSrc) return null;
 
   return (
-    <div className="border-b border-slate-800 bg-slate-900/50 flex flex-col relative group select-none">
-      {/* Loading Overlay */}
+    <div className="h-full w-full flex flex-col relative group select-none bg-slate-900/50">
       {!isReady && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm text-slate-400 text-xs">
           <Activity className="animate-pulse mr-2" size={16} />
@@ -236,32 +361,21 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         </div>
       )}
 
-      {/* Controls Overlay (Top Right) */}
       <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={handleZoomOut}
-          className="p-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 border border-slate-700"
-          title="Zoom Out"
-        >
-          <ZoomOut size={14} />
-        </button>
-        <button
-          onClick={handleZoomIn}
-          className="p-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 border border-slate-700"
-          title="Zoom In"
-        >
-          <ZoomIn size={14} />
-        </button>
+        <button onClick={handleZoomOut} className="p-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 border border-slate-700"><ZoomOut size={14} /></button>
+        <button onClick={handleZoomIn} className="p-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 border border-slate-700"><ZoomIn size={14} /></button>
       </div>
 
-      {/* Waveform Container */}
-      <div ref={containerRef} className="w-full" />
+      <div ref={containerRef} className="w-full h-full" />
 
-      {/* Region Style Overrides */}
       <style>{`
         .wavesurfer-region {
           border: 1px solid rgba(99, 102, 241, 0.5) !important;
           border-radius: 4px;
+        }
+        .wavesurfer-region[data-region-id="${TEMP_REGION_ID}"] {
+           border: 1px solid rgba(74, 222, 128, 0.8) !important;
+           background-color: rgba(74, 222, 128, 0.3) !important;
         }
         .wavesurfer-region:hover {
           background-color: rgba(99, 102, 241, 0.3) !important;
@@ -274,6 +388,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
            overflow: hidden;
            white-space: nowrap;
         }
+        /* Custom scrollbar for minimap if needed, though wavesurfer handles it */
       `}</style>
     </div>
   );
