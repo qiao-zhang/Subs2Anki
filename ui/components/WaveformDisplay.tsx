@@ -1,64 +1,77 @@
-
-import React, { useEffect, useRef, useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import RegionsPlugin, { Region } from 'wavesurfer.js/dist/plugins/regions.esm.js';
+import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Minimap from 'wavesurfer.js/dist/plugins/minimap.esm.js';
-import { ZoomIn, ZoomOut, Activity } from 'lucide-react';
-import { SubtitleLine } from '../../core/types';
+import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
+import {SubtitleLine} from '../../core/types';
 
 interface WaveformDisplayProps {
   audioSrc: string;
   currentTime: number;
   onSeek: (time: number) => void;
-  subtitles: SubtitleLine[];
+  subtitleLines: SubtitleLine[];
   onSubtitleChange: (id: number, start: number, end: number) => void;
-  tempSegment: { start: number; end: number } | null;
+  // tempSegment: { start: number; end: number } | null;
   onTempSegmentCreated: (start: number, end: number) => void;
   onTempSegmentUpdated: (start: number, end: number) => void;
+  onTempSegmentRemoved: () => void;
   onEditSubtitle: (id: number) => void;
   onPlaySubtitle: (id: number) => void;
-  onPlayTempSegment: () => void;
+  onClickTempSegment: () => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (id: number) => void;
+  // onSelectedTimeSpanChanged: (start: number, end: number) => void;
 }
 
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            audioSrc,
                                                            currentTime,
                                                            onSeek,
-                                                           subtitles,
+                                                           subtitleLines,
                                                            onSubtitleChange,
-                                                           tempSegment,
+                                                           // tempSegment,
                                                            onTempSegmentCreated,
                                                            onTempSegmentUpdated,
+                                                           onTempSegmentRemoved,
                                                            onEditSubtitle,
                                                            onPlaySubtitle,
-                                                           onPlayTempSegment,
+                                                           onClickTempSegment,
                                                            onToggleLock,
-                                                           onCreateCard
+                                                           onCreateCard,
+                                                           // onSelectedTimeSpanChanged: onSelectedTimeSpanUpdated,
                                                          }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const waveformContainerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
   const wsRegions = useRef<RegionsPlugin | null>(null);
+
   const [zoom, setZoom] = useState<number>(50);
   const [isReady, setIsReady] = useState(false);
 
   const isSyncingSubtitles = useRef(false);
 
   // Track creation of new regions
+  const TEMP_REGION_ID = 'subs2anki-temp-segment';
+  const tempTimeSpan = useRef<{ start: number, end: number } | null>(null);
   const activeDragRegionId = useRef<string | null>(null);
   // Track modification of existing regions
-  const draggingRegionId = useRef<string | null>(null);
+  // const draggingRegionId = useRef<string | null>(null);
 
   // Middle mouse dragging state
   const isMiddleDragging = useRef(false);
   const lastMouseX = useRef(0);
 
-  const TEMP_REGION_ID = 'temp-segment';
+  const tempRegion = useRef<Region | null>(null);
+
+  const lastestSubtitleLines = useRef<SubtitleLine[]>(subtitleLines);
+  /*
+  useEffect(() => {
+    lastestSubtitleLines.current = subtitleLines;
+  }, [subtitleLines]);
+   */
 
   // Initialize WaveSurfer
   useEffect(() => {
-    if (!containerRef.current || !audioSrc) return;
+    if (!waveformContainerRef.current || !audioSrc) return;
 
     setIsReady(false);
     const regions = RegionsPlugin.create();
@@ -75,7 +88,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     });
 
     const ws = WaveSurfer.create({
-      container: containerRef.current,
+      container: waveformContainerRef.current,
       waveColor: '#4f46e5',
       progressColor: '#818cf8',
       cursorColor: '#ef4444',
@@ -92,6 +105,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     });
 
     regions.enableDragSelection({
+      id: TEMP_REGION_ID,
+      // content: 'Right click to dismiss',
       color: 'rgba(74, 222, 128, 0.4)',
     });
 
@@ -104,24 +119,40 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     ws.on('interaction', (newTime) => {
       onSeek(newTime);
+
+      tempRegion.current?.remove();
+      onTempSegmentRemoved();
     });
 
     // --- Region Events ---
 
     regions.on('region-created', (region: Region) => {
-      if (!isSyncingSubtitles.current) {
-        if (region.id === TEMP_REGION_ID) return;
-        activeDragRegionId.current = region.id;
-      }
+      if (isSyncingSubtitles.current) return;
+      // remove the previous temp region if there is one
+      tempRegion.current?.remove();
+      tempRegion.current = region;
+      region.setOptions({content: 'Right click to dismiss'});
+      region.element.addEventListener('contextmenu', (e: MouseEvent) => {
+        e.preventDefault();
+        tempRegion.current = null;
+        setTimeout(() => region.remove(), 0);
+        onTempSegmentRemoved();
+      });
+      onTempSegmentCreated(region.start, region.end);
     });
 
     regions.on('region-updated', (region: Region) => {
+      console.log("on region-updated", region.id);
       if (isSyncingSubtitles.current) return;
 
+      console.log("on region-updated1", region.id);
+      /*
       if (activeDragRegionId.current !== region.id) {
-        draggingRegionId.current = region.id;
+        // draggingRegionId.current = region.id;
       }
+       */
 
+      console.log("on region-updated2", region.id);
       if (region.id === TEMP_REGION_ID) {
         onTempSegmentUpdated(region.start, region.end);
       } else {
@@ -133,16 +164,23 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     });
 
     regions.on('region-clicked', (region: Region, e: MouseEvent) => {
+      console.log("on region-clicked", region.id);
       e.stopPropagation();
       if (region.id === TEMP_REGION_ID) {
-        onPlayTempSegment();
+        onClickTempSegment();
       } else {
         const id = parseInt(region.id);
+        console.log(lastestSubtitleLines.current);
+        const sub = lastestSubtitleLines.current.find(s => s.id === id);
+        console.log(sub);
+        onPlaySubtitle(id);
+        /*
         if (!isNaN(id)) {
           onPlaySubtitle(id);
         } else {
           onSeek(region.start);
         }
+        */
       }
     });
 
@@ -163,10 +201,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     };
   }, [audioSrc]);
 
+  /*
   // Middle Mouse Panning Logic
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const waveformContainer = waveformContainerRef.current;
+    if (!waveformContainer) return;
 
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button === 1) { // Middle Button
@@ -174,7 +213,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         e.stopPropagation(); // Stop propagation to prevent standard scrolling triggers
         isMiddleDragging.current = true;
         lastMouseX.current = e.clientX;
-        container.style.cursor = 'grabbing';
+        waveformContainer.style.cursor = 'grabbing';
       }
     };
 
@@ -195,27 +234,29 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     const handleMouseUp = (e: MouseEvent) => {
       if (isMiddleDragging.current) {
         isMiddleDragging.current = false;
-        if(container) container.style.cursor = 'auto';
+        if (waveformContainer) waveformContainer.style.cursor = 'auto';
       }
     };
 
-    container.addEventListener('mousedown', handleMouseDown);
+    waveformContainer.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
 
     const handleAuxClick = (e: MouseEvent) => {
       if (e.button === 1) e.preventDefault();
     };
-    container.addEventListener('auxclick', handleAuxClick);
+    waveformContainer.addEventListener('auxclick', handleAuxClick);
 
     return () => {
-      container.removeEventListener('mousedown', handleMouseDown);
+      waveformContainer.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
-      container.removeEventListener('auxclick', handleAuxClick);
+      waveformContainer.removeEventListener('auxclick', handleAuxClick);
     };
   }, []);
+  */
 
+  /*
   // Global Mouse Up Listener for Regions
   useEffect(() => {
     const handleGlobalMouseUp = () => {
@@ -238,7 +279,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       if (draggingRegionId.current && wsRegions.current) {
         const regionId = draggingRegionId.current;
         if (regionId === TEMP_REGION_ID) {
-          onPlayTempSegment();
+          onClickTempSegment();
         } else {
           const id = parseInt(regionId);
           if (!isNaN(id)) onPlaySubtitle(id);
@@ -251,7 +292,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     return () => {
       window.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [onTempSegmentCreated, onPlaySubtitle, onPlayTempSegment, onSeek]);
+  }, [onTempSegmentCreated, onPlaySubtitle, onClickTempSegment, onSeek]);
+  */
 
   // Handle Zoom
   useEffect(() => {
@@ -270,9 +312,28 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
   }, [currentTime, isReady]);
 
-  // Sync Regions
-  useEffect(() => {
+  useEffect(() => { // Sync Regions on [subtitleLines, isReady]
     if (!wsRegions.current || !isReady) return;
+
+    if (lastestSubtitleLines.current !== subtitleLines)
+    {
+      lastestSubtitleLines.current = subtitleLines;
+    }
+    /*
+    const pre = previousThings.current;
+
+    if (pre?.subtitles !== subtitles)
+    {
+      console.log('subtitle changed');
+    }
+
+    if (pre?.isReady !== isReady)
+    {
+      console.log('isReady changed');
+    }
+
+    previousThings.current = {subtitles, isReady};
+     */
 
     isSyncingSubtitles.current = true;
     const regionsPlugin = wsRegions.current;
@@ -280,6 +341,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     const existingRegions = new Map(regionsPlugin.getRegions().map(r => [r.id, r]));
     const processedIds = new Set<string>();
 
+    /*
     if (tempSegment) {
       processedIds.add(TEMP_REGION_ID);
       if (draggingRegionId.current !== TEMP_REGION_ID) {
@@ -300,21 +362,25 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         }
       }
     }
+     */
+    const l = lastestSubtitleLines.current[1];
+    console.log(`subtitle lines:`, l);
 
-    subtitles.forEach(sub => {
+    subtitleLines.forEach(sub => {
       const idStr = sub.id.toString();
       processedIds.add(idStr);
 
-      if (draggingRegionId.current === idStr) return;
+      // if (draggingRegionId.current === idStr) return;
 
       const r = existingRegions.get(idStr);
       const color = sub.locked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.2)';
-      const content = sub.text.substring(0, 15) + (sub.text.length > 15 ? '...' : '');
+      // const content = sub.text.substring(0, 15) + (sub.text.length > 15 ? '...' : '');
+      const content = sub.text;
 
       if (r) {
         if (Math.abs(r.start - sub.startTime) > 0.01) r.start = sub.startTime;
         if (Math.abs(r.end - sub.endTime) > 0.01) r.end = sub.endTime;
-        r.setOptions({ drag: !sub.locked, resize: !sub.locked, color, content });
+        r.setOptions({drag: !sub.locked, resize: !sub.locked, color, content});
       } else {
         const newRegion = regionsPlugin.addRegion({
           id: idStr,
@@ -345,7 +411,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       isSyncingSubtitles.current = false;
     }, 0);
 
-  }, [subtitles, tempSegment, isReady, onToggleLock]);
+  }, [subtitleLines, isReady]); // end of Sync Regions
 
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));
@@ -355,18 +421,23 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   return (
     <div className="h-full w-full flex flex-col relative group select-none bg-slate-900/50">
       {!isReady && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm text-slate-400 text-xs">
-          <Activity className="animate-pulse mr-2" size={16} />
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm text-slate-400 text-xs">
+          <Activity className="animate-pulse mr-2" size={16}/>
           Extracting Waveform...
         </div>
       )}
 
       <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={handleZoomOut} className="p-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 border border-slate-700"><ZoomOut size={14} /></button>
-        <button onClick={handleZoomIn} className="p-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 border border-slate-700"><ZoomIn size={14} /></button>
+        <button onClick={handleZoomOut}
+                className="p-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 border border-slate-700"><ZoomOut
+          size={14}/></button>
+        <button onClick={handleZoomIn}
+                className="p-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 border border-slate-700"><ZoomIn
+          size={14}/></button>
       </div>
 
-      <div ref={containerRef} className="w-full h-full" />
+      <div ref={waveformContainerRef} className="w-full h-full"/>
 
       <style>{`
         .wavesurfer-region {

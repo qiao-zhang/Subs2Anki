@@ -1,29 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Clock } from 'lucide-react';
-import { formatTime } from '../../core/time';
-import { LLMSettings } from '../../core/gemini';
+import React, {useState, useEffect, useRef} from 'react';
+import {X, Save, Clock} from 'lucide-react';
+import {formatTime} from '../../core/time';
+import {LLMSettings} from '../../core/gemini';
 
-interface NewSubtitleModalProps {
+interface EditSubtitleLineModalProps {
   isOpen: boolean;
-  onClose: () => void;
   startTime: number;
   endTime: number;
+  onRemove: () => void;
+  onClose: () => void;
   onSave: (text: string) => void;
   initialText?: string;
   audioBlob?: Blob | null;
   llmSettings?: LLMSettings;
 }
 
-const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  startTime, 
-  endTime, 
-  onSave,
-  initialText = '',
-  audioBlob,
-  llmSettings
-}) => {
+const EditSubtitleLineModal: React.FC<EditSubtitleLineModalProps> = (
+  {
+    isOpen,
+    startTime,
+    endTime,
+    onRemove,
+    onClose,
+    onSave,
+    initialText = '',
+    audioBlob,
+    llmSettings
+  }) => {
   const [text, setText] = useState(initialText);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -41,6 +44,11 @@ const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleRemove = () => {
+    onRemove();
+    onClose();
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (text.trim()) {
@@ -50,6 +58,7 @@ const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // TODO Enter + ShiftKey to submit
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as any);
@@ -60,20 +69,22 @@ const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-        
+      <div
+        className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+
         <div className="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-800">
           <h2 className="text-lg font-bold flex items-center gap-2 text-white">
-            <Clock className="text-indigo-400" size={20} /> {initialText ? 'Edit Subtitle' : 'New Subtitle Line'}
+            <Clock className="text-indigo-400" size={20}/> {initialText ? 'Edit Subtitle' : 'New Subtitle Line'}
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition">
-            <X size={20} />
+            <X size={20}/>
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          
-          <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-800/50 p-2 rounded border border-slate-700">
+
+          <div
+            className="flex items-center justify-between text-xs text-slate-400 bg-slate-800/50 p-2 rounded border border-slate-700">
             <div>
               <span className="font-bold uppercase mr-2">Start:</span>
               <span className="font-mono text-indigo-300">{formatTime(startTime)}</span>
@@ -85,8 +96,8 @@ const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({
             </div>
             <div className="h-4 w-px bg-slate-600"></div>
             <div>
-               <span className="font-bold uppercase mr-2">Duration:</span>
-               <span className="font-mono text-slate-300">{(endTime - startTime).toFixed(2)}s</span>
+              <span className="font-bold uppercase mr-2">Duration:</span>
+              <span className="font-mono text-slate-300">{(endTime - startTime).toFixed(2)}s</span>
             </div>
           </div>
 
@@ -107,6 +118,13 @@ const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
+              onClick={handleRemove}
+              className="px-2 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 transition"
+            >
+              Remove
+            </button>
+            <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 transition"
             >
@@ -117,7 +135,7 @@ const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({
               disabled={!text.trim()}
               className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Save size={16} /> Save
+              <Save size={16}/> Save
             </button>
           </div>
         </form>
@@ -127,4 +145,4 @@ const NewSubtitleModal: React.FC<NewSubtitleModalProps> = ({
   );
 };
 
-export default NewSubtitleModal;
+export default EditSubtitleLineModal;

@@ -1,4 +1,3 @@
-
 import React, {useState, useRef, useEffect, useMemo} from 'react';
 import {SubtitleLine, AnkiCard, ProcessingState, AnkiNoteType} from '../core/types';
 import {parseSubtitles, serializeSubtitles} from '../core/parser';
@@ -11,7 +10,7 @@ import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
 import CardItem from './components/CardItem';
 import TemplateEditorModal from './components/TemplateEditorModal';
-import NewSubtitleModal from './components/NewSubtitleModal';
+import EditSubtitleLineModal from './components/EditSubtitleLineModal.tsx';
 import LLMSettingsModal from './components/LLMSettingsModal';
 import {
   FileText,
@@ -34,7 +33,7 @@ import {
 
 const DEFAULT_NOTE_TYPE: AnkiNoteType = {
   id: 123456789,
-  name: "Sub2Anki Advanced",
+  name: "Subs2Anki",
   css: `.card { font-family:Arial; font-size:36px; text-align: center; color:black; background-color:white; } .before{ font-size: 18px; text-align: left; color: grey; } .after { font-size: 18px; text-align: left; color: grey; } .tags { font-size:15px; text-align: left; color:grey; } .notes { font-size:21px; text-align: left; color:grey; }`,
   fields: [
     { name: "Sequence", source: 'Sequence' },
@@ -97,6 +96,11 @@ const App: React.FC = () => {
   const subtitleListRef = useRef<HTMLDivElement>(null);
   const subtitleInputRef = useRef<HTMLInputElement>(null);
 
+  const lastestSubtitleLines = useRef<SubtitleLine[]>(subtitleLines);
+  useEffect(() => {
+    lastestSubtitleLines.current = subtitleLines;
+  }, [subtitleLines]);
+
   useEffect(() => {
     const saved = localStorage.getItem('sub2anki_llm_settings');
     if (saved) {
@@ -142,8 +146,10 @@ const App: React.FC = () => {
         });
         const file = await handle.getFile();
         const text = await file.text();
+        console.log(`file: ${file}`);
         setSubtitleFileName(file.name);
         setSubtitleLines(parseSubtitles(text));
+        console.log(`in handleOpenSubtitle, after setSubtitleLines: subtitleLines: ${subtitleLines}`);
         setFileHandle(handle);
         setHasUnsavedChanges(false);
         return;
@@ -162,7 +168,11 @@ const App: React.FC = () => {
       setFileHandle(null);
       const reader = new FileReader();
       reader.onload = (e) => {
-        setSubtitleLines(parseSubtitles(e.target?.result as string));
+        const lines = parseSubtitles(e.target?.result as string);
+        //console.log(lines);
+        console.log(`in handleSubtitleInputChange, before setSubtitleLines: lines: ${lines}`);
+        setSubtitleLines(lines);
+        console.log(`in handleSubtitleInputChange, after setSubtitleLines: subtitleLines: ${subtitleLines}`);
         setHasUnsavedChanges(false);
       };
       reader.readAsText(file);
@@ -188,10 +198,14 @@ const App: React.FC = () => {
     setTempSegment({ start, end });
 
     // Auto-play the region for preview
+    /*
     videoRef.current?.pause();
-    videoRef.current?.seekTo(start);
-    videoRef.current?.play();
-    setPauseAtTime(end);
+    playTimeSpan(start, end);
+
+    //videoRef.current?.seekTo(start);
+    //videoRef.current?.play();
+    //setPauseAtTime(end);
+     */
   };
 
   // 2. User resizes the green region -> Update state (no auto-play)
@@ -199,12 +213,24 @@ const App: React.FC = () => {
     setTempSegment({ start, end });
   };
 
-  // 3. User clicks "Replay" in Component Island OR interact with waveform temp region
+  const handleTempSegmentRemoved = () => {
+    setTempSegment(null);
+  }
+
+  const playTimeSpan = (start: number, end: number) => {
+    setPauseAtTime(end);
+    videoRef.current?.seekTo(start);
+    videoRef.current?.play();
+  }
+
+  const handlePlayTimeSpan = (start: number, end: number) => {
+    playTimeSpan(start, end);
+  }
+
+  // 3. User clicks "Play" in Control bar OR interact with waveform temp region
   const handlePlayTempSegment = () => {
     if (!tempSegment) return;
-    setPauseAtTime(tempSegment.end);
-    videoRef.current?.seekTo(tempSegment.start);
-    videoRef.current?.play();
+    playTimeSpan(tempSegment.start, tempSegment.end);
   };
 
   // 4. User clicks "Add Subtitle" -> Open Modal
@@ -223,9 +249,10 @@ const App: React.FC = () => {
 
   // --- Edit Existing Subtitle ---
   const handleEditSubtitle = (id: number) => {
-    const sub = subtitleLines.find(s => s.id === id);
+    const sub = lastestSubtitleLines.current.find(s => s.id === id);
     if (!sub) return;
     videoRef.current?.pause();
+    videoRef.current?.seekTo(sub.startTime);
     setEditingSubId(id);
     setTempSegment(null); // Clear any dragging temp
     if (audioBuffer) setSubAudioBlob(sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime));
@@ -238,7 +265,7 @@ const App: React.FC = () => {
       setSubtitleLines(prev => prev.map(s => s.id === editingSubId ? { ...s, text } : s));
     } else if (tempSegment) {
       // Creating new from temp segment
-      const maxId = subtitleLines.reduce((max, s) => Math.max(max, s.id), 0);
+      const maxId = lastestSubtitleLines.current.reduce((max, s) => Math.max(max, s.id), 0);
       const newSub: SubtitleLine = { id: maxId + 1, startTime: tempSegment.start, endTime: tempSegment.end, text, locked: false };
       setSubtitleLines(prev => [...prev, newSub].sort((a, b) => a.startTime - b.startTime));
       setTempSegment(null); // Clear temp segment after save
@@ -247,7 +274,11 @@ const App: React.FC = () => {
   };
 
   const toggleSubtitleLock = (id: number) => {
-    setSubtitleLines(prev => prev.map(s => s.id === id ? { ...s, locked: !s.locked } : s));
+    console.log("toggleSubtitleLock");
+    const lines = lastestSubtitleLines.current
+    const l = lastestSubtitleLines.current.find(s => s.id === id);
+    console.log("toggleSubtitleLock: ", l);
+    setSubtitleLines(lines.map(s => s.id === id ? { ...s, locked: !s.locked } : s));
   };
 
   const handleSaveSubtitles = async () => {
@@ -255,7 +286,7 @@ const App: React.FC = () => {
     if (fileHandle) {
       try {
         const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
-        const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
+        const content = serializeSubtitles(lastestSubtitleLines.current, isVtt ? 'vtt' : 'srt');
         // @ts-ignore
         const writable = await fileHandle.createWritable();
         // @ts-ignore
@@ -271,7 +302,7 @@ const App: React.FC = () => {
   const handleDownloadSubtitles = async () => {
     if (!subtitleFileName) return;
     const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
-    const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
+    const content = serializeSubtitles(lastestSubtitleLines.current, isVtt ? 'vtt' : 'srt');
     try {
       // @ts-ignore
       if (window.showSaveFilePicker) {
@@ -296,14 +327,17 @@ const App: React.FC = () => {
     setCurrentTime(time);
     if (pauseAtTime !== null && time >= pauseAtTime) {
       videoRef.current?.pause();
+      videoRef.current?.seekTo(pauseAtTime);
       setPauseAtTime(null);
     }
+    /*
     const active = subtitleLines.find(s => time >= s.startTime && time <= s.endTime);
     if (active && active.id !== activeSubtitleId) {
       setActiveSubtitleId(active.id);
       const el = document.getElementById(`sub-${active.id}`);
       if (el && subtitleListRef.current) el.scrollIntoView({behavior: 'smooth', block: 'center'});
     } else if (!active) setActiveSubtitleId(null);
+    */
   };
 
   const handleSeek = (time: number) => {
@@ -312,13 +346,23 @@ const App: React.FC = () => {
   };
 
   const handlePlaySubtitle = (id: number) => {
-    const sub = subtitleLines.find(s => s.id === id);
+    console.log(`in handlePlaySubtitle: id: ${id}`);
+    console.log(`in handlePlaySubtitle: lastest subtitle lines: ${lastestSubtitleLines.current}`);
+    const sub = lastestSubtitleLines.current.find(s => s.id === id);
+
     if (sub && videoRef.current) {
       // Explicitly clear any active temp segment to ensure UI controls switch back to the active subtitle
       setTempSegment(null);
-      setPauseAtTime(sub.endTime);
-      videoRef.current.seekTo(sub.startTime);
-      videoRef.current.play();
+      playTimeSpan(sub.startTime, sub.endTime);
+    }
+  };
+
+  const handleRemoveBtnClicked = () => {
+    if (editingSubId)
+    {
+      const l = lastestSubtitleLines.current.find(l => l.id === editingSubId);
+      console.log("removing subtitle:", l);
+      setSubtitleLines(lastestSubtitleLines.current.filter(l => l.id !== editingSubId));
     }
   };
 
@@ -335,8 +379,8 @@ const App: React.FC = () => {
 
   const analyzeCard = async (card: AnkiCard) => {
     setProcessing(prev => ({...prev, isAnalyzing: true}));
-    const subIndex = subtitleLines.findIndex(s => s.id === card.subtitleId);
-    const result = await analyzeSubtitle(card.text, subtitleLines[subIndex - 1]?.text, subtitleLines[subIndex + 1]?.text, llmSettings);
+    const subIndex = lastestSubtitleLines.current.findIndex(s => s.id === card.subtitleId);
+    const result = await analyzeSubtitle(card.text, lastestSubtitleLines.current[subIndex - 1]?.text, lastestSubtitleLines.current[subIndex + 1]?.text, llmSettings);
     setAnkiCards(prev => prev.map(c => c.id === card.id ? { ...c, translation: result.translation, notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}` } : c));
     setProcessing(prev => ({...prev, isAnalyzing: false}));
   };
@@ -385,7 +429,7 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Component Island (Control Bar) */}
+          {/* Control Bar */}
           <div className="h-16 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all">
 
             {tempSegment ? (
@@ -398,16 +442,18 @@ const App: React.FC = () => {
                 <div className="h-6 w-px bg-slate-700 mx-1"></div>
 
                 <button onClick={handlePlayTempSegment} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition border border-slate-700 font-medium">
-                  <RotateCcw size={16} /> Replay
+                  <Play size={16} />
                 </button>
 
                 <button onClick={handleCommitTempSegment} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition shadow-lg shadow-emerald-500/20 font-bold">
                   <Check size={16} /> Add Subtitle
                 </button>
 
-                <button onClick={handleDiscardTempSegment} className="p-2 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded-lg transition" title="Discard">
-                  <XIcon size={20} />
-                </button>
+                <span>Right click the temp region to dismiss it</span>
+
+                {/*<button onClick={handleDiscardTempSegment} className="p-2 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded-lg transition" title="Discard">*/}
+                {/*  <XIcon size={20} />*/}
+                {/*</button>*/}
               </div>
             ) : (
               /* Standard Controls Mode */
@@ -430,7 +476,7 @@ const App: React.FC = () => {
                   <>
                     <div className="h-8 w-px bg-slate-800"></div>
                     <button onClick={() => handlePlaySubtitle(activeSubtitleId)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-lg transition border border-slate-700 font-medium text-sm animate-in fade-in zoom-in duration-200">
-                      <RotateCcw size={14} /> Replay Segment
+                      <Play size={16} /> Play
                     </button>
                   </>
                 )}
@@ -511,14 +557,15 @@ const App: React.FC = () => {
           audioSrc={videoSrc}
           currentTime={currentTime}
           onSeek={handleSeek}
-          subtitles={subtitleLines}
+          subtitleLines={subtitleLines}
           onSubtitleChange={handleSubtitleTimeChange}
-          tempSegment={tempSegment}
+          // tempSegment={currentTimeSpan}
           onTempSegmentCreated={handleTempSegmentCreated}
           onTempSegmentUpdated={handleTempSegmentUpdated}
+          onTempSegmentRemoved={handleTempSegmentRemoved}
           onEditSubtitle={handleEditSubtitle}
           onPlaySubtitle={handlePlaySubtitle}
-          onPlayTempSegment={handlePlayTempSegment}
+          onClickTempSegment={handlePlayTempSegment}
           onToggleLock={toggleSubtitleLock}
           onCreateCard={(id) => { const s = subtitleLines.find(x => x.id === id); if(s) createCard(s); }}
         />
@@ -527,8 +574,9 @@ const App: React.FC = () => {
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} config={ankiConfig} onSave={setAnkiConfig} />
       <LLMSettingsModal isOpen={isLLMSettingsOpen} onClose={() => setIsLLMSettingsOpen(false)} settings={llmSettings} onSave={handleSaveLLMSettings} />
-      <NewSubtitleModal
+      <EditSubtitleLineModal
         isOpen={isNewSubtitleModalOpen}
+        onRemove={handleRemoveBtnClicked}
         onClose={() => setIsNewSubtitleModalOpen(false)}
         startTime={tempSegment ? tempSegment.start : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.startTime || 0) : 0)}
         endTime={tempSegment ? tempSegment.end : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.endTime || 0) : 0)}

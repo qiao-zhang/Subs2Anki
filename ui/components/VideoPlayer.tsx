@@ -11,7 +11,7 @@ interface VideoPlayerProps {
  */
 export interface VideoPlayerHandle {
   seekTo: (time: number) => void;
-  play: () => void;
+  play: () => Promise<void>;
   pause: () => void;
   captureFrame: () => string | null;
   captureFrameAt: (time: number) => Promise<string | null>;

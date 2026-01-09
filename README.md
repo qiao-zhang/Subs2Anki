@@ -105,3 +105,11 @@ npm run test:watch
     *   Click the **Export** button at the top of the deck list.
     *   This downloads a `.zip` file.
     *   **In Anki**: Go to `File -> Import` and select the downloaded zip file.
+
+
+```aiignore
+npm install --save-dev @tauri-apps/cli@latest
+npx tauri init
+npx tauri dev
+npx tauri build
+```
