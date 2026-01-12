@@ -19,10 +19,17 @@ export interface AnkiCard {
   text: string;             // The front text of the card
   translation: string;      // AI-generated translation
   notes: string;            // AI-generated notes (grammar, culture, vocab)
-  screenshotDataUrl: string | null; // Base64 encoded image of the video frame
-  audioBlob: Blob | null;   // Reserved for future audio clip support
+  
+  // Media References (UUIDs pointing to IndexedDB)
+  screenshotRef: string | null; 
+  audioRef: string | null;   
+  gifRef: string | null;
+  
   timestampStr: string;     // Formatted timestamp string for display (e.g., "01:23")
   audioStatus?: 'pending' | 'processing' | 'done' | 'error'; // Tracking background audio extraction
+  gifStatus?: 'pending' | 'processing' | 'done' | 'error';
+  
+  preferredMediaType?: 'image' | 'gif';
 }
 
 /**

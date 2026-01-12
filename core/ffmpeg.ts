@@ -4,7 +4,7 @@ import { toBlobURL, fetchFile } from '@ffmpeg/util';
 
 /**
  * Singleton service for handling FFmpeg operations.
- * Allows fast extraction of audio clips without real-time playback.
+ * Allows fast extraction of audio clips and GIFs without real-time playback.
  */
 class FFmpegService {
   private ffmpeg: FFmpeg | null = null;
@@ -44,11 +44,6 @@ class FFmpegService {
 
   /**
    * Extracts an audio clip from a video file.
-   * 
-   * @param file - The source video File object
-   * @param start - Start time in seconds
-   * @param end - End time in seconds
-   * @returns Blob containing the WAV audio
    */
   async extractAudioClip(file: File, start: number, end: number): Promise<Blob> {
     if (!this.loaded) {
@@ -58,23 +53,11 @@ class FFmpegService {
     if (!this.ffmpeg) throw new Error("FFmpeg not loaded");
 
     const duration = Math.max(0.1, end - start);
-    const inputName = 'input.video'; // Use generic extension or derive from file
+    const inputName = 'input_audio.video'; 
     const outputName = 'output.wav';
 
-    // 1. Write file to MEMFS
-    // Note: Writing large files to MEMFS consumes memory. 
-    // For very large files (>2GB), this might still OOM on some systems,
-    // but it's generally safer than decoding the whole audio stream to PCM.
     await this.ffmpeg.writeFile(inputName, await fetchFile(file));
 
-    // 2. Run FFmpeg command
-    // -ss: Start time
-    // -t: Duration
-    // -i: Input
-    // -vn: No video
-    // -acodec pcm_s16le: Uncompressed WAV (safe/compatible)
-    // -ar 44100: Standard sample rate
-    // -y: Overwrite output
     await this.ffmpeg.exec([
       '-ss', start.toString(),
       '-t', duration.toString(),
@@ -86,14 +69,72 @@ class FFmpegService {
       outputName
     ]);
 
-    // 3. Read output
     const data = await this.ffmpeg.readFile(outputName);
     
-    // 4. Cleanup to free memory
     await this.ffmpeg.deleteFile(inputName);
     await this.ffmpeg.deleteFile(outputName);
 
     return new Blob([data], { type: 'audio/wav' });
+  }
+
+  /**
+   * Extracts a GIF clip from a video file.
+   * Resizes to width 480px, fps 10 for reasonable size/performance.
+   */
+  async extractGifClip(file: File, start: number, end: number): Promise<string> {
+    if (!this.loaded) {
+      await this.load();
+    }
+    
+    if (!this.ffmpeg) throw new Error("FFmpeg not loaded");
+
+    const duration = Math.max(0.1, end - start);
+    // Limit max duration for GIF to prevent crashes/huge files
+    const safeDuration = Math.min(duration, 5.0).toString();
+
+    const inputName = 'input_gif.video';
+    const outputName = 'output.gif';
+    const paletteName = 'palette.png';
+
+    await this.ffmpeg.writeFile(inputName, await fetchFile(file));
+
+    // 1. Generate Palette for better quality
+    // filters: fps=10, scale=480:-1 (maintain aspect ratio)
+    await this.ffmpeg.exec([
+        '-ss', start.toString(),
+        '-t', safeDuration,
+        '-i', inputName,
+        '-vf', 'fps=10,scale=480:-1:flags=lanczos,palettegen',
+        '-y',
+        paletteName
+    ]);
+
+    // 2. Generate GIF using palette
+    await this.ffmpeg.exec([
+        '-ss', start.toString(),
+        '-t', safeDuration,
+        '-i', inputName,
+        '-i', paletteName,
+        '-nhb',
+        '-filter_complex', 'fps=10,scale=480:-1:flags=lanczos[x];[x][1:v]paletteuse',
+        '-y',
+        outputName
+    ]);
+
+    const data = await this.ffmpeg.readFile(outputName);
+    
+    // Cleanup
+    await this.ffmpeg.deleteFile(inputName);
+    await this.ffmpeg.deleteFile(paletteName);
+    await this.ffmpeg.deleteFile(outputName);
+
+    // Convert Uint8Array to Base64 String
+    const blob = new Blob([data], { type: 'image/gif' });
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+    });
   }
 }
 

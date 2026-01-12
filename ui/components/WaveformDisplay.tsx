@@ -22,17 +22,17 @@ interface WaveformDisplayProps {
 }
 
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
-                                                           videoElement,
-                                                           currentTime,
-                                                           onSeek,
-                                                           onTempSubtitleLineCreated,
-                                                           onTempSubtitleLineUpdated,
-                                                           onTempSubtitleLineClicked,
-                                                           onTempSubtitleLineRemoved,
-                                                           onEditSubtitle,
-                                                           onPlaySubtitle,
-                                                           onToggleLock
-                                                         }) => {
+  videoElement,
+  currentTime,
+  onSeek,
+  onTempSubtitleLineCreated,
+  onTempSubtitleLineUpdated,
+  onTempSubtitleLineClicked,
+  onTempSubtitleLineRemoved,
+  onEditSubtitle,
+  onPlaySubtitle,
+  onToggleLock
+}) => {
   // Access store for direct reads in listeners and reactive updates
   const { subtitleLines, updateSubtitleTime } = useAppStore();
 
@@ -55,7 +55,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // Destroy previous instance if it exists
     if (wavesurfer.current) {
-      wavesurfer.current.destroy();
+        wavesurfer.current.destroy();
     }
 
     setIsReady(false);
@@ -118,25 +118,25 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     regions.on('region-created', (region: Region) => {
       if (isSyncingSubtitles.current) return;
-
+      
       // Handle Temp Region logic
       if (region.id === TEMP_REGION_ID) {
-        // remove the previous temp region if there is one (to enforce singleton)
-        if (tempRegion.current && tempRegion.current !== region) {
-          tempRegion.current.remove();
-        }
-        tempRegion.current = region;
-        region.setOptions({content: 'Right click to dismiss'});
-
-        // Add right-click to dismiss behavior
-        region.element.addEventListener('contextmenu', (e: MouseEvent) => {
-          e.preventDefault();
-          region.remove();
-          tempRegion.current = null;
-          onTempSubtitleLineRemoved();
-        });
-
-        onTempSubtitleLineCreated(region.start, region.end);
+         // remove the previous temp region if there is one (to enforce singleton)
+         if (tempRegion.current && tempRegion.current !== region) {
+            tempRegion.current.remove();
+         }
+         tempRegion.current = region;
+         region.setOptions({content: 'Right click to dismiss'});
+         
+         // Add right-click to dismiss behavior
+         region.element.addEventListener('contextmenu', (e: MouseEvent) => {
+            e.preventDefault();
+            region.remove();
+            tempRegion.current = null;
+            onTempSubtitleLineRemoved();
+         });
+         
+         onTempSubtitleLineCreated(region.start, region.end);
       }
     });
 
@@ -160,7 +160,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       } else {
         const id = parseInt(region.id);
         if (!isNaN(id)) {
-          onPlaySubtitle(id);
+             onPlaySubtitle(id);
         }
       }
     });

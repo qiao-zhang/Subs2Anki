@@ -1,12 +1,23 @@
+
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CardItem from '../../ui/components/CardItem';
 import { AnkiCard } from '../../core/types';
 
+// Mock getMedia from db to handle async image loading
+vi.mock('../../core/db', () => ({
+  getMedia: vi.fn().mockImplementation((id) => {
+    if (id === 'mock-screenshot-id') {
+      return Promise.resolve('data:image/png;base64,fake');
+    }
+    return Promise.resolve(null);
+  })
+}));
+
 /**
  * Test Suite for CardItem Component.
- *
+ * 
  * Verifies:
  * 1. UI Rendering: Correct text, images, and timestamps are displayed.
  * 2. Conditional Rendering: Placeholders appear when data is missing.
@@ -20,9 +31,12 @@ describe('CardItem Component', () => {
     text: 'Hello World',
     translation: 'Hola Mundo',
     notes: 'A greeting',
-    screenshotDataUrl: 'data:image/png;base64,fake',
-    audioBlob: null,
-    timestampStr: '00:05'
+    screenshotRef: 'mock-screenshot-id',
+    audioRef: null,
+    gifRef: null,
+    timestampStr: '00:05',
+    audioStatus: 'done',
+    preferredMediaType: 'image'
   };
 
   // Mock callback functions
@@ -30,14 +44,14 @@ describe('CardItem Component', () => {
   const mockAnalyze = vi.fn();
   const mockPreview = vi.fn();
 
-  it('renders card content correctly', () => {
+  it('renders card content correctly', async () => {
     render(
-      <CardItem
-        card={mockCard}
-        onDelete={mockDelete}
-        onAnalyze={mockAnalyze}
+      <CardItem 
+        card={mockCard} 
+        onDelete={mockDelete} 
+        onAnalyze={mockAnalyze} 
         onPreview={mockPreview}
-        isAnalyzing={false}
+        isAnalyzing={false} 
       />
     );
 
@@ -50,64 +64,64 @@ describe('CardItem Component', () => {
 
   it('renders placeholder when translation is missing', () => {
     // Create a card with no AI analysis data
-    const emptyCard = { ...mockCard, translation: '', notes: '' };
+    const emptyCard: AnkiCard = { ...mockCard, translation: '', notes: '' };
     render(
-      <CardItem
-        card={emptyCard}
-        onDelete={mockDelete}
-        onAnalyze={mockAnalyze}
+      <CardItem 
+        card={emptyCard} 
+        onDelete={mockDelete} 
+        onAnalyze={mockAnalyze} 
         onPreview={mockPreview}
-        isAnalyzing={false}
+        isAnalyzing={false} 
       />
     );
 
     // Verify the placeholder text appears
-    expect(screen.getByText('No analysis data yet.')).toBeInTheDocument();
+    expect(screen.getByText('Double-click to preview')).toBeInTheDocument();
   });
 
   it('calls onDelete when delete button is clicked', () => {
     render(
-      <CardItem
-        card={mockCard}
-        onDelete={mockDelete}
-        onAnalyze={mockAnalyze}
+      <CardItem 
+        card={mockCard} 
+        onDelete={mockDelete} 
+        onAnalyze={mockAnalyze} 
         onPreview={mockPreview}
-        isAnalyzing={false}
+        isAnalyzing={false} 
       />
     );
 
     // Find button by title attribute (accessibility practice)
     const deleteBtn = screen.getByTitle('Delete Card');
     fireEvent.click(deleteBtn);
-
+    
     // Verify callback was fired with correct ID
     expect(mockDelete).toHaveBeenCalledWith('123');
   });
 
   it('calls onAnalyze when analyze button is clicked', () => {
     render(
-      <CardItem
-        card={mockCard}
-        onDelete={mockDelete}
-        onAnalyze={mockAnalyze}
+      <CardItem 
+        card={mockCard} 
+        onDelete={mockDelete} 
+        onAnalyze={mockAnalyze} 
         onPreview={mockPreview}
-        isAnalyzing={false}
+        isAnalyzing={false} 
       />
     );
 
     const analyzeBtn = screen.getByTitle('AI Analyze');
     fireEvent.click(analyzeBtn);
-
+    
     // Verify callback was fired with the card object
     expect(mockAnalyze).toHaveBeenCalledWith(mockCard);
   });
 
   it('disables analyze button when isAnalyzing is true', () => {
     render(
-      <CardItem
-        card={mockCard}
-        onDelete={mockDelete}
-        onAnalyze={mockAnalyze}
+      <CardItem 
+        card={mockCard} 
+        onDelete={mockDelete} 
+        onAnalyze={mockAnalyze} 
         onPreview={mockPreview}
         isAnalyzing={true} // Simulate loading state
       />

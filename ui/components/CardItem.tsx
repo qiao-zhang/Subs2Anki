@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnkiCard } from '../../core/types';
 import { Trash2, Wand2, Image as ImageIcon, Loader2, Clock, AlertCircle } from 'lucide-react';
+import { getMedia } from '../../core/db';
 
 interface CardItemProps {
   card: AnkiCard;
@@ -13,7 +14,7 @@ interface CardItemProps {
 
 /**
  * Displays a single Flashcard in the deck list.
- *
+ * 
  * Shows:
  * - Screenshot thumbnail.
  * - Dialogue text.
@@ -22,7 +23,23 @@ interface CardItemProps {
  * - Audio processing status.
  */
 const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, onPreview, isAnalyzing }) => {
+  const [thumbnailSrc, setThumbnailSrc] = useState<string | null>(null);
 
+  // Async load thumbnail from IDB
+  useEffect(() => {
+    let active = true;
+    if (card.screenshotRef) {
+        getMedia(card.screenshotRef).then(data => {
+            if (active && data && typeof data === 'string') {
+                setThumbnailSrc(data);
+            }
+        });
+    } else {
+        setThumbnailSrc(null);
+    }
+    return () => { active = false; };
+  }, [card.screenshotRef]);
+  
   const renderAudioStatus = () => {
     if (card.audioStatus === 'processing') {
       return <Loader2 size={12} className="animate-spin text-indigo-400" />;
@@ -37,18 +54,18 @@ const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, onPrevie
   };
 
   return (
-    <div
+    <div 
       className="bg-slate-800 rounded-lg p-4 mb-3 border border-slate-700 shadow-sm hover:border-slate-600 transition-colors select-none"
       onDoubleClick={() => onPreview(card)}
     >
       <div className="flex gap-4">
         {/* Screenshot Thumbnail Section */}
         <div className="w-32 h-20 bg-black rounded overflow-hidden flex-shrink-0 relative border border-slate-700 group cursor-pointer" onClick={() => onPreview(card)}>
-          {card.screenshotDataUrl ? (
-            <img
-              src={card.screenshotDataUrl}
-              alt="Scene"
-              className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+          {thumbnailSrc ? (
+            <img 
+              src={thumbnailSrc} 
+              alt="Scene" 
+              className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -67,11 +84,11 @@ const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, onPrevie
           <h4 className="font-semibold text-white text-lg leading-tight mb-1 truncate cursor-text select-text" onClick={(e) => e.stopPropagation()}>
             {card.text}
           </h4>
-
+          
           {card.translation && (
             <p className="text-emerald-400 text-sm mb-1 truncate">{card.translation}</p>
           )}
-
+          
           {card.notes && (
             <p className="text-slate-400 text-xs italic line-clamp-1">{card.notes}</p>
           )}
@@ -90,14 +107,14 @@ const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, onPrevie
           >
             <Trash2 size={18} />
           </button>
-
+          
           {/* Analysis Button: Disabled during processing */}
           <button
             onClick={(e) => { e.stopPropagation(); onAnalyze(card); }}
             disabled={isAnalyzing}
             className={`p-2 rounded transition-colors ${
-              card.translation
-                ? 'text-emerald-500 hover:bg-emerald-950/30'
+              card.translation 
+                ? 'text-emerald-500 hover:bg-emerald-950/30' 
                 : 'text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/30'
             } ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="AI Analyze"

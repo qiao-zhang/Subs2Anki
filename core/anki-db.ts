@@ -1,3 +1,4 @@
+
 import initSqlJs, {Database} from 'sql.js';
 import {AnkiCard, AnkiNoteType} from './types';
 
@@ -227,11 +228,23 @@ export const createAnkiDatabase = async (
   // Use the passed creationTime to ensure filenames match what is in the zip media map
   cards.forEach((card, index) => {
     // Generate filenames for media
-    const safeImageFilename = card.screenshotDataUrl ? `sub2anki_${index}_${creationTime}.jpg` : '';
-    // Force max height to 270px for images in the Media field
-    const imageTag = safeImageFilename ? `<img src="${safeImageFilename}" style="max-height: 270px;">` : '';
+    // Note: We check if refs exist, not raw data
+    const safeImageFilename = card.screenshotRef ? `sub2anki_${index}_${creationTime}.jpg` : '';
+    const safeGifFilename = card.gifRef ? `sub2anki_gif_${index}_${creationTime}.gif` : '';
+    
+    // Determine which image file to use based on preference
+    let usedImageFilename = safeImageFilename;
+    if (card.preferredMediaType === 'gif' && safeGifFilename) {
+        usedImageFilename = safeGifFilename;
+    } else if (!safeImageFilename && safeGifFilename) {
+        // Fallback if png missing
+        usedImageFilename = safeGifFilename;
+    }
 
-    const safeAudioFilename = card.audioBlob ? `sub2anki_audio_${index}_${creationTime}.wav` : '';
+    // Force max height to 270px for images in the Media field
+    const imageTag = usedImageFilename ? `<img src="${usedImageFilename}" style="max-height: 270px;">` : '';
+
+    const safeAudioFilename = card.audioRef ? `sub2anki_audio_${index}_${creationTime}.wav` : '';
     const audioTag = safeAudioFilename ? `[sound:${safeAudioFilename}]` : '';
 
     // Prepare fields array based on the model definition and mappings
@@ -257,19 +270,6 @@ export const createAnkiDatabase = async (
             return '';
         }
       }
-
-      // Legacy Fallback (Name Heuristics) if no source is mapped
-      /*
-      const name = f.name.toLowerCase();
-      if (name.includes('sequence')) return `${safeAudioFilename} ${card.timestampStr}`.trim();
-      if (name.includes('text') || name.includes('sentence') || name.includes('front')) return card.text;
-      if (name.includes('translation')) return card.translation;
-      if (name.includes('notes')) return card.notes;
-      if (name.includes('meaning')) return `${card.translation}<br><small>${card.notes}</small>`;
-      if (name.includes('image') || name.includes('screenshot') || name.includes('picture') || name.includes('media')) return imageTag;
-      if (name.includes('audio') || name.includes('sound')) return audioTag;
-      if (name.includes('time')) return card.timestampStr;
-      */
       return "";
     });
 

@@ -8,6 +8,7 @@ import {formatTime} from '../core/time';
 import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
 import {ffmpegService} from '../core/ffmpeg';
+import {storeMedia, deleteMedia} from '../core/db';
 import saveAs from 'file-saver';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
@@ -33,14 +34,15 @@ import {
   Unlock,
   Settings,
   Loader2,
+  Wand2
 } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
-  const {
-    videoSrc, videoName, videoFile, setVideo,
-    subtitleLines, subtitleFileName, fileHandle, setSubtitles,
-    updateSubtitleText, toggleSubtitleLock, addSubtitle, removeSubtitle,
+  const { 
+    videoSrc, videoName, videoFile, setVideo, 
+    subtitleLines, subtitleFileName, fileHandle, setSubtitles, 
+    updateSubtitleText, updateSubtitleTime, toggleSubtitleLock, addSubtitle, removeSubtitle,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
     llmSettings, setLLMSettings,
@@ -51,9 +53,10 @@ const App: React.FC = () => {
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
-
+  
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
+  const [backgroundGifProcessingId, setBackgroundGifProcessingId] = useState<string | null>(null);
 
   // Modals
   const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
@@ -65,7 +68,7 @@ const App: React.FC = () => {
   // Editing context
   const [editingSubId, setEditingSubId] = useState<number | null>(null);
   const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
-
+  
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{start: number, end: number} | null>(null);
 
   // Refs
@@ -76,47 +79,105 @@ const App: React.FC = () => {
   // --- Background Audio Extraction Queue ---
   useEffect(() => {
     if (backgroundProcessingId) return;
-
+    
     const cards = useAppStore.getState().ankiCards;
     let nextCard = previewCard && cards.find(c => c.id === previewCard.id && c.audioStatus === 'pending');
-
+    
     if (!nextCard) {
-      nextCard = cards.find(c => c.audioStatus === 'pending');
+        nextCard = cards.find(c => c.audioStatus === 'pending');
     }
 
     if (nextCard && videoFile) {
-      processCardAudio(nextCard.id, nextCard.subtitleId);
-    } else if (!nextCard && isExporting) {
-      // Only finish export if GIF queue is also empty
-      finalizeExportIfReady();
+        processCardAudio(nextCard.id, nextCard.subtitleId);
+    } else if (!nextCard && isExporting && !backgroundGifProcessingId) {
+        // Only finish export if GIF queue is also empty
+        finalizeExportIfReady();
     }
   }, [ankiCards, backgroundProcessingId, previewCard, isExporting, videoFile]);
 
+  // --- Background GIF Extraction Queue ---
+  useEffect(() => {
+    if (backgroundGifProcessingId) return;
+
+    const cards = useAppStore.getState().ankiCards;
+    // 1. Prioritize preview card GIF
+    let nextCard = previewCard && cards.find(c => c.id === previewCard.id && c.gifStatus === 'pending');
+    
+    // 2. Then others
+    if (!nextCard) {
+        nextCard = cards.find(c => c.gifStatus === 'pending');
+    }
+
+    if (nextCard && videoFile) {
+        processCardGif(nextCard.id, nextCard.subtitleId);
+    } else if (!nextCard && isExporting && !backgroundProcessingId) {
+        finalizeExportIfReady();
+    }
+  }, [ankiCards, backgroundGifProcessingId, previewCard, isExporting, videoFile]);
+
+
   const processCardAudio = async (cardId: string, subtitleId: number) => {
-    if (!videoFile) return;
-
-    const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
-    if (!sub) {
-      updateCard(cardId, { audioStatus: 'error' });
-      return;
-    }
-
-    setBackgroundProcessingId(cardId);
-    updateCard(cardId, { audioStatus: 'processing' });
-
-    try {
-      const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime);
-      const currentCards = useAppStore.getState().ankiCards;
-      if (currentCards.find(c => c.id === cardId)) {
-        updateCard(cardId, { audioStatus: 'done', audioBlob: blob });
+      if (!videoFile) return;
+      
+      const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
+      if (!sub) {
+          updateCard(cardId, { audioStatus: 'error' });
+          return;
       }
-    } catch (e) {
-      console.error("Audio extraction failed", e);
-      updateCard(cardId, { audioStatus: 'error' });
-    } finally {
-      setBackgroundProcessingId(null);
-    }
+
+      setBackgroundProcessingId(cardId);
+      updateCard(cardId, { audioStatus: 'processing' });
+
+      try {
+          const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime);
+          
+          // Store Blob in IndexedDB
+          const audioId = crypto.randomUUID();
+          await storeMedia(audioId, blob);
+
+          const currentCards = useAppStore.getState().ankiCards;
+          if (currentCards.find(c => c.id === cardId)) {
+              updateCard(cardId, { audioStatus: 'done', audioRef: audioId });
+          }
+      } catch (e) {
+          console.error("Audio extraction failed", e);
+          updateCard(cardId, { audioStatus: 'error' });
+      } finally {
+          setBackgroundProcessingId(null);
+      }
   };
+
+  const processCardGif = async (cardId: string, subtitleId: number) => {
+      if (!videoFile) return;
+
+      const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
+      if (!sub) {
+          updateCard(cardId, { gifStatus: 'error' });
+          return;
+      }
+
+      setBackgroundGifProcessingId(cardId);
+      updateCard(cardId, { gifStatus: 'processing' });
+
+      try {
+          const gifBase64 = await ffmpegService.extractGifClip(videoFile, sub.startTime, sub.endTime);
+          
+          // Store GIF Base64 in IndexedDB
+          const gifId = crypto.randomUUID();
+          await storeMedia(gifId, gifBase64);
+
+          const currentCards = useAppStore.getState().ankiCards;
+          if (currentCards.find(c => c.id === cardId)) {
+              updateCard(cardId, { gifStatus: 'done', gifRef: gifId });
+          }
+      } catch (e) {
+          console.error("GIF extraction failed", e);
+          updateCard(cardId, { gifStatus: 'error' });
+      } finally {
+          setBackgroundGifProcessingId(null);
+      }
+  };
+
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -185,12 +246,12 @@ const App: React.FC = () => {
   const extractAudioSync = async (start: number, end: number): Promise<Blob | null> => {
     if (!videoFile) return null;
     try {
-      videoRef.current?.pause();
+      videoRef.current?.pause(); 
       return await ffmpegService.extractAudioClip(videoFile, start, end);
     } catch (e) {
       console.error("Audio extraction failed", e);
       return null;
-    }
+    } 
   };
 
   const handleCommitTempSubtitleLine = async () => {
@@ -203,7 +264,7 @@ const App: React.FC = () => {
   const handleEditSubtitle = async (id: number) => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (!sub) return;
-
+    
     videoRef.current?.pause();
     videoRef.current?.seekTo(sub.startTime);
 
@@ -221,12 +282,12 @@ const App: React.FC = () => {
     } else if (tempSubtitleLine) {
       const lines = useAppStore.getState().subtitleLines;
       const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
-      const newSub: SubtitleLine = {
-        id: maxId + 1,
-        startTime: tempSubtitleLine.start,
-        endTime: tempSubtitleLine.end,
-        text,
-        locked: false
+      const newSub: SubtitleLine = { 
+        id: maxId + 1, 
+        startTime: tempSubtitleLine.start, 
+        endTime: tempSubtitleLine.end, 
+        text, 
+        locked: false 
       };
       addSubtitle(newSub);
       setTempSubtitleLine(null);
@@ -253,8 +314,8 @@ const App: React.FC = () => {
         await writable.close();
         useAppStore.getState().setHasUnsavedChanges(false);
       } catch (err) { alert('Failed to save file.'); }
-    } else {
-      useAppStore.getState().setHasUnsavedChanges(false);
+    } else { 
+      useAppStore.getState().setHasUnsavedChanges(false); 
     }
     setIsSaveMenuOpen(false);
   };
@@ -290,7 +351,7 @@ const App: React.FC = () => {
       videoRef.current?.seekTo(pauseAtTime);
       setPauseAtTime(null);
     }
-
+    
     // Efficiently find active subtitle index
     const activeIndex = subtitleLines.findIndex(s => time >= s.startTime && time <= s.endTime);
     const active = activeIndex !== -1 ? subtitleLines[activeIndex] : null;
@@ -319,79 +380,104 @@ const App: React.FC = () => {
 
   const handleCreateCard = async (sub: SubtitleLine) => {
     if (!videoRef.current) return;
-
+    
     // Capture Screenshot immediately
     const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
     setPauseAtTime(null);
 
+    let screenshotRef = null;
+    if (screenshot) {
+        screenshotRef = crypto.randomUUID();
+        await storeMedia(screenshotRef, screenshot);
+    }
+    
     // Add card with pending audio status
-    const newCard: AnkiCard = {
-      id: crypto.randomUUID(),
-      subtitleId: sub.id,
-      text: sub.text,
-      translation: '',
-      notes: '',
-      screenshotDataUrl: screenshot || null,
-      audioBlob: null,
-      audioStatus: 'pending',
-      timestampStr: formatTime(sub.startTime),
+    const newCard: AnkiCard = { 
+        id: crypto.randomUUID(), 
+        subtitleId: sub.id, 
+        text: sub.text, 
+        translation: '', 
+        notes: '', 
+        screenshotRef: screenshotRef, 
+        audioRef: null, 
+        audioStatus: 'pending',
+        timestampStr: formatTime(sub.startTime),
+        preferredMediaType: 'image',
+        gifStatus: undefined,
+        gifRef: null
     };
-
+    
     addCard(newCard);
-
+    
     if (llmSettings.autoAnalyze) handleAnalyzeCard(newCard);
   };
 
   const handleAnalyzeCard = async (card: AnkiCard) => {
     setProcessing({ isAnalyzing: true });
-
+    
     const lines = useAppStore.getState().subtitleLines;
     const subIndex = lines.findIndex(s => s.id === card.subtitleId);
-
+    
     const result = await analyzeSubtitle(
-      card.text,
-      lines[subIndex - 1]?.text,
-      lines[subIndex + 1]?.text,
+      card.text, 
+      lines[subIndex - 1]?.text, 
+      lines[subIndex + 1]?.text, 
       llmSettings
     );
-
-    updateCard(card.id, {
-      translation: result.translation,
-      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}`
+    
+    updateCard(card.id, { 
+      translation: result.translation, 
+      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}` 
     });
-
+    
     setProcessing({ isAnalyzing: false });
   };
 
-  const handleExportClick = () => {
-    // Check if audio processing is pending
-    const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
+  const handleDeleteCard = async (id: string) => {
+      const card = ankiCards.find(c => c.id === id);
+      if (card) {
+          try {
+            if (card.screenshotRef) await deleteMedia(card.screenshotRef);
+            if (card.audioRef) await deleteMedia(card.audioRef);
+            if (card.gifRef) await deleteMedia(card.gifRef);
+          } catch (e) {
+              console.error("Failed to delete media from DB", e);
+          }
+          deleteCard(id);
+      }
+  };
 
-    if (pendingAudio) {
-      setIsExporting(true);
-    } else {
-      finalizeExport();
-    }
+  const handleExportClick = () => {
+      // Check if audio processing is pending
+      const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
+      const pendingGif = ankiCards.some(c => c.gifStatus === 'pending' || c.gifStatus === 'processing');
+      
+      if (pendingAudio || pendingGif) {
+          setIsExporting(true);
+      } else {
+          finalizeExport();
+      }
   };
 
   const finalizeExportIfReady = () => {
-    const cards = useAppStore.getState().ankiCards;
-    const pendingAudio = cards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
+      const cards = useAppStore.getState().ankiCards;
+      const pendingAudio = cards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
+      const pendingGif = cards.some(c => c.gifStatus === 'pending' || c.gifStatus === 'processing');
 
-    if (!pendingAudio) {
-      finalizeExport();
-    }
+      if (!pendingAudio && !pendingGif) {
+          finalizeExport();
+      }
   }
 
   const finalizeExport = async () => {
-    setIsExporting(false);
-    await generateAnkiDeck(ankiCards, videoName, ankiConfig);
+      setIsExporting(false);
+      await generateAnkiDeck(ankiCards, videoName, ankiConfig);
   };
 
   const renderControlBar = () => {
     if (tempSubtitleLine) {
       return (
-        <TempSubtitleLineControls
+        <TempSubtitleLineControls 
           start={tempSubtitleLine.start}
           end={tempSubtitleLine.end}
           onPlay={handleTempSubtitleLineClicked}
@@ -400,10 +486,10 @@ const App: React.FC = () => {
         />
       );
     }
-
+    
     if (activeSubtitleId !== null) {
       return (
-        <ActiveSubtitleLineControls
+        <ActiveSubtitleLineControls 
           videoName={videoName}
           currentTime={currentTime}
           llmSettings={llmSettings}
@@ -415,7 +501,7 @@ const App: React.FC = () => {
     }
 
     return (
-      <DefaultControls
+      <DefaultControls 
         videoName={videoName}
         currentTime={currentTime}
         llmSettings={llmSettings}
@@ -429,12 +515,12 @@ const App: React.FC = () => {
   const renderSubtitleRow = (index: number) => {
     const sub = subtitleLines[index];
     const isActive = sub.id === activeSubtitleId;
-
+    
     return (
-      <div
-        key={sub.id}
-        id={`sub-${sub.id}`}
-        onClick={() => handlePlaySubtitle(sub.id)}
+      <div 
+        key={sub.id} 
+        id={`sub-${sub.id}`} 
+        onClick={() => handlePlaySubtitle(sub.id)} 
         className={`group flex items-start gap-2 p-2 mx-2 mb-1 rounded transition-all cursor-pointer border ${isActive ? 'bg-slate-800 border-indigo-500/50 shadow-md' : 'border-transparent hover:bg-slate-800/50'}`}
       >
         <button onClick={(e) => {e.stopPropagation(); toggleSubtitleLock(sub.id);}} className={`mt-1 ${sub.locked ? 'text-red-400' : 'text-slate-700 group-hover:text-slate-500'}`}>{sub.locked ? <Lock size={12}/> : <Unlock size={12}/>}</button>
@@ -451,21 +537,21 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
-
+      
       {/* Export Wait Overlay */}
       {isExporting && (
         <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
-          <Loader2 size={48} className="text-indigo-500 animate-spin mb-4" />
-          <div className="text-xl font-bold text-white">Finalizing Export...</div>
-          <div className="text-sm text-slate-400 mt-2">
-            Processing media ({ankiCards.filter(c => c.audioStatus !== 'done').length} remaining)
-          </div>
-          <button
-            onClick={() => setIsExporting(false)}
-            className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:bg-slate-800 transition"
-          >
-            Cancel
-          </button>
+            <Loader2 size={48} className="text-indigo-500 animate-spin mb-4" />
+            <div className="text-xl font-bold text-white">Finalizing Export...</div>
+            <div className="text-sm text-slate-400 mt-2">
+                Processing media ({ankiCards.filter(c => c.audioStatus !== 'done' || (c.preferredMediaType === 'gif' && c.gifStatus !== 'done')).length} remaining)
+            </div>
+            <button 
+                onClick={() => setIsExporting(false)} 
+                className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:bg-slate-800 transition"
+            >
+                Cancel
+            </button>
         </div>
       )}
 
@@ -495,14 +581,14 @@ const App: React.FC = () => {
           {/* Deck List */}
           <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
             {ankiCards.length === 0 ? <div className="text-center py-10 text-slate-600 text-xs">No cards yet</div> : ankiCards.map(card => (
-              <CardItem
-                key={card.id}
-                card={card}
-                onDelete={deleteCard}
-                onAnalyze={handleAnalyzeCard}
-                onPreview={(c) => setPreviewCard(c)}
-                isAnalyzing={processing.isAnalyzing}
-              />
+                <CardItem 
+                    key={card.id} 
+                    card={card} 
+                    onDelete={handleDeleteCard} 
+                    onAnalyze={handleAnalyzeCard} 
+                    onPreview={(c) => setPreviewCard(c)}
+                    isAnalyzing={processing.isAnalyzing} 
+                />
             ))}
           </div>
         </aside>
@@ -556,16 +642,16 @@ const App: React.FC = () => {
           {/* Subtitle List - Virtualized */}
           <div className="flex-1 min-h-0 bg-slate-900 pt-2">
             {subtitleLines.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs">
-                <AlertCircle size={24} className="mb-2 opacity-50"/>No subtitles loaded
-              </div>
+                <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs">
+                    <AlertCircle size={24} className="mb-2 opacity-50"/>No subtitles loaded
+                </div>
             ) : (
-              <Virtuoso
-                ref={virtuosoRef}
-                totalCount={subtitleLines.length}
-                className="custom-scrollbar"
-                itemContent={renderSubtitleRow}
-              />
+                <Virtuoso
+                    ref={virtuosoRef}
+                    totalCount={subtitleLines.length}
+                    className="custom-scrollbar"
+                    itemContent={renderSubtitleRow}
+                />
             )}
           </div>
         </aside>
@@ -589,9 +675,9 @@ const App: React.FC = () => {
           onEditSubtitle={handleEditSubtitle}
           onPlaySubtitle={handlePlaySubtitle}
           onToggleLock={toggleSubtitleLock}
-          onCreateCard={(id) => {
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
-            if(s) handleCreateCard(s);
+          onCreateCard={(id) => { 
+            const s = useAppStore.getState().subtitleLines.find(x => x.id === id); 
+            if(s) handleCreateCard(s); 
           }}
         />
       </div>
@@ -599,10 +685,10 @@ const App: React.FC = () => {
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} config={ankiConfig} onSave={setAnkiConfig} />
       <LLMSettingsModal isOpen={isLLMSettingsOpen} onClose={() => setIsLLMSettingsOpen(false)} settings={llmSettings} onSave={setLLMSettings} />
-      <CardPreviewModal
-        isOpen={!!previewCard}
-        card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}
-        onClose={() => setPreviewCard(null)}
+      <CardPreviewModal 
+        isOpen={!!previewCard} 
+        card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null} 
+        onClose={() => setPreviewCard(null)} 
       />
       <EditSubtitleLineModal
         isOpen={isNewSubtitleModalOpen}

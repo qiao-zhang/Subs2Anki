@@ -1,8 +1,10 @@
+
 /// <reference lib="dom" />
 import JSZip from 'jszip';
 import saveAs from 'file-saver';
 import { AnkiCard, AnkiNoteType } from './types';
 import { createAnkiDatabase } from './anki-db';
+import { getMedia } from './db';
 
 /**
  * Generates an Anki-compatible .apkg file.
@@ -35,6 +37,8 @@ export const generateAnkiDeck = async (
   const creationTime = Date.now();
 
   // 1. Generate SQLite Database
+  // Note: createAnkiDatabase logic remains mostly the same, relying on properties of 'card'
+  // We need to ensure that the logic there checks refs existence.
   try {
     const dbData = await createAnkiDatabase(cards, deckName, noteType, creationTime);
     zip.file("collection.anki2", dbData);
@@ -44,34 +48,58 @@ export const generateAnkiDeck = async (
     return;
   }
 
-  // 2. Process Media
-  cards.forEach((card, index) => {
-    // Process Screenshot Image
-    if (card.screenshotDataUrl) {
-      const extension = "jpg";
-      const filename = `sub2anki_${index}_${creationTime}.${extension}`;
-      
-      const zipName = mediaIndex.toString();
-      const base64Data = card.screenshotDataUrl.split(',')[1];
-      
-      zip.file(zipName, base64Data, { base64: true });
-      
-      mediaMap[zipName] = filename;
-      mediaIndex++;
+  // 2. Process Media (Async loop)
+  // We use a for-loop to handle async await correctly
+  for (let index = 0; index < cards.length; index++) {
+    const card = cards[index];
+
+    // Process Image (Screenshot)
+    if (card.screenshotRef) {
+      const data = await getMedia(card.screenshotRef);
+      if (data && typeof data === 'string') {
+          const extension = "jpg";
+          const filename = `sub2anki_${index}_${creationTime}.${extension}`;
+          
+          const zipName = mediaIndex.toString();
+          const base64Data = data.split(',')[1];
+          
+          zip.file(zipName, base64Data, { base64: true });
+          mediaMap[zipName] = filename;
+          mediaIndex++;
+      }
+    }
+
+    // Process GIF
+    if (card.gifRef) {
+      const data = await getMedia(card.gifRef);
+      if (data && typeof data === 'string') {
+          const extension = "gif";
+          const filename = `sub2anki_gif_${index}_${creationTime}.${extension}`;
+          
+          const zipName = mediaIndex.toString();
+          const base64Data = data.split(',')[1];
+          
+          zip.file(zipName, base64Data, { base64: true });
+          mediaMap[zipName] = filename;
+          mediaIndex++;
+      }
     }
 
     // Process Audio Blob
-    if (card.audioBlob) {
-      const extension = "wav";
-      const filename = `sub2anki_audio_${index}_${creationTime}.${extension}`;
+    if (card.audioRef) {
+      const blob = await getMedia(card.audioRef);
+      if (blob && blob instanceof Blob) {
+          const extension = "wav";
+          const filename = `sub2anki_audio_${index}_${creationTime}.${extension}`;
 
-      const zipName = mediaIndex.toString();
-      zip.file(zipName, card.audioBlob);
+          const zipName = mediaIndex.toString();
+          zip.file(zipName, blob);
 
-      mediaMap[zipName] = filename;
-      mediaIndex++;
+          mediaMap[zipName] = filename;
+          mediaIndex++;
+      }
     }
-  });
+  }
 
   // 3. Add Media Map
   zip.file("media", JSON.stringify(mediaMap));
