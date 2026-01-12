@@ -1,3 +1,4 @@
+
 /**
  * Represents a single subtitle line parsed from a file.
  */
@@ -21,6 +22,7 @@ export interface AnkiCard {
   screenshotDataUrl: string | null; // Base64 encoded image of the video frame
   audioBlob: Blob | null;   // Reserved for future audio clip support
   timestampStr: string;     // Formatted timestamp string for display (e.g., "01:23")
+  audioStatus?: 'pending' | 'processing' | 'done' | 'error'; // Tracking background audio extraction
 }
 
 /**

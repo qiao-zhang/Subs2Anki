@@ -1,6 +1,7 @@
+
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {SubtitleLine, AnkiCard} from '../core/types';
 import {parseSubtitles, serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
@@ -14,6 +15,7 @@ import CardItem from './components/CardItem';
 import TemplateEditorModal from './components/TemplateEditorModal';
 import EditSubtitleLineModal from './components/EditSubtitleLineModal';
 import LLMSettingsModal from './components/LLMSettingsModal';
+import CardPreviewModal from './components/CardPreviewModal';
 import TempSubtitleLineControls from './components/controls/TempSubtitleLineControls';
 import ActiveSubtitleLineControls from './components/controls/ActiveSubtitleLineControls';
 import DefaultControls from './components/controls/DefaultControls';
@@ -35,9 +37,9 @@ import {
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
-  const { 
-    videoSrc, videoName, videoFile, setVideo, 
-    subtitleLines, subtitleFileName, fileHandle, setSubtitles, 
+  const {
+    videoSrc, videoName, videoFile, setVideo,
+    subtitleLines, subtitleFileName, fileHandle, setSubtitles,
     updateSubtitleText, updateSubtitleTime, toggleSubtitleLock, addSubtitle, removeSubtitle,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
@@ -49,20 +51,25 @@ const App: React.FC = () => {
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
-  
+
   // Processing States
-  const [isExtractingAudio, setIsExtractingAudio] = useState<boolean>(false);
+  // isExtractingAudio is now just for global overlay if needed, 
+  // but mostly we rely on card-level status. 
+  // We'll use this specifically for the *Export* blocking state.
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
 
   // Modals
   const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState<boolean>(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [isLLMSettingsOpen, setIsLLMSettingsOpen] = useState<boolean>(false);
+  const [previewCard, setPreviewCard] = useState<AnkiCard | null>(null);
 
   // Editing context
   const [editingSubId, setEditingSubId] = useState<number | null>(null);
   const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
-  
+
   // Renamed from tempSegment to tempSubtitleLine
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{start: number, end: number} | null>(null);
 
@@ -70,6 +77,64 @@ const App: React.FC = () => {
   const videoRef = useRef<VideoPlayerHandle>(null);
   const subtitleListRef = useRef<HTMLDivElement>(null);
   const subtitleInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Background Audio Extraction Queue ---
+
+  // Effect to process the audio queue
+  useEffect(() => {
+    // If we are already processing a card, do nothing
+    if (backgroundProcessingId) return;
+
+    const cards = useAppStore.getState().ankiCards;
+
+    // 1. Find Priority Card (The one being previewed if it's pending)
+    let nextCard = previewCard && cards.find(c => c.id === previewCard.id && c.audioStatus === 'pending');
+
+    // 2. If no priority, find next pending card
+    if (!nextCard) {
+      nextCard = cards.find(c => c.audioStatus === 'pending');
+    }
+
+    if (nextCard && videoFile) {
+      processCardAudio(nextCard.id, nextCard.subtitleId);
+    } else if (!nextCard && isExporting) {
+      // Queue empty and we were waiting to export
+      finalizeExport();
+    }
+
+  }, [ankiCards, backgroundProcessingId, previewCard, isExporting, videoFile]);
+
+  const processCardAudio = async (cardId: string, subtitleId: number) => {
+    if (!videoFile) return;
+
+    const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
+    if (!sub) {
+      // Orphaned card? Set error
+      updateCard(cardId, { audioStatus: 'error' });
+      return;
+    }
+
+    setBackgroundProcessingId(cardId);
+    updateCard(cardId, { audioStatus: 'processing' });
+
+    try {
+      // Perform extraction
+      const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime);
+
+      // Check if card still exists (wasn't deleted while processing)
+      const currentCards = useAppStore.getState().ankiCards;
+      if (currentCards.find(c => c.id === cardId)) {
+        updateCard(cardId, { audioStatus: 'done', audioBlob: blob });
+      } else {
+        console.log("Card deleted during processing, discarding audio.");
+      }
+    } catch (e) {
+      console.error("Background audio extraction failed", e);
+      updateCard(cardId, { audioStatus: 'error' });
+    } finally {
+      setBackgroundProcessingId(null);
+    }
+  };
 
   // --- Handlers ---
 
@@ -142,29 +207,24 @@ const App: React.FC = () => {
   };
 
   /**
-   * Helper: Extract audio using FFmpeg
+   * Helper: Extract audio using FFmpeg (Used for creating NEW subtitles, strict sync needed)
    */
-  const extractAudio = async (start: number, end: number): Promise<Blob | null> => {
+  const extractAudioSync = async (start: number, end: number): Promise<Blob | null> => {
     if (!videoFile) return null;
     try {
-      setIsExtractingAudio(true);
-      videoRef.current?.pause(); // Ensure video is paused during extraction
-      
-      const blob = await ffmpegService.extractAudioClip(videoFile, start, end);
-      return blob;
+      // setIsExtractingAudio(true); // Don't block whole UI for single clip unless necessary
+      videoRef.current?.pause();
+      return await ffmpegService.extractAudioClip(videoFile, start, end);
     } catch (e) {
       console.error("Audio extraction failed", e);
-      alert("Failed to extract audio. Check console for details. (Ensure SharedArrayBuffer is enabled in server headers if using FFmpeg)");
       return null;
-    } finally {
-      setIsExtractingAudio(false);
     }
   };
 
   const handleCommitTempSubtitleLine = async () => {
     if (!tempSubtitleLine) return;
-    
-    const blob = await extractAudio(tempSubtitleLine.start, tempSubtitleLine.end);
+    // For new subtitle lines, we extract immediately for the editor modal
+    const blob = await extractAudioSync(tempSubtitleLine.start, tempSubtitleLine.end);
     setSubAudioBlob(blob);
     setIsNewSubtitleModalOpen(true);
   };
@@ -174,13 +234,11 @@ const App: React.FC = () => {
   const handleEditSubtitle = async (id: number) => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (!sub) return;
-    
-    // Pause video
+
     videoRef.current?.pause();
     videoRef.current?.seekTo(sub.startTime);
 
-    // Extract Audio
-    const blob = await extractAudio(sub.startTime, sub.endTime);
+    const blob = await extractAudioSync(sub.startTime, sub.endTime);
 
     setEditingSubId(id);
     setTempSubtitleLine(null);
@@ -194,12 +252,12 @@ const App: React.FC = () => {
     } else if (tempSubtitleLine) {
       const lines = useAppStore.getState().subtitleLines;
       const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
-      const newSub: SubtitleLine = { 
-        id: maxId + 1, 
-        startTime: tempSubtitleLine.start, 
-        endTime: tempSubtitleLine.end, 
-        text, 
-        locked: false 
+      const newSub: SubtitleLine = {
+        id: maxId + 1,
+        startTime: tempSubtitleLine.start,
+        endTime: tempSubtitleLine.end,
+        text,
+        locked: false
       };
       addSubtitle(newSub);
       setTempSubtitleLine(null);
@@ -226,8 +284,8 @@ const App: React.FC = () => {
         await writable.close();
         useAppStore.getState().setHasUnsavedChanges(false);
       } catch (err) { alert('Failed to save file.'); }
-    } else { 
-      useAppStore.getState().setHasUnsavedChanges(false); 
+    } else {
+      useAppStore.getState().setHasUnsavedChanges(false);
     }
     setIsSaveMenuOpen(false);
   };
@@ -286,58 +344,69 @@ const App: React.FC = () => {
 
   const handleCreateCard = async (sub: SubtitleLine) => {
     if (!videoRef.current) return;
-    
-    // 1. Capture Audio using FFmpeg (Fast, non-realtime)
-    const audioBlob = await extractAudio(sub.startTime, sub.endTime);
-    
-    setPauseAtTime(null);
-    
-    // 2. Capture Screenshot
+
+    // Capture Screenshot immediately
     const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
-    
-    const newCard: AnkiCard = { 
-        id: crypto.randomUUID(), 
-        subtitleId: sub.id, 
-        text: sub.text, 
-        translation: '', 
-        notes: '', 
-        screenshotDataUrl: screenshot || null, 
-        audioBlob: audioBlob, 
-        timestampStr: formatTime(sub.startTime) 
+    setPauseAtTime(null);
+
+    // Add card with pending audio status
+    const newCard: AnkiCard = {
+      id: crypto.randomUUID(),
+      subtitleId: sub.id,
+      text: sub.text,
+      translation: '',
+      notes: '',
+      screenshotDataUrl: screenshot || null,
+      audioBlob: null,
+      audioStatus: 'pending', // Queue audio extraction
+      timestampStr: formatTime(sub.startTime)
     };
-    
+
     addCard(newCard);
-    
+
     if (llmSettings.autoAnalyze) handleAnalyzeCard(newCard);
   };
 
   const handleAnalyzeCard = async (card: AnkiCard) => {
     setProcessing({ isAnalyzing: true });
-    
+
     const lines = useAppStore.getState().subtitleLines;
     const subIndex = lines.findIndex(s => s.id === card.subtitleId);
-    
+
     const result = await analyzeSubtitle(
-      card.text, 
-      lines[subIndex - 1]?.text, 
-      lines[subIndex + 1]?.text, 
+      card.text,
+      lines[subIndex - 1]?.text,
+      lines[subIndex + 1]?.text,
       llmSettings
     );
-    
-    updateCard(card.id, { 
-      translation: result.translation, 
-      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}` 
+
+    updateCard(card.id, {
+      translation: result.translation,
+      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}`
     });
-    
+
     setProcessing({ isAnalyzing: false });
   };
 
-  const handleExport = async () => await generateAnkiDeck(ankiCards, videoName, ankiConfig);
+  const handleExportClick = () => {
+    // Check if audio processing is pending
+    const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
+    if (pendingAudio) {
+      setIsExporting(true);
+    } else {
+      finalizeExport();
+    }
+  };
+
+  const finalizeExport = async () => {
+    setIsExporting(false);
+    await generateAnkiDeck(ankiCards, videoName, ankiConfig);
+  };
 
   const renderControlBar = () => {
     if (tempSubtitleLine) {
       return (
-        <TempSubtitleLineControls 
+        <TempSubtitleLineControls
           start={tempSubtitleLine.start}
           end={tempSubtitleLine.end}
           onPlay={handleTempSubtitleLineClicked}
@@ -346,10 +415,10 @@ const App: React.FC = () => {
         />
       );
     }
-    
+
     if (activeSubtitleId !== null) {
       return (
-        <ActiveSubtitleLineControls 
+        <ActiveSubtitleLineControls
           videoName={videoName}
           currentTime={currentTime}
           llmSettings={llmSettings}
@@ -361,7 +430,7 @@ const App: React.FC = () => {
     }
 
     return (
-      <DefaultControls 
+      <DefaultControls
         videoName={videoName}
         currentTime={currentTime}
         llmSettings={llmSettings}
@@ -373,13 +442,21 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
-      
-      {/* FFmpeg Extraction Overlay */}
-      {isExtractingAudio && (
-        <div className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
-            <Wand2 size={48} className="text-indigo-500 animate-bounce mb-4" />
-            <div className="text-xl font-bold text-white">Extracting Audio...</div>
-            <div className="text-sm text-slate-400 mt-2">Processing via FFmpeg (WASM)</div>
+
+      {/* Export Wait Overlay */}
+      {isExporting && (
+        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
+          <Loader2 size={48} className="text-indigo-500 animate-spin mb-4" />
+          <div className="text-xl font-bold text-white">Finalizing Export...</div>
+          <div className="text-sm text-slate-400 mt-2">
+            Processing audio clips ({ankiCards.filter(c => c.audioStatus !== 'done').length} remaining)
+          </div>
+          <button
+            onClick={() => setIsExporting(false)}
+            className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:bg-slate-800 transition"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
@@ -402,13 +479,22 @@ const App: React.FC = () => {
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Deck ({ankiCards.length})</h2>
             <div className="flex gap-1">
               <button onClick={() => setIsTemplateModalOpen(true)} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition" title="Template Settings"><Settings size={14}/></button>
-              <button onClick={handleExport} disabled={ankiCards.length === 0} className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition disabled:opacity-50 disabled:bg-slate-700" title="Export Deck"><Download size={14}/></button>
+              <button onClick={handleExportClick} disabled={ankiCards.length === 0} className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition disabled:opacity-50 disabled:bg-slate-700" title="Export Deck"><Download size={14}/></button>
             </div>
           </div>
 
           {/* Deck List */}
           <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
-            {ankiCards.length === 0 ? <div className="text-center py-10 text-slate-600 text-xs">No cards yet</div> : ankiCards.map(card => <CardItem key={card.id} card={card} onDelete={deleteCard} onAnalyze={handleAnalyzeCard} isAnalyzing={processing.isAnalyzing} />)}
+            {ankiCards.length === 0 ? <div className="text-center py-10 text-slate-600 text-xs">No cards yet</div> : ankiCards.map(card => (
+              <CardItem
+                key={card.id}
+                card={card}
+                onDelete={deleteCard}
+                onAnalyze={handleAnalyzeCard}
+                onPreview={(c) => setPreviewCard(c)}
+                isAnalyzing={processing.isAnalyzing}
+              />
+            ))}
           </div>
         </aside>
 
@@ -498,9 +584,9 @@ const App: React.FC = () => {
           onEditSubtitle={handleEditSubtitle}
           onPlaySubtitle={handlePlaySubtitle}
           onToggleLock={toggleSubtitleLock}
-          onCreateCard={(id) => { 
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === id); 
-            if(s) handleCreateCard(s); 
+          onCreateCard={(id) => {
+            const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
+            if(s) handleCreateCard(s);
           }}
         />
       </div>
@@ -508,6 +594,11 @@ const App: React.FC = () => {
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} config={ankiConfig} onSave={setAnkiConfig} />
       <LLMSettingsModal isOpen={isLLMSettingsOpen} onClose={() => setIsLLMSettingsOpen(false)} settings={llmSettings} onSave={setLLMSettings} />
+      <CardPreviewModal
+        isOpen={!!previewCard}
+        card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}
+        onClose={() => setPreviewCard(null)}
+      />
       <EditSubtitleLineModal
         isOpen={isNewSubtitleModalOpen}
         onRemove={handleRemoveBtnClicked}
