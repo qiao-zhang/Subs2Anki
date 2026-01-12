@@ -5,13 +5,12 @@ import {parseSubtitles, serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
 import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
-import {loadAudioBuffer, sliceAudioBuffer} from '../core/media-utils';
 import saveAs from 'file-saver';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
 import CardItem from './components/CardItem';
 import TemplateEditorModal from './components/TemplateEditorModal';
-import EditSubtitleLineModal from './components/EditSubtitleLineModal.tsx';
+import EditSubtitleLineModal from './components/EditSubtitleLineModal';
 import LLMSettingsModal from './components/LLMSettingsModal';
 import TempSubtitleLineControls from './components/controls/TempSubtitleLineControls';
 import ActiveSubtitleLineControls from './components/controls/ActiveSubtitleLineControls';
@@ -32,10 +31,9 @@ import {
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
-  const { 
-    videoSrc, videoName, setVideo, 
-    audioBuffer, setAudioBuffer,
-    subtitleLines, subtitleFileName, fileHandle, setSubtitles, 
+  const {
+    videoSrc, videoName, setVideo,
+    subtitleLines, subtitleFileName, fileHandle, setSubtitles,
     updateSubtitleText, updateSubtitleTime, toggleSubtitleLock, addSubtitle, removeSubtitle,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
@@ -56,8 +54,7 @@ const App: React.FC = () => {
 
   // Editing context
   const [editingSubId, setEditingSubId] = useState<number | null>(null);
-  const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
-  
+
   // Renamed from tempSegment to tempSubtitleLine
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{start: number, end: number} | null>(null);
 
@@ -73,9 +70,8 @@ const App: React.FC = () => {
     if (file) {
       const url = URL.createObjectURL(file);
       setVideo(url, file.name);
-      
-      // Load audio buffer asynchronously
-      loadAudioBuffer(url).then(setAudioBuffer).catch(err => console.error("Failed to load audio track", err));
+      // NOTE: We no longer decode the full audio here to avoid OOM on large files.
+      // WaveformDisplay will handle playback via MediaElement.
     }
   };
 
@@ -142,7 +138,6 @@ const App: React.FC = () => {
   const handleCommitTempSubtitleLine = () => {
     if (!tempSubtitleLine) return;
     videoRef.current?.pause();
-    if (audioBuffer) setSubAudioBlob(sliceAudioBuffer(audioBuffer, tempSubtitleLine.start, tempSubtitleLine.end));
     setIsNewSubtitleModalOpen(true);
   };
 
@@ -152,12 +147,11 @@ const App: React.FC = () => {
     // Use store state directly
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (!sub) return;
-    
+
     videoRef.current?.pause();
     videoRef.current?.seekTo(sub.startTime);
     setEditingSubId(id);
     setTempSubtitleLine(null);
-    if (audioBuffer) setSubAudioBlob(sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime));
     setIsNewSubtitleModalOpen(true);
   };
 
@@ -168,12 +162,12 @@ const App: React.FC = () => {
       // Creating new from temp segment
       const lines = useAppStore.getState().subtitleLines;
       const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
-      const newSub: SubtitleLine = { 
-        id: maxId + 1, 
-        startTime: tempSubtitleLine.start, 
-        endTime: tempSubtitleLine.end, 
-        text, 
-        locked: false 
+      const newSub: SubtitleLine = {
+        id: maxId + 1,
+        startTime: tempSubtitleLine.start,
+        endTime: tempSubtitleLine.end,
+        text,
+        locked: false
       };
       addSubtitle(newSub);
       setTempSubtitleLine(null);
@@ -200,8 +194,8 @@ const App: React.FC = () => {
         await writable.close();
         useAppStore.getState().setHasUnsavedChanges(false);
       } catch (err) { alert('Failed to save file.'); }
-    } else { 
-      useAppStore.getState().setHasUnsavedChanges(false); 
+    } else {
+      useAppStore.getState().setHasUnsavedChanges(false);
     }
     setIsSaveMenuOpen(false);
   };
@@ -262,36 +256,37 @@ const App: React.FC = () => {
 
   const handleCreateCard = async (sub: SubtitleLine) => {
     if (!videoRef.current) return;
-    let audioBlob: Blob | null = null;
-    if (audioBuffer) audioBlob = sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime);
+    // Audio slicing disabled for performance/stability on large files without ffmpeg.wasm
+    const audioBlob: Blob | null = null;
+
     setPauseAtTime(null);
     const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
     const newCard: AnkiCard = { id: crypto.randomUUID(), subtitleId: sub.id, text: sub.text, translation: '', notes: '', screenshotDataUrl: screenshot || null, audioBlob: audioBlob, timestampStr: formatTime(sub.startTime) };
-    
+
     addCard(newCard);
-    
-    if (llmSettings.autoAnalyze) handleAnalyzeCard(newCard);
+
+    if (llmSettings.autoAnalyze) await handleAnalyzeCard(newCard);
   };
 
   const handleAnalyzeCard = async (card: AnkiCard) => {
     setProcessing({ isAnalyzing: true });
-    
+
     // Get fresh context
     const lines = useAppStore.getState().subtitleLines;
     const subIndex = lines.findIndex(s => s.id === card.subtitleId);
-    
+
     const result = await analyzeSubtitle(
-      card.text, 
-      lines[subIndex - 1]?.text, 
-      lines[subIndex + 1]?.text, 
+      card.text,
+      lines[subIndex - 1]?.text,
+      lines[subIndex + 1]?.text,
       llmSettings
     );
-    
-    updateCard(card.id, { 
-      translation: result.translation, 
-      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}` 
+
+    updateCard(card.id, {
+      translation: result.translation,
+      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}`
     });
-    
+
     setProcessing({ isAnalyzing: false });
   };
 
@@ -302,7 +297,7 @@ const App: React.FC = () => {
     if (tempSubtitleLine) {
       console.assert(activeSubtitleId === null);
       return (
-        <TempSubtitleLineControls 
+        <TempSubtitleLineControls
           start={tempSubtitleLine.start}
           end={tempSubtitleLine.end}
           onPlay={handleTempSubtitleLineClicked}
@@ -311,10 +306,10 @@ const App: React.FC = () => {
         />
       );
     }
-    
+
     if (activeSubtitleId !== null) {
       return (
-        <ActiveSubtitleLineControls 
+        <ActiveSubtitleLineControls
           videoName={videoName}
           currentTime={currentTime}
           llmSettings={llmSettings}
@@ -326,7 +321,7 @@ const App: React.FC = () => {
     }
 
     return (
-      <DefaultControls 
+      <DefaultControls
         videoName={videoName}
         currentTime={currentTime}
         llmSettings={llmSettings}
@@ -444,7 +439,7 @@ const App: React.FC = () => {
       {/* Bottom Part: Full-width Waveform */}
       <div className="h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative">
         <WaveformDisplay
-          audioSrc={videoSrc}
+          videoElement={videoRef.current?.getVideoElement() || null}
           currentTime={currentTime}
           onSeek={handleSeek}
           onTempSubtitleLineCreated={handleTempSubtitleLineCreated}
@@ -454,9 +449,9 @@ const App: React.FC = () => {
           onEditSubtitle={handleEditSubtitle}
           onPlaySubtitle={handlePlaySubtitle}
           onToggleLock={toggleSubtitleLock}
-          onCreateCard={(id) => { 
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === id); 
-            if(s) handleCreateCard(s); 
+          onCreateCard={(id) => {
+            const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
+            if(s) handleCreateCard(s);
           }}
         />
       </div>
@@ -471,7 +466,7 @@ const App: React.FC = () => {
         startTime={tempSubtitleLine ? tempSubtitleLine.start : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.startTime || 0) : 0)}
         endTime={tempSubtitleLine ? tempSubtitleLine.end : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.endTime || 0) : 0)}
         initialText={editingSubId !== null ? subtitleLines.find(s => s.id === editingSubId)?.text : ''}
-        audioBlob={subAudioBlob}
+        audioBlob={null}
         llmSettings={llmSettings}
         onSave={handleSaveSubtitleFromModal}
       />

@@ -36,12 +36,10 @@ const DEFAULT_LLM_SETTINGS: LLMSettings = {
 };
 
 interface AppState {
-  // Video & Audio Data
+  // Video Data
   videoSrc: string;
   videoName: string;
-  audioBuffer: AudioBuffer | null;
   setVideo: (src: string, name: string) => void;
-  setAudioBuffer: (buffer: AudioBuffer | null) => void;
 
   // Subtitles
   subtitleLines: SubtitleLine[];
@@ -75,23 +73,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Video defaults
   videoSrc: '',
   videoName: '',
-  audioBuffer: null,
-  setVideo: (src, name) => set({ videoSrc: src, videoName: name, audioBuffer: null }),
-  setAudioBuffer: (buffer) => set({ audioBuffer: buffer }),
+  setVideo: (src, name) => set({ videoSrc: src, videoName: name }),
 
   // Subtitle defaults
   subtitleLines: [],
   subtitleFileName: '',
   fileHandle: null,
   hasUnsavedChanges: false,
-  setSubtitles: (lines, fileName, fileHandle = null) => 
+  setSubtitles: (lines, fileName, fileHandle = null) =>
     set({ subtitleLines: lines, subtitleFileName: fileName, fileHandle, hasUnsavedChanges: false }),
-  
+
   updateSubtitleText: (id, text) => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => (s.id === id && !s.locked) ? { ...s, text } : s),
     hasUnsavedChanges: true
   })),
-  
+
   updateSubtitleTime: (id, start, end) => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => (s.id === id && !s.locked) ? { ...s, startTime: start, endTime: end } : s),
     hasUnsavedChanges: true
@@ -133,7 +129,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (!parsed.apiKey && parsed.provider === 'gemini') {
-            parsed.apiKey = process.env.API_KEY || '';
+          parsed.apiKey = process.env.API_KEY || '';
         }
         return parsed;
       }

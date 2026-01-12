@@ -1,3 +1,4 @@
+
 import React, { useRef, forwardRef, useImperativeHandle } from 'react';
 
 interface VideoPlayerProps {
@@ -16,11 +17,12 @@ export interface VideoPlayerHandle {
   captureFrame: () => string | null;
   captureFrameAt: (time: number) => Promise<string | null>;
   getCurrentTime: () => number;
+  getVideoElement: () => HTMLVideoElement | null;
 }
 
 /**
  * A wrapper around the HTML5 video element.
- * 
+ *
  * Features:
  * - Exposes imperative handle for control (seek, play, pause).
  * - Implements frame capture logic using an internal Canvas.
@@ -35,10 +37,11 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ src, onTi
         videoRef.current.currentTime = time;
       }
     },
-    play: () => videoRef.current?.play(),
+    play: () => videoRef.current?.play() || Promise.resolve(),
     pause: () => videoRef.current?.pause(),
     getCurrentTime: () => videoRef.current?.currentTime || 0,
-    
+    getVideoElement: () => videoRef.current,
+
     /**
      * Captures the current frame of the video as a base64 JPEG image.
      */
@@ -67,7 +70,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ src, onTi
 
         // Attach event listener before triggering seek
         video.addEventListener('seeked', onSeeked, { once: true });
-        
+
         // Trigger seek
         video.currentTime = time;
       });
@@ -82,7 +85,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ src, onTi
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        return canvas.toDataURL('image/jpeg', 0.85); 
+        return canvas.toDataURL('image/jpeg', 0.85);
       }
     } catch (e) {
       console.error("Frame capture failed", e);

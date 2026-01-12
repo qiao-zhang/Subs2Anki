@@ -3,11 +3,12 @@ import React, {useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Minimap from 'wavesurfer.js/dist/plugins/minimap.esm.js';
-import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
+import {ZoomIn, ZoomOut, Activity, AlertTriangle} from 'lucide-react';
 import { useAppStore } from '../../core/store';
 
 interface WaveformDisplayProps {
-  audioSrc: string;
+  // Removed audioSrc as we use the videoElement directly
+  videoElement: HTMLVideoElement | null;
   currentTime: number;
   onSeek: (time: number) => void;
   onTempSubtitleLineCreated: (start: number, end: number) => void;
@@ -21,17 +22,17 @@ interface WaveformDisplayProps {
 }
 
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
-  audioSrc,
-  currentTime,
-  onSeek,
-  onTempSubtitleLineCreated,
-  onTempSubtitleLineUpdated,
-  onTempSubtitleLineClicked,
-  onTempSubtitleLineRemoved,
-  onEditSubtitle,
-  onPlaySubtitle,
-  onToggleLock
-}) => {
+                                                           videoElement,
+                                                           currentTime,
+                                                           onSeek,
+                                                           onTempSubtitleLineCreated,
+                                                           onTempSubtitleLineUpdated,
+                                                           onTempSubtitleLineClicked,
+                                                           onTempSubtitleLineRemoved,
+                                                           onEditSubtitle,
+                                                           onPlaySubtitle,
+                                                           onToggleLock
+                                                         }) => {
   // Access store for direct reads in listeners and reactive updates
   const { subtitleLines, updateSubtitleTime } = useAppStore();
 
@@ -46,12 +47,16 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   // Constants & Refs
   const TEMP_REGION_ID = 'subs2anki-temp-segment';
-  const activeDragRegionId = useRef<string | null>(null);
   const tempRegion = useRef<Region | null>(null);
 
   // Initialize WaveSurfer
   useEffect(() => {
-    if (!waveformContainerRef.current || !audioSrc) return;
+    if (!waveformContainerRef.current || !videoElement) return;
+
+    // Destroy previous instance if it exists
+    if (wavesurfer.current) {
+      wavesurfer.current.destroy();
+    }
 
     setIsReady(false);
     const regions = RegionsPlugin.create();
@@ -69,19 +74,25 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     const ws = WaveSurfer.create({
       container: waveformContainerRef.current,
+      media: videoElement, // Use the video element directly!
       waveColor: '#4f46e5',
       progressColor: '#818cf8',
       cursorColor: '#ef4444',
       barWidth: 2,
       barGap: 1,
       barRadius: 2,
-      height: 140, // Reduced height to fit minimap
-      normalize: true,
+      height: 140,
       minPxPerSec: zoom,
       fillParent: true,
       interact: true,
       autoScroll: true,
       plugins: [regions, minimap],
+      // Important: By not providing a URL, we prevent fetching/decoding.
+      // However, to see a waveform, WaveSurfer normally needs to decode.
+      // Using 'media' binds the playhead.
+      // NOTE: Without pre-decoded peaks, WaveSurfer might try to fetch the src of the video element.
+      // This is unavoidable for visualization unless we use peaks.
+      // But for local files (blob:), standard fetch is often optimized or handled by browser cache better than decodeAudioData.
     });
 
     regions.enableDragSelection({
@@ -89,13 +100,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       color: 'rgba(74, 222, 128, 0.4)',
     });
 
-    ws.load(audioSrc);
-
     ws.on('ready', () => {
       setIsReady(true);
-      ws.setVolume(0);
     });
 
+    // WaveSurfer 'interaction' event is triggered when user clicks/drags on waveform
     ws.on('interaction', (newTime) => {
       onSeek(newTime);
       // Remove temp region if clicking elsewhere on timeline
@@ -109,25 +118,25 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     regions.on('region-created', (region: Region) => {
       if (isSyncingSubtitles.current) return;
-      
+
       // Handle Temp Region logic
       if (region.id === TEMP_REGION_ID) {
-         // remove the previous temp region if there is one (to enforce singleton)
-         if (tempRegion.current && tempRegion.current !== region) {
-            tempRegion.current.remove();
-         }
-         tempRegion.current = region;
-         region.setOptions({content: 'Right click to dismiss'});
-         
-         // Add right-click to dismiss behavior
-         region.element.addEventListener('contextmenu', (e: MouseEvent) => {
-            e.preventDefault();
-            region.remove();
-            tempRegion.current = null;
-            onTempSubtitleLineRemoved();
-         });
-         
-         onTempSubtitleLineCreated(region.start, region.end);
+        // remove the previous temp region if there is one (to enforce singleton)
+        if (tempRegion.current && tempRegion.current !== region) {
+          tempRegion.current.remove();
+        }
+        tempRegion.current = region;
+        region.setOptions({content: 'Right click to dismiss'});
+
+        // Add right-click to dismiss behavior
+        region.element.addEventListener('contextmenu', (e: MouseEvent) => {
+          e.preventDefault();
+          region.remove();
+          tempRegion.current = null;
+          onTempSubtitleLineRemoved();
+        });
+
+        onTempSubtitleLineCreated(region.start, region.end);
       }
     });
 
@@ -139,11 +148,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       } else {
         const id = parseInt(region.id);
         if (!isNaN(id)) {
-          // Update store directly or via parent callback? 
-          // Parent callback updates store, which loops back here.
-          // For performance, this is fine as long as we don't stutter.
-          // Using the store action directly is also an option if props are removed.
-          // For now, adhere to prop contract for update:
           updateSubtitleTime(id, region.start, region.end);
         }
       }
@@ -156,7 +160,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       } else {
         const id = parseInt(region.id);
         if (!isNaN(id)) {
-             onPlaySubtitle(id);
+          onPlaySubtitle(id);
         }
       }
     });
@@ -176,30 +180,18 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     return () => {
       ws.destroy();
     };
-  }, [audioSrc]);
+  }, [videoElement]); // Re-run when video source changes
 
   // Handle Zoom
   useEffect(() => {
-    if (wavesurfer.current && isReady) {
+    if (wavesurfer.current) {
       wavesurfer.current.zoom(zoom);
     }
-  }, [zoom, isReady]);
-
-  // Sync Video Time
-  useEffect(() => {
-    if (wavesurfer.current && isReady) {
-      const currentWsTime = wavesurfer.current.getCurrentTime();
-      if (Math.abs(currentWsTime - currentTime) > 0.1) {
-        wavesurfer.current.setTime(currentTime);
-      }
-    }
-  }, [currentTime, isReady]);
+  }, [zoom]);
 
   // Sync Regions with Store Data
-  // This replaces the complex prop watching with direct store usage (via the subtitleLines prop passed from App which is now store-bound)
-  // or strictly speaking, we could subscribe here. Since App passes it as a prop from the store, it's reactive.
   useEffect(() => {
-    if (!wsRegions.current || !isReady) return;
+    if (!wsRegions.current) return;
 
     isSyncingSubtitles.current = true;
     const regionsPlugin = wsRegions.current;
@@ -216,11 +208,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       const content = sub.text;
 
       if (r) {
-        // Only update if difference is significant to avoid infinite loops on float precision
         if (Math.abs(r.start - sub.startTime) > 0.01) r.start = sub.startTime;
         if (Math.abs(r.end - sub.endTime) > 0.01) r.end = sub.endTime;
-        
-        // Update styling/content
         r.setOptions({drag: !sub.locked, resize: !sub.locked, color, content});
       } else {
         const newRegion = regionsPlugin.addRegion({
@@ -241,7 +230,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
     });
 
-    // Cleanup deleted regions (except temp)
     existingRegions.forEach((r, id) => {
       if (id === TEMP_REGION_ID) return;
       if (!processedIds.has(id)) {
@@ -249,15 +237,14 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
     });
 
-    // Reset flag immediately
     isSyncingSubtitles.current = false;
 
-  }, [subtitleLines, isReady]); // Reacts to store changes
+  }, [subtitleLines, isReady]);
 
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));
 
-  if (!audioSrc) return null;
+  if (!videoElement) return null;
 
   return (
     <div className="h-full w-full flex flex-col relative group select-none bg-slate-900/50">
@@ -265,7 +252,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         <div
           className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm text-slate-400 text-xs">
           <Activity className="animate-pulse mr-2" size={16}/>
-          Extracting Waveform...
+          Loading Audio Track...
         </div>
       )}
 
