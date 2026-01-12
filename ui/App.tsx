@@ -13,7 +13,7 @@ import saveAs from 'file-saver';
 import { VirtuosoHandle } from 'react-virtuoso';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
-import CardItem from './components/CardItem';
+import DeckColumn from './components/DeckColumn';
 import SubtitleColumn from './components/SubtitleColumn';
 import AppControlBar from './components/AppControlBar';
 import TemplateEditorModal from './components/TemplateEditorModal';
@@ -22,12 +22,7 @@ import LLMSettingsModal from './components/LLMSettingsModal';
 import CardPreviewModal from './components/CardPreviewModal';
 import { useAppStore } from '../core/store';
 import { useMediaProcessing } from './hooks/useMediaProcessing';
-import {
-  Download,
-  Layers,
-  Settings,
-  Loader2,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
@@ -343,39 +338,15 @@ const App: React.FC = () => {
       <div className="flex flex-1 min-h-0 w-full">
 
         {/* COL 1: DECK (Left) */}
-        <aside className="w-80 flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900/50 z-20">
-
-          {/* Logo Section */}
-          <div className="h-14 flex items-center px-4 border-b border-slate-800 bg-slate-950 select-none">
-            <div className="flex items-center gap-2 text-indigo-400">
-              <Layers size={20} className="text-indigo-500" />
-              <span className="text-lg font-bold tracking-tight text-slate-200">Subs2Anki</span>
-            </div>
-          </div>
-
-          {/* Deck Header */}
-          <div className="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/80 backdrop-blur">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Deck ({ankiCards.length})</h2>
-            <div className="flex gap-1">
-              <button onClick={() => setIsTemplateModalOpen(true)} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition" title="Template Settings"><Settings size={14}/></button>
-              <button onClick={handleExportClick} disabled={ankiCards.length === 0} className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition disabled:opacity-50 disabled:bg-slate-700" title="Export Deck"><Download size={14}/></button>
-            </div>
-          </div>
-
-          {/* Deck List */}
-          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
-            {ankiCards.length === 0 ? <div className="text-center py-10 text-slate-600 text-xs">No cards yet</div> : ankiCards.map(card => (
-              <CardItem
-                key={card.id}
-                card={card}
-                onDelete={handleDeleteCard}
-                onAnalyze={handleAnalyzeCard}
-                onPreview={(c) => setPreviewCard(c)}
-                isAnalyzing={processing.isAnalyzing}
-              />
-            ))}
-          </div>
-        </aside>
+        <DeckColumn
+          cards={ankiCards}
+          isAnalyzing={processing.isAnalyzing}
+          onDelete={handleDeleteCard}
+          onAnalyze={handleAnalyzeCard}
+          onPreview={(c) => setPreviewCard(c)}
+          onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
+          onExport={handleExportClick}
+        />
 
         {/* COL 2: VIDEO (Center) */}
         <main className="flex-1 flex flex-col bg-slate-950 relative min-w-0">
