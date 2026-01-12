@@ -1,17 +1,16 @@
+
 import React, {useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Minimap from 'wavesurfer.js/dist/plugins/minimap.esm.js';
 import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
-import {SubtitleLine} from '../../core/types';
+import { useAppStore } from '../../core/store';
 
 interface WaveformDisplayProps {
   audioSrc: string;
   currentTime: number;
   onSeek: (time: number) => void;
-  subtitleLines: SubtitleLine[];
-  onSubtitleChange: (id: number, start: number, end: number) => void;
-  // tempSegment: { start: number; end: number } | null;
+  // Events
   onTempSegmentCreated: (start: number, end: number) => void;
   onTempSegmentUpdated: (start: number, end: number) => void;
   onTempSegmentRemoved: () => void;
@@ -20,26 +19,23 @@ interface WaveformDisplayProps {
   onClickTempSegment: () => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (id: number) => void;
-  // onSelectedTimeSpanChanged: (start: number, end: number) => void;
 }
 
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
-                                                           audioSrc,
-                                                           currentTime,
-                                                           onSeek,
-                                                           subtitleLines,
-                                                           onSubtitleChange,
-                                                           // tempSegment,
-                                                           onTempSegmentCreated,
-                                                           onTempSegmentUpdated,
-                                                           onTempSegmentRemoved,
-                                                           onEditSubtitle,
-                                                           onPlaySubtitle,
-                                                           onClickTempSegment,
-                                                           onToggleLock,
-                                                           onCreateCard,
-                                                           // onSelectedTimeSpanChanged: onSelectedTimeSpanUpdated,
-                                                         }) => {
+  audioSrc,
+  currentTime,
+  onSeek,
+  onTempSegmentCreated,
+  onTempSegmentUpdated,
+  onTempSegmentRemoved,
+  onEditSubtitle,
+  onPlaySubtitle,
+  onClickTempSegment,
+  onToggleLock
+}) => {
+  // Access store for direct reads in listeners and reactive updates
+  const { subtitleLines, updateSubtitleTime } = useAppStore();
+
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
   const wsRegions = useRef<RegionsPlugin | null>(null);
@@ -49,25 +45,9 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   const isSyncingSubtitles = useRef(false);
 
-  // Track creation of new regions
+  // Constants & Refs
   const TEMP_REGION_ID = 'subs2anki-temp-segment';
-  const tempTimeSpan = useRef<{ start: number, end: number } | null>(null);
-  const activeDragRegionId = useRef<string | null>(null);
-  // Track modification of existing regions
-  // const draggingRegionId = useRef<string | null>(null);
-
-  // Middle mouse dragging state
-  const isMiddleDragging = useRef(false);
-  const lastMouseX = useRef(0);
-
   const tempRegion = useRef<Region | null>(null);
-
-  const lastestSubtitleLines = useRef<SubtitleLine[]>(subtitleLines);
-  /*
-  useEffect(() => {
-    lastestSubtitleLines.current = subtitleLines;
-  }, [subtitleLines]);
-   */
 
   // Initialize WaveSurfer
   useEffect(() => {
@@ -106,7 +86,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     regions.enableDragSelection({
       id: TEMP_REGION_ID,
-      // content: 'Right click to dismiss',
       color: 'rgba(74, 222, 128, 0.4)',
     });
 
@@ -119,68 +98,66 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     ws.on('interaction', (newTime) => {
       onSeek(newTime);
-
-      tempRegion.current?.remove();
-      onTempSegmentRemoved();
+      // Remove temp region if clicking elsewhere on timeline
+      if (tempRegion.current) {
+        tempRegion.current.remove();
+        onTempSegmentRemoved();
+      }
     });
 
     // --- Region Events ---
 
     regions.on('region-created', (region: Region) => {
       if (isSyncingSubtitles.current) return;
-      // remove the previous temp region if there is one
-      tempRegion.current?.remove();
-      tempRegion.current = region;
-      region.setOptions({content: 'Right click to dismiss'});
-      region.element.addEventListener('contextmenu', (e: MouseEvent) => {
-        e.preventDefault();
-        tempRegion.current = null;
-        setTimeout(() => region.remove(), 0);
-        onTempSegmentRemoved();
-      });
-      onTempSegmentCreated(region.start, region.end);
+      
+      // Handle Temp Region logic
+      if (region.id === TEMP_REGION_ID) {
+         // remove the previous temp region if there is one (to enforce singleton)
+         if (tempRegion.current && tempRegion.current !== region) {
+            tempRegion.current.remove();
+         }
+         tempRegion.current = region;
+         region.setOptions({content: 'Right click to dismiss'});
+         
+         // Add right-click to dismiss behavior
+         region.element.addEventListener('contextmenu', (e: MouseEvent) => {
+            e.preventDefault();
+            region.remove();
+            tempRegion.current = null;
+            onTempSegmentRemoved();
+         });
+         
+         onTempSegmentCreated(region.start, region.end);
+      }
     });
 
     regions.on('region-updated', (region: Region) => {
-      console.log("on region-updated", region.id);
       if (isSyncingSubtitles.current) return;
 
-      console.log("on region-updated1", region.id);
-      /*
-      if (activeDragRegionId.current !== region.id) {
-        // draggingRegionId.current = region.id;
-      }
-       */
-
-      console.log("on region-updated2", region.id);
       if (region.id === TEMP_REGION_ID) {
         onTempSegmentUpdated(region.start, region.end);
       } else {
         const id = parseInt(region.id);
         if (!isNaN(id)) {
-          onSubtitleChange(id, region.start, region.end);
+          // Update store directly or via parent callback? 
+          // Parent callback updates store, which loops back here.
+          // For performance, this is fine as long as we don't stutter.
+          // Using the store action directly is also an option if props are removed.
+          // For now, adhere to prop contract for update:
+          updateSubtitleTime(id, region.start, region.end);
         }
       }
     });
 
     regions.on('region-clicked', (region: Region, e: MouseEvent) => {
-      console.log("on region-clicked", region.id);
       e.stopPropagation();
       if (region.id === TEMP_REGION_ID) {
         onClickTempSegment();
       } else {
         const id = parseInt(region.id);
-        console.log(lastestSubtitleLines.current);
-        const sub = lastestSubtitleLines.current.find(s => s.id === id);
-        console.log(sub);
-        onPlaySubtitle(id);
-        /*
         if (!isNaN(id)) {
-          onPlaySubtitle(id);
-        } else {
-          onSeek(region.start);
+             onPlaySubtitle(id);
         }
-        */
       }
     });
 
@@ -201,100 +178,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     };
   }, [audioSrc]);
 
-  /*
-  // Middle Mouse Panning Logic
-  useEffect(() => {
-    const waveformContainer = waveformContainerRef.current;
-    if (!waveformContainer) return;
-
-    const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 1) { // Middle Button
-        e.preventDefault();
-        e.stopPropagation(); // Stop propagation to prevent standard scrolling triggers
-        isMiddleDragging.current = true;
-        lastMouseX.current = e.clientX;
-        waveformContainer.style.cursor = 'grabbing';
-      }
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isMiddleDragging.current && wavesurfer.current) {
-        e.preventDefault();
-        const delta = lastMouseX.current - e.clientX;
-        lastMouseX.current = e.clientX;
-
-        const ws = wavesurfer.current;
-        if (typeof ws.setScroll === 'function') {
-          const current = ws.getScroll();
-          ws.setScroll(current + delta);
-        }
-      }
-    };
-
-    const handleMouseUp = (e: MouseEvent) => {
-      if (isMiddleDragging.current) {
-        isMiddleDragging.current = false;
-        if (waveformContainer) waveformContainer.style.cursor = 'auto';
-      }
-    };
-
-    waveformContainer.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-
-    const handleAuxClick = (e: MouseEvent) => {
-      if (e.button === 1) e.preventDefault();
-    };
-    waveformContainer.addEventListener('auxclick', handleAuxClick);
-
-    return () => {
-      waveformContainer.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      waveformContainer.removeEventListener('auxclick', handleAuxClick);
-    };
-  }, []);
-  */
-
-  /*
-  // Global Mouse Up Listener for Regions
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      if (activeDragRegionId.current && wsRegions.current) {
-        const region = wsRegions.current.getRegions().find(r => r.id === activeDragRegionId.current);
-        if (region) {
-          const oldTemp = wsRegions.current.getRegions().find(r => r.id === TEMP_REGION_ID);
-          if (oldTemp) oldTemp.remove();
-
-          if (region.end - region.start > 0.2) {
-            onTempSegmentCreated(region.start, region.end);
-            region.remove();
-          } else {
-            region.remove();
-          }
-        }
-        activeDragRegionId.current = null;
-      }
-
-      if (draggingRegionId.current && wsRegions.current) {
-        const regionId = draggingRegionId.current;
-        if (regionId === TEMP_REGION_ID) {
-          onClickTempSegment();
-        } else {
-          const id = parseInt(regionId);
-          if (!isNaN(id)) onPlaySubtitle(id);
-        }
-        draggingRegionId.current = null;
-      }
-    };
-
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => {
-      window.removeEventListener('mouseup', handleGlobalMouseUp);
-    };
-  }, [onTempSegmentCreated, onPlaySubtitle, onClickTempSegment, onSeek]);
-  */
-
   // Handle Zoom
   useEffect(() => {
     if (wavesurfer.current && isReady) {
@@ -312,28 +195,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
   }, [currentTime, isReady]);
 
-  useEffect(() => { // Sync Regions on [subtitleLines, isReady]
+  // Sync Regions with Store Data
+  // This replaces the complex prop watching with direct store usage (via the subtitleLines prop passed from App which is now store-bound)
+  // or strictly speaking, we could subscribe here. Since App passes it as a prop from the store, it's reactive.
+  useEffect(() => {
     if (!wsRegions.current || !isReady) return;
-
-    if (lastestSubtitleLines.current !== subtitleLines)
-    {
-      lastestSubtitleLines.current = subtitleLines;
-    }
-    /*
-    const pre = previousThings.current;
-
-    if (pre?.subtitles !== subtitles)
-    {
-      console.log('subtitle changed');
-    }
-
-    if (pre?.isReady !== isReady)
-    {
-      console.log('isReady changed');
-    }
-
-    previousThings.current = {subtitles, isReady};
-     */
 
     isSyncingSubtitles.current = true;
     const regionsPlugin = wsRegions.current;
@@ -341,45 +207,20 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     const existingRegions = new Map(regionsPlugin.getRegions().map(r => [r.id, r]));
     const processedIds = new Set<string>();
 
-    /*
-    if (tempSegment) {
-      processedIds.add(TEMP_REGION_ID);
-      if (draggingRegionId.current !== TEMP_REGION_ID) {
-        const r = existingRegions.get(TEMP_REGION_ID);
-        if (r) {
-          if (Math.abs(r.start - tempSegment.start) > 0.01) r.start = tempSegment.start;
-          if (Math.abs(r.end - tempSegment.end) > 0.01) r.end = tempSegment.end;
-        } else {
-          regionsPlugin.addRegion({
-            id: TEMP_REGION_ID,
-            start: tempSegment.start,
-            end: tempSegment.end,
-            content: 'New Subtitle',
-            color: 'rgba(74, 222, 128, 0.4)',
-            drag: true,
-            resize: true,
-          });
-        }
-      }
-    }
-     */
-    const l = lastestSubtitleLines.current[1];
-    console.log(`subtitle lines:`, l);
-
     subtitleLines.forEach(sub => {
       const idStr = sub.id.toString();
       processedIds.add(idStr);
 
-      // if (draggingRegionId.current === idStr) return;
-
       const r = existingRegions.get(idStr);
       const color = sub.locked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.2)';
-      // const content = sub.text.substring(0, 15) + (sub.text.length > 15 ? '...' : '');
       const content = sub.text;
 
       if (r) {
+        // Only update if difference is significant to avoid infinite loops on float precision
         if (Math.abs(r.start - sub.startTime) > 0.01) r.start = sub.startTime;
         if (Math.abs(r.end - sub.endTime) > 0.01) r.end = sub.endTime;
+        
+        // Update styling/content
         r.setOptions({drag: !sub.locked, resize: !sub.locked, color, content});
       } else {
         const newRegion = regionsPlugin.addRegion({
@@ -400,18 +241,18 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
     });
 
+    // Cleanup deleted regions (except temp)
     existingRegions.forEach((r, id) => {
-      if (id === activeDragRegionId.current) return;
+      if (id === TEMP_REGION_ID) return;
       if (!processedIds.has(id)) {
         r.remove();
       }
     });
 
-    setTimeout(() => {
-      isSyncingSubtitles.current = false;
-    }, 0);
+    // Reset flag immediately
+    isSyncingSubtitles.current = false;
 
-  }, [subtitleLines, isReady]); // end of Sync Regions
+  }, [subtitleLines, isReady]); // Reacts to store changes
 
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));
@@ -459,7 +300,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
            overflow: hidden;
            white-space: nowrap;
         }
-        /* Custom scrollbar for minimap if needed, though wavesurfer handles it */
       `}</style>
     </div>
   );
