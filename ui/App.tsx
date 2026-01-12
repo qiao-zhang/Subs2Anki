@@ -9,6 +9,7 @@ import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
 import {ffmpegService} from '../core/ffmpeg';
 import saveAs from 'file-saver';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
 import CardItem from './components/CardItem';
@@ -32,7 +33,6 @@ import {
   Unlock,
   Settings,
   Loader2,
-  Wand2
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -40,7 +40,7 @@ const App: React.FC = () => {
   const {
     videoSrc, videoName, videoFile, setVideo,
     subtitleLines, subtitleFileName, fileHandle, setSubtitles,
-    updateSubtitleText, updateSubtitleTime, toggleSubtitleLock, addSubtitle, removeSubtitle,
+    updateSubtitleText, toggleSubtitleLock, addSubtitle, removeSubtitle,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
     llmSettings, setLLMSettings,
@@ -52,10 +52,6 @@ const App: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
 
-  // Processing States
-  // isExtractingAudio is now just for global overlay if needed, 
-  // but mostly we rely on card-level status. 
-  // We'll use this specifically for the *Export* blocking state.
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
 
@@ -70,27 +66,20 @@ const App: React.FC = () => {
   const [editingSubId, setEditingSubId] = useState<number | null>(null);
   const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
 
-  // Renamed from tempSegment to tempSubtitleLine
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{start: number, end: number} | null>(null);
 
   // Refs
   const videoRef = useRef<VideoPlayerHandle>(null);
-  const subtitleListRef = useRef<HTMLDivElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const subtitleInputRef = useRef<HTMLInputElement>(null);
 
   // --- Background Audio Extraction Queue ---
-
-  // Effect to process the audio queue
   useEffect(() => {
-    // If we are already processing a card, do nothing
     if (backgroundProcessingId) return;
 
     const cards = useAppStore.getState().ankiCards;
-
-    // 1. Find Priority Card (The one being previewed if it's pending)
     let nextCard = previewCard && cards.find(c => c.id === previewCard.id && c.audioStatus === 'pending');
 
-    // 2. If no priority, find next pending card
     if (!nextCard) {
       nextCard = cards.find(c => c.audioStatus === 'pending');
     }
@@ -98,10 +87,9 @@ const App: React.FC = () => {
     if (nextCard && videoFile) {
       processCardAudio(nextCard.id, nextCard.subtitleId);
     } else if (!nextCard && isExporting) {
-      // Queue empty and we were waiting to export
-      finalizeExport();
+      // Only finish export if GIF queue is also empty
+      finalizeExportIfReady();
     }
-
   }, [ankiCards, backgroundProcessingId, previewCard, isExporting, videoFile]);
 
   const processCardAudio = async (cardId: string, subtitleId: number) => {
@@ -109,7 +97,6 @@ const App: React.FC = () => {
 
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
     if (!sub) {
-      // Orphaned card? Set error
       updateCard(cardId, { audioStatus: 'error' });
       return;
     }
@@ -118,30 +105,21 @@ const App: React.FC = () => {
     updateCard(cardId, { audioStatus: 'processing' });
 
     try {
-      // Perform extraction
       const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime);
-
-      // Check if card still exists (wasn't deleted while processing)
       const currentCards = useAppStore.getState().ankiCards;
       if (currentCards.find(c => c.id === cardId)) {
         updateCard(cardId, { audioStatus: 'done', audioBlob: blob });
-      } else {
-        console.log("Card deleted during processing, discarding audio.");
       }
     } catch (e) {
-      console.error("Background audio extraction failed", e);
+      console.error("Audio extraction failed", e);
       updateCard(cardId, { audioStatus: 'error' });
     } finally {
       setBackgroundProcessingId(null);
     }
   };
-
-  // --- Handlers ---
-
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Pass the File object to the store (for FFmpeg access)
       setVideo(file);
     }
   };
@@ -180,8 +158,6 @@ const App: React.FC = () => {
     event.target.value = '';
   };
 
-  // --- Temp Subtitle Line Workflow ---
-
   const handleTempSubtitleLineCreated = (start: number, end: number) => {
     setEditingSubId(null);
     setTempSubtitleLine({ start, end });
@@ -206,13 +182,9 @@ const App: React.FC = () => {
     playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
   };
 
-  /**
-   * Helper: Extract audio using FFmpeg (Used for creating NEW subtitles, strict sync needed)
-   */
   const extractAudioSync = async (start: number, end: number): Promise<Blob | null> => {
     if (!videoFile) return null;
     try {
-      // setIsExtractingAudio(true); // Don't block whole UI for single clip unless necessary
       videoRef.current?.pause();
       return await ffmpegService.extractAudioClip(videoFile, start, end);
     } catch (e) {
@@ -223,13 +195,10 @@ const App: React.FC = () => {
 
   const handleCommitTempSubtitleLine = async () => {
     if (!tempSubtitleLine) return;
-    // For new subtitle lines, we extract immediately for the editor modal
     const blob = await extractAudioSync(tempSubtitleLine.start, tempSubtitleLine.end);
     setSubAudioBlob(blob);
     setIsNewSubtitleModalOpen(true);
   };
-
-  // --- Edit Existing Subtitle ---
 
   const handleEditSubtitle = async (id: number) => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
@@ -321,12 +290,18 @@ const App: React.FC = () => {
       videoRef.current?.seekTo(pauseAtTime);
       setPauseAtTime(null);
     }
-    const active = subtitleLines.find(s => time >= s.startTime && time <= s.endTime);
+
+    // Efficiently find active subtitle index
+    const activeIndex = subtitleLines.findIndex(s => time >= s.startTime && time <= s.endTime);
+    const active = activeIndex !== -1 ? subtitleLines[activeIndex] : null;
+
     if (active && active.id !== activeSubtitleId) {
       setActiveSubtitleId(active.id);
-      const el = document.getElementById(`sub-${active.id}`);
-      if (el && subtitleListRef.current) el.scrollIntoView({behavior: 'smooth', block: 'center'});
-    } else if (!active) setActiveSubtitleId(null);
+      // Virtual Scroll to index
+      virtuosoRef.current?.scrollToIndex({ index: activeIndex, align: 'center', behavior: 'smooth' });
+    } else if (!active) {
+      setActiveSubtitleId(null);
+    }
   };
 
   const handleSeek = (time: number) => {
@@ -358,8 +333,8 @@ const App: React.FC = () => {
       notes: '',
       screenshotDataUrl: screenshot || null,
       audioBlob: null,
-      audioStatus: 'pending', // Queue audio extraction
-      timestampStr: formatTime(sub.startTime)
+      audioStatus: 'pending',
+      timestampStr: formatTime(sub.startTime),
     };
 
     addCard(newCard);
@@ -391,12 +366,22 @@ const App: React.FC = () => {
   const handleExportClick = () => {
     // Check if audio processing is pending
     const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
+
     if (pendingAudio) {
       setIsExporting(true);
     } else {
       finalizeExport();
     }
   };
+
+  const finalizeExportIfReady = () => {
+    const cards = useAppStore.getState().ankiCards;
+    const pendingAudio = cards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
+
+    if (!pendingAudio) {
+      finalizeExport();
+    }
+  }
 
   const finalizeExport = async () => {
     setIsExporting(false);
@@ -440,6 +425,30 @@ const App: React.FC = () => {
     );
   };
 
+  // Helper function to render a single subtitle row within the virtualizer
+  const renderSubtitleRow = (index: number) => {
+    const sub = subtitleLines[index];
+    const isActive = sub.id === activeSubtitleId;
+
+    return (
+      <div
+        key={sub.id}
+        id={`sub-${sub.id}`}
+        onClick={() => handlePlaySubtitle(sub.id)}
+        className={`group flex items-start gap-2 p-2 mx-2 mb-1 rounded transition-all cursor-pointer border ${isActive ? 'bg-slate-800 border-indigo-500/50 shadow-md' : 'border-transparent hover:bg-slate-800/50'}`}
+      >
+        <button onClick={(e) => {e.stopPropagation(); toggleSubtitleLock(sub.id);}} className={`mt-1 ${sub.locked ? 'text-red-400' : 'text-slate-700 group-hover:text-slate-500'}`}>{sub.locked ? <Lock size={12}/> : <Unlock size={12}/>}</button>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-center mb-1">
+            <span className={`text-[10px] font-mono ${isActive ? 'text-indigo-400' : 'text-slate-600'}`}>{formatTime(sub.startTime)}</span>
+          </div>
+          <textarea value={sub.text} onChange={(e) => updateSubtitleText(sub.id, e.target.value)} onClick={(e) => e.stopPropagation()} rows={2} readOnly={sub.locked} className={`w-full bg-transparent resize-none outline-none text-sm leading-snug ${sub.locked ? 'text-slate-500' : isActive ? 'text-white' : 'text-slate-400 hover:text-slate-300'}`}/>
+        </div>
+        <button onClick={(e) => {e.stopPropagation(); handleCreateCard(sub);}} className={`mt-1 text-slate-600 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition`} title="Create Card"><PlusCircle size={16}/></button>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
 
@@ -449,7 +458,7 @@ const App: React.FC = () => {
           <Loader2 size={48} className="text-indigo-500 animate-spin mb-4" />
           <div className="text-xl font-bold text-white">Finalizing Export...</div>
           <div className="text-sm text-slate-400 mt-2">
-            Processing audio clips ({ankiCards.filter(c => c.audioStatus !== 'done').length} remaining)
+            Processing media ({ankiCards.filter(c => c.audioStatus !== 'done').length} remaining)
           </div>
           <button
             onClick={() => setIsExporting(false)}
@@ -544,24 +553,20 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Subtitle List */}
-          <div ref={subtitleListRef} className="flex-1 overflow-y-auto px-2 py-2 space-y-1 bg-slate-900">
-            {subtitleLines.length === 0 && <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs"><AlertCircle size={24} className="mb-2 opacity-50"/>No subtitles loaded</div>}
-            {subtitleLines.map(sub => {
-              const isActive = sub.id === activeSubtitleId;
-              return (
-                <div key={sub.id} id={`sub-${sub.id}`} onClick={() => handlePlaySubtitle(sub.id)} className={`group flex items-start gap-2 p-2 rounded transition-all cursor-pointer border ${isActive ? 'bg-slate-800 border-indigo-500/50 shadow-md' : 'border-transparent hover:bg-slate-800/50'}`}>
-                  <button onClick={(e) => {e.stopPropagation(); toggleSubtitleLock(sub.id);}} className={`mt-1 ${sub.locked ? 'text-red-400' : 'text-slate-700 group-hover:text-slate-500'}`}>{sub.locked ? <Lock size={12}/> : <Unlock size={12}/>}</button>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className={`text-[10px] font-mono ${isActive ? 'text-indigo-400' : 'text-slate-600'}`}>{formatTime(sub.startTime)}</span>
-                    </div>
-                    <textarea value={sub.text} onChange={(e) => updateSubtitleText(sub.id, e.target.value)} onClick={(e) => e.stopPropagation()} rows={2} readOnly={sub.locked} className={`w-full bg-transparent resize-none outline-none text-sm leading-snug ${sub.locked ? 'text-slate-500' : isActive ? 'text-white' : 'text-slate-400 hover:text-slate-300'}`}/>
-                  </div>
-                  <button onClick={(e) => {e.stopPropagation(); handleCreateCard(sub);}} className={`mt-1 text-slate-600 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition`} title="Create Card"><PlusCircle size={16}/></button>
-                </div>
-              );
-            })}
+          {/* Subtitle List - Virtualized */}
+          <div className="flex-1 min-h-0 bg-slate-900 pt-2">
+            {subtitleLines.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs">
+                <AlertCircle size={24} className="mb-2 opacity-50"/>No subtitles loaded
+              </div>
+            ) : (
+              <Virtuoso
+                ref={virtuosoRef}
+                totalCount={subtitleLines.length}
+                className="custom-scrollbar"
+                itemContent={renderSubtitleRow}
+              />
+            )}
           </div>
         </aside>
       </div>
