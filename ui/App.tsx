@@ -1,48 +1,40 @@
 
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useRef} from 'react';
 import {SubtitleLine, AnkiCard} from '../core/types';
-import {parseSubtitles, serializeSubtitles} from '../core/parser';
+import {serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
 import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
 import {ffmpegService} from '../core/ffmpeg';
 import {storeMedia, deleteMedia} from '../core/db';
 import saveAs from 'file-saver';
-import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+import { VirtuosoHandle } from 'react-virtuoso';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
 import CardItem from './components/CardItem';
+import SubtitleColumn from './components/SubtitleColumn';
+import AppControlBar from './components/AppControlBar';
 import TemplateEditorModal from './components/TemplateEditorModal';
 import EditSubtitleLineModal from './components/EditSubtitleLineModal';
 import LLMSettingsModal from './components/LLMSettingsModal';
 import CardPreviewModal from './components/CardPreviewModal';
-import TempSubtitleLineControls from './components/controls/TempSubtitleLineControls';
-import ActiveSubtitleLineControls from './components/controls/ActiveSubtitleLineControls';
-import DefaultControls from './components/controls/DefaultControls';
 import { useAppStore } from '../core/store';
+import { useMediaProcessing } from './hooks/useMediaProcessing';
 import {
-  FileText,
   Download,
-  PlusCircle,
   Layers,
-  AlertCircle,
-  Save,
-  FolderOpen,
-  Lock,
-  Unlock,
   Settings,
   Loader2,
-  Wand2
 } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
-  const { 
-    videoSrc, videoName, videoFile, setVideo, 
-    subtitleLines, subtitleFileName, fileHandle, setSubtitles, 
-    updateSubtitleText, updateSubtitleTime, toggleSubtitleLock, addSubtitle, removeSubtitle,
+  const {
+    videoSrc, videoName, videoFile, setVideo,
+    subtitleLines, subtitleFileName, fileHandle, setSubtitles,
+    updateSubtitleText, toggleSubtitleLock, addSubtitle, removeSubtitle,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
     llmSettings, setLLMSettings,
@@ -53,14 +45,11 @@ const App: React.FC = () => {
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
-  
+
   const [isExporting, setIsExporting] = useState<boolean>(false);
-  const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
-  const [backgroundGifProcessingId, setBackgroundGifProcessingId] = useState<string | null>(null);
 
   // Modals
   const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
-  const [isSaveMenuOpen, setIsSaveMenuOpen] = useState<boolean>(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [isLLMSettingsOpen, setIsLLMSettingsOpen] = useState<boolean>(false);
   const [previewCard, setPreviewCard] = useState<AnkiCard | null>(null);
@@ -68,155 +57,28 @@ const App: React.FC = () => {
   // Editing context
   const [editingSubId, setEditingSubId] = useState<number | null>(null);
   const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
-  
+
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{start: number, end: number} | null>(null);
 
   // Refs
   const videoRef = useRef<VideoPlayerHandle>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const subtitleInputRef = useRef<HTMLInputElement>(null);
 
-  // --- Background Audio Extraction Queue ---
-  useEffect(() => {
-    if (backgroundProcessingId) return;
-    
-    const cards = useAppStore.getState().ankiCards;
-    let nextCard = previewCard && cards.find(c => c.id === previewCard.id && c.audioStatus === 'pending');
-    
-    if (!nextCard) {
-        nextCard = cards.find(c => c.audioStatus === 'pending');
-    }
-
-    if (nextCard && videoFile) {
-        processCardAudio(nextCard.id, nextCard.subtitleId);
-    } else if (!nextCard && isExporting && !backgroundGifProcessingId) {
-        // Only finish export if GIF queue is also empty
-        finalizeExportIfReady();
-    }
-  }, [ankiCards, backgroundProcessingId, previewCard, isExporting, videoFile]);
-
-  // --- Background GIF Extraction Queue ---
-  useEffect(() => {
-    if (backgroundGifProcessingId) return;
-
-    const cards = useAppStore.getState().ankiCards;
-    // 1. Prioritize preview card GIF
-    let nextCard = previewCard && cards.find(c => c.id === previewCard.id && c.gifStatus === 'pending');
-    
-    // 2. Then others
-    if (!nextCard) {
-        nextCard = cards.find(c => c.gifStatus === 'pending');
-    }
-
-    if (nextCard && videoFile) {
-        processCardGif(nextCard.id, nextCard.subtitleId);
-    } else if (!nextCard && isExporting && !backgroundProcessingId) {
-        finalizeExportIfReady();
-    }
-  }, [ankiCards, backgroundGifProcessingId, previewCard, isExporting, videoFile]);
-
-
-  const processCardAudio = async (cardId: string, subtitleId: number) => {
-      if (!videoFile) return;
-      
-      const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
-      if (!sub) {
-          updateCard(cardId, { audioStatus: 'error' });
-          return;
-      }
-
-      setBackgroundProcessingId(cardId);
-      updateCard(cardId, { audioStatus: 'processing' });
-
-      try {
-          const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime);
-          
-          // Store Blob in IndexedDB
-          const audioId = crypto.randomUUID();
-          await storeMedia(audioId, blob);
-
-          const currentCards = useAppStore.getState().ankiCards;
-          if (currentCards.find(c => c.id === cardId)) {
-              updateCard(cardId, { audioStatus: 'done', audioRef: audioId });
-          }
-      } catch (e) {
-          console.error("Audio extraction failed", e);
-          updateCard(cardId, { audioStatus: 'error' });
-      } finally {
-          setBackgroundProcessingId(null);
-      }
+  // --- Background Media Processing ---
+  const finalizeExport = async () => {
+    setIsExporting(false);
+    await generateAnkiDeck(ankiCards, videoName, ankiConfig);
   };
 
-  const processCardGif = async (cardId: string, subtitleId: number) => {
-      if (!videoFile) return;
+  useMediaProcessing(videoFile, previewCard, isExporting, finalizeExport);
 
-      const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
-      if (!sub) {
-          updateCard(cardId, { gifStatus: 'error' });
-          return;
-      }
-
-      setBackgroundGifProcessingId(cardId);
-      updateCard(cardId, { gifStatus: 'processing' });
-
-      try {
-          const gifBase64 = await ffmpegService.extractGifClip(videoFile, sub.startTime, sub.endTime);
-          
-          // Store GIF Base64 in IndexedDB
-          const gifId = crypto.randomUUID();
-          await storeMedia(gifId, gifBase64);
-
-          const currentCards = useAppStore.getState().ankiCards;
-          if (currentCards.find(c => c.id === cardId)) {
-              updateCard(cardId, { gifStatus: 'done', gifRef: gifId });
-          }
-      } catch (e) {
-          console.error("GIF extraction failed", e);
-          updateCard(cardId, { gifStatus: 'error' });
-      } finally {
-          setBackgroundGifProcessingId(null);
-      }
-  };
+  // --- Handlers ---
 
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setVideo(file);
     }
-  };
-
-  const handleOpenSubtitle = async () => {
-    try {
-      // @ts-ignore
-      if (window.showOpenFilePicker) {
-        // @ts-ignore
-        const [handle] = await window.showOpenFilePicker({
-          types: [{ description: 'Subtitle Files', accept: { 'text/plain': ['.srt', '.vtt'] } }],
-          multiple: false,
-        });
-        const file = await handle.getFile();
-        const text = await file.text();
-        setSubtitles(parseSubtitles(text), file.name, handle);
-        return;
-      }
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') console.error("File picker failed", err);
-      else return;
-    }
-    subtitleInputRef.current?.click();
-  };
-
-  const handleSubtitleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const lines = parseSubtitles(e.target?.result as string);
-        setSubtitles(lines, file.name, null);
-      };
-      reader.readAsText(file);
-    }
-    event.target.value = '';
   };
 
   const handleTempSubtitleLineCreated = (start: number, end: number) => {
@@ -246,12 +108,12 @@ const App: React.FC = () => {
   const extractAudioSync = async (start: number, end: number): Promise<Blob | null> => {
     if (!videoFile) return null;
     try {
-      videoRef.current?.pause(); 
+      videoRef.current?.pause();
       return await ffmpegService.extractAudioClip(videoFile, start, end);
     } catch (e) {
       console.error("Audio extraction failed", e);
       return null;
-    } 
+    }
   };
 
   const handleCommitTempSubtitleLine = async () => {
@@ -264,7 +126,7 @@ const App: React.FC = () => {
   const handleEditSubtitle = async (id: number) => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (!sub) return;
-    
+
     videoRef.current?.pause();
     videoRef.current?.seekTo(sub.startTime);
 
@@ -282,12 +144,12 @@ const App: React.FC = () => {
     } else if (tempSubtitleLine) {
       const lines = useAppStore.getState().subtitleLines;
       const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
-      const newSub: SubtitleLine = { 
-        id: maxId + 1, 
-        startTime: tempSubtitleLine.start, 
-        endTime: tempSubtitleLine.end, 
-        text, 
-        locked: false 
+      const newSub: SubtitleLine = {
+        id: maxId + 1,
+        startTime: tempSubtitleLine.start,
+        endTime: tempSubtitleLine.end,
+        text,
+        locked: false
       };
       addSubtitle(newSub);
       setTempSubtitleLine(null);
@@ -314,10 +176,9 @@ const App: React.FC = () => {
         await writable.close();
         useAppStore.getState().setHasUnsavedChanges(false);
       } catch (err) { alert('Failed to save file.'); }
-    } else { 
-      useAppStore.getState().setHasUnsavedChanges(false); 
+    } else {
+      useAppStore.getState().setHasUnsavedChanges(false);
     }
-    setIsSaveMenuOpen(false);
   };
 
   const handleDownloadSubtitles = async () => {
@@ -341,7 +202,6 @@ const App: React.FC = () => {
         useAppStore.getState().setHasUnsavedChanges(false);
       }
     } catch (err) {}
-    setIsSaveMenuOpen(false);
   };
 
   const handleTimeUpdate = (time: number) => {
@@ -351,7 +211,7 @@ const App: React.FC = () => {
       videoRef.current?.seekTo(pauseAtTime);
       setPauseAtTime(null);
     }
-    
+
     // Efficiently find active subtitle index
     const activeIndex = subtitleLines.findIndex(s => time >= s.startTime && time <= s.endTime);
     const active = activeIndex !== -1 ? subtitleLines[activeIndex] : null;
@@ -380,178 +240,102 @@ const App: React.FC = () => {
 
   const handleCreateCard = async (sub: SubtitleLine) => {
     if (!videoRef.current) return;
-    
+
     // Capture Screenshot immediately
     const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
     setPauseAtTime(null);
 
     let screenshotRef = null;
     if (screenshot) {
-        screenshotRef = crypto.randomUUID();
-        await storeMedia(screenshotRef, screenshot);
+      screenshotRef = crypto.randomUUID();
+      await storeMedia(screenshotRef, screenshot);
     }
-    
+
     // Add card with pending audio status
-    const newCard: AnkiCard = { 
-        id: crypto.randomUUID(), 
-        subtitleId: sub.id, 
-        text: sub.text, 
-        translation: '', 
-        notes: '', 
-        screenshotRef: screenshotRef, 
-        audioRef: null, 
-        audioStatus: 'pending',
-        timestampStr: formatTime(sub.startTime),
-        preferredMediaType: 'image',
-        gifStatus: undefined,
-        gifRef: null
+    const newCard: AnkiCard = {
+      id: crypto.randomUUID(),
+      subtitleId: sub.id,
+      text: sub.text,
+      translation: '',
+      notes: '',
+      screenshotRef: screenshotRef,
+      audioRef: null,
+      audioStatus: 'pending',
+      timestampStr: formatTime(sub.startTime),
+      preferredMediaType: 'image',
+      gifStatus: undefined,
+      gifRef: null
     };
-    
+
     addCard(newCard);
-    
+
     if (llmSettings.autoAnalyze) handleAnalyzeCard(newCard);
   };
 
   const handleAnalyzeCard = async (card: AnkiCard) => {
     setProcessing({ isAnalyzing: true });
-    
+
     const lines = useAppStore.getState().subtitleLines;
     const subIndex = lines.findIndex(s => s.id === card.subtitleId);
-    
+
     const result = await analyzeSubtitle(
-      card.text, 
-      lines[subIndex - 1]?.text, 
-      lines[subIndex + 1]?.text, 
+      card.text,
+      lines[subIndex - 1]?.text,
+      lines[subIndex + 1]?.text,
       llmSettings
     );
-    
-    updateCard(card.id, { 
-      translation: result.translation, 
-      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}` 
+
+    updateCard(card.id, {
+      translation: result.translation,
+      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}`
     });
-    
+
     setProcessing({ isAnalyzing: false });
   };
 
   const handleDeleteCard = async (id: string) => {
-      const card = ankiCards.find(c => c.id === id);
-      if (card) {
-          try {
-            if (card.screenshotRef) await deleteMedia(card.screenshotRef);
-            if (card.audioRef) await deleteMedia(card.audioRef);
-            if (card.gifRef) await deleteMedia(card.gifRef);
-          } catch (e) {
-              console.error("Failed to delete media from DB", e);
-          }
-          deleteCard(id);
+    const card = ankiCards.find(c => c.id === id);
+    if (card) {
+      try {
+        if (card.screenshotRef) await deleteMedia(card.screenshotRef);
+        if (card.audioRef) await deleteMedia(card.audioRef);
+        if (card.gifRef) await deleteMedia(card.gifRef);
+      } catch (e) {
+        console.error("Failed to delete media from DB", e);
       }
+      deleteCard(id);
+    }
   };
 
   const handleExportClick = () => {
-      // Check if audio processing is pending
-      const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
-      const pendingGif = ankiCards.some(c => c.gifStatus === 'pending' || c.gifStatus === 'processing');
-      
-      if (pendingAudio || pendingGif) {
-          setIsExporting(true);
-      } else {
-          finalizeExport();
-      }
-  };
+    // Check if audio processing is pending
+    const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
+    const pendingGif = ankiCards.some(c => c.gifStatus === 'pending' || c.gifStatus === 'processing');
 
-  const finalizeExportIfReady = () => {
-      const cards = useAppStore.getState().ankiCards;
-      const pendingAudio = cards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
-      const pendingGif = cards.some(c => c.gifStatus === 'pending' || c.gifStatus === 'processing');
-
-      if (!pendingAudio && !pendingGif) {
-          finalizeExport();
-      }
-  }
-
-  const finalizeExport = async () => {
-      setIsExporting(false);
-      await generateAnkiDeck(ankiCards, videoName, ankiConfig);
-  };
-
-  const renderControlBar = () => {
-    if (tempSubtitleLine) {
-      return (
-        <TempSubtitleLineControls 
-          start={tempSubtitleLine.start}
-          end={tempSubtitleLine.end}
-          onPlay={handleTempSubtitleLineClicked}
-          onCommit={handleCommitTempSubtitleLine}
-          onDiscard={handleTempSubtitleLineRemoved}
-        />
-      );
+    if (pendingAudio || pendingGif) {
+      setIsExporting(true);
+    } else {
+      finalizeExport();
     }
-    
-    if (activeSubtitleId !== null) {
-      return (
-        <ActiveSubtitleLineControls 
-          videoName={videoName}
-          currentTime={currentTime}
-          llmSettings={llmSettings}
-          onVideoUpload={handleVideoUpload}
-          onOpenLLMSettings={() => setIsLLMSettingsOpen(true)}
-          onReplay={() => handlePlaySubtitle(activeSubtitleId)}
-        />
-      );
-    }
-
-    return (
-      <DefaultControls 
-        videoName={videoName}
-        currentTime={currentTime}
-        llmSettings={llmSettings}
-        onVideoUpload={handleVideoUpload}
-        onOpenLLMSettings={() => setIsLLMSettingsOpen(true)}
-      />
-    );
-  };
-
-  // Helper function to render a single subtitle row within the virtualizer
-  const renderSubtitleRow = (index: number) => {
-    const sub = subtitleLines[index];
-    const isActive = sub.id === activeSubtitleId;
-    
-    return (
-      <div 
-        key={sub.id} 
-        id={`sub-${sub.id}`} 
-        onClick={() => handlePlaySubtitle(sub.id)} 
-        className={`group flex items-start gap-2 p-2 mx-2 mb-1 rounded transition-all cursor-pointer border ${isActive ? 'bg-slate-800 border-indigo-500/50 shadow-md' : 'border-transparent hover:bg-slate-800/50'}`}
-      >
-        <button onClick={(e) => {e.stopPropagation(); toggleSubtitleLock(sub.id);}} className={`mt-1 ${sub.locked ? 'text-red-400' : 'text-slate-700 group-hover:text-slate-500'}`}>{sub.locked ? <Lock size={12}/> : <Unlock size={12}/>}</button>
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-center mb-1">
-            <span className={`text-[10px] font-mono ${isActive ? 'text-indigo-400' : 'text-slate-600'}`}>{formatTime(sub.startTime)}</span>
-          </div>
-          <textarea value={sub.text} onChange={(e) => updateSubtitleText(sub.id, e.target.value)} onClick={(e) => e.stopPropagation()} rows={2} readOnly={sub.locked} className={`w-full bg-transparent resize-none outline-none text-sm leading-snug ${sub.locked ? 'text-slate-500' : isActive ? 'text-white' : 'text-slate-400 hover:text-slate-300'}`}/>
-        </div>
-        <button onClick={(e) => {e.stopPropagation(); handleCreateCard(sub);}} className={`mt-1 text-slate-600 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition`} title="Create Card"><PlusCircle size={16}/></button>
-      </div>
-    );
   };
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
-      
+
       {/* Export Wait Overlay */}
       {isExporting && (
         <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
-            <Loader2 size={48} className="text-indigo-500 animate-spin mb-4" />
-            <div className="text-xl font-bold text-white">Finalizing Export...</div>
-            <div className="text-sm text-slate-400 mt-2">
-                Processing media ({ankiCards.filter(c => c.audioStatus !== 'done' || (c.preferredMediaType === 'gif' && c.gifStatus !== 'done')).length} remaining)
-            </div>
-            <button 
-                onClick={() => setIsExporting(false)} 
-                className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:bg-slate-800 transition"
-            >
-                Cancel
-            </button>
+          <Loader2 size={48} className="text-indigo-500 animate-spin mb-4" />
+          <div className="text-xl font-bold text-white">Finalizing Export...</div>
+          <div className="text-sm text-slate-400 mt-2">
+            Processing media ({ankiCards.filter(c => c.audioStatus !== 'done' || (c.preferredMediaType === 'gif' && c.gifStatus !== 'done')).length} remaining)
+          </div>
+          <button
+            onClick={() => setIsExporting(false)}
+            className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:bg-slate-800 transition"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
@@ -581,14 +365,14 @@ const App: React.FC = () => {
           {/* Deck List */}
           <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
             {ankiCards.length === 0 ? <div className="text-center py-10 text-slate-600 text-xs">No cards yet</div> : ankiCards.map(card => (
-                <CardItem 
-                    key={card.id} 
-                    card={card} 
-                    onDelete={handleDeleteCard} 
-                    onAnalyze={handleAnalyzeCard} 
-                    onPreview={(c) => setPreviewCard(c)}
-                    isAnalyzing={processing.isAnalyzing} 
-                />
+              <CardItem
+                key={card.id}
+                card={card}
+                onDelete={handleDeleteCard}
+                onAnalyze={handleAnalyzeCard}
+                onPreview={(c) => setPreviewCard(c)}
+                isAnalyzing={processing.isAnalyzing}
+              />
             ))}
           </div>
         </aside>
@@ -604,62 +388,41 @@ const App: React.FC = () => {
         </main>
 
         {/* COL 3: SUBTITLES (Right) */}
-        <aside className="w-80 flex-shrink-0 flex flex-col border-l border-slate-800 bg-slate-900/50 z-20">
-          <div className="h-14 flex items-center justify-between px-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
-            <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-wider">
-              <FileText size={16} /> Subtitles
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button onClick={handleOpenSubtitle} className="p-2 hover:bg-slate-700 rounded text-indigo-400 transition" title="Load Subtitles">
-                <FolderOpen size={16} />
-              </button>
-              <input ref={subtitleInputRef} type="file" accept=".srt,.vtt" onChange={handleSubtitleInputChange} className="hidden" />
-
-              {subtitleLines.length > 0 && (
-                <div className="relative">
-                  <button onClick={() => setIsSaveMenuOpen(!isSaveMenuOpen)} className="p-2 hover:bg-slate-700 rounded text-slate-400 transition" title="Save/Download">
-                    <Save size={16} />
-                  </button>
-                  {isSaveMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setIsSaveMenuOpen(false)}></div>
-                      <div className="absolute top-full right-0 mt-2 w-32 bg-slate-800 border border-slate-700 rounded shadow-xl z-50 overflow-hidden">
-                        <button onClick={handleSaveSubtitles} className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2">
-                          <Save size={14} /> Save
-                        </button>
-                        <button onClick={handleDownloadSubtitles} className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2">
-                          <Download size={14} /> Download
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Subtitle List - Virtualized */}
-          <div className="flex-1 min-h-0 bg-slate-900 pt-2">
-            {subtitleLines.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs">
-                    <AlertCircle size={24} className="mb-2 opacity-50"/>No subtitles loaded
-                </div>
-            ) : (
-                <Virtuoso
-                    ref={virtuosoRef}
-                    totalCount={subtitleLines.length}
-                    className="custom-scrollbar"
-                    itemContent={renderSubtitleRow}
-                />
-            )}
-          </div>
-        </aside>
+        <SubtitleColumn
+          subtitleLines={subtitleLines}
+          activeSubtitleId={activeSubtitleId}
+          subtitleFileName={subtitleFileName}
+          virtuosoRef={virtuosoRef}
+          onSetSubtitles={setSubtitles}
+          onUpdateText={updateSubtitleText}
+          onPlaySubtitle={handlePlaySubtitle}
+          onToggleLock={toggleSubtitleLock}
+          onCreateCard={(sub) => {
+            const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
+            if(s) handleCreateCard(s);
+          }}
+          onSave={handleSaveSubtitles}
+          onDownload={handleDownloadSubtitles}
+        />
       </div>
 
       {/* Control Bar - Full Width */}
       <div className="h-16 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
-        {renderControlBar()}
+        <AppControlBar
+          tempSubtitleLine={tempSubtitleLine}
+          activeSubtitleId={activeSubtitleId}
+          videoName={videoName}
+          currentTime={currentTime}
+          llmSettings={llmSettings}
+          onTempPlay={handleTempSubtitleLineClicked}
+          onTempCommit={handleCommitTempSubtitleLine}
+          onTempDiscard={handleTempSubtitleLineRemoved}
+          onVideoUpload={handleVideoUpload}
+          onOpenLLMSettings={() => setIsLLMSettingsOpen(true)}
+          onReplayActive={() => {
+            if (activeSubtitleId) handlePlaySubtitle(activeSubtitleId);
+          }}
+        />
       </div>
 
       {/* Bottom Part: Full-width Waveform */}
@@ -675,9 +438,9 @@ const App: React.FC = () => {
           onEditSubtitle={handleEditSubtitle}
           onPlaySubtitle={handlePlaySubtitle}
           onToggleLock={toggleSubtitleLock}
-          onCreateCard={(id) => { 
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === id); 
-            if(s) handleCreateCard(s); 
+          onCreateCard={(id) => {
+            const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
+            if(s) handleCreateCard(s);
           }}
         />
       </div>
@@ -685,10 +448,10 @@ const App: React.FC = () => {
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} config={ankiConfig} onSave={setAnkiConfig} />
       <LLMSettingsModal isOpen={isLLMSettingsOpen} onClose={() => setIsLLMSettingsOpen(false)} settings={llmSettings} onSave={setLLMSettings} />
-      <CardPreviewModal 
-        isOpen={!!previewCard} 
-        card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null} 
-        onClose={() => setPreviewCard(null)} 
+      <CardPreviewModal
+        isOpen={!!previewCard}
+        card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}
+        onClose={() => setPreviewCard(null)}
       />
       <EditSubtitleLineModal
         isOpen={isNewSubtitleModalOpen}
