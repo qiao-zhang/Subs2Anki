@@ -10,13 +10,12 @@ interface WaveformDisplayProps {
   audioSrc: string;
   currentTime: number;
   onSeek: (time: number) => void;
-  // Events
-  onTempSegmentCreated: (start: number, end: number) => void;
-  onTempSegmentUpdated: (start: number, end: number) => void;
-  onTempSegmentRemoved: () => void;
+  onTempSubtitleLineCreated: (start: number, end: number) => void;
+  onTempSubtitleLineUpdated: (start: number, end: number) => void;
+  onTempSubtitleLineClicked: () => void;
+  onTempSubtitleLineRemoved: () => void;
   onEditSubtitle: (id: number) => void;
   onPlaySubtitle: (id: number) => void;
-  onClickTempSegment: () => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (id: number) => void;
 }
@@ -25,12 +24,12 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   audioSrc,
   currentTime,
   onSeek,
-  onTempSegmentCreated,
-  onTempSegmentUpdated,
-  onTempSegmentRemoved,
+  onTempSubtitleLineCreated,
+  onTempSubtitleLineUpdated,
+  onTempSubtitleLineClicked,
+  onTempSubtitleLineRemoved,
   onEditSubtitle,
   onPlaySubtitle,
-  onClickTempSegment,
   onToggleLock
 }) => {
   // Access store for direct reads in listeners and reactive updates
@@ -47,6 +46,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   // Constants & Refs
   const TEMP_REGION_ID = 'subs2anki-temp-segment';
+  const activeDragRegionId = useRef<string | null>(null);
   const tempRegion = useRef<Region | null>(null);
 
   // Initialize WaveSurfer
@@ -101,7 +101,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       // Remove temp region if clicking elsewhere on timeline
       if (tempRegion.current) {
         tempRegion.current.remove();
-        onTempSegmentRemoved();
+        onTempSubtitleLineRemoved();
       }
     });
 
@@ -124,10 +124,10 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
             e.preventDefault();
             region.remove();
             tempRegion.current = null;
-            onTempSegmentRemoved();
+            onTempSubtitleLineRemoved();
          });
          
-         onTempSegmentCreated(region.start, region.end);
+         onTempSubtitleLineCreated(region.start, region.end);
       }
     });
 
@@ -135,7 +135,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       if (isSyncingSubtitles.current) return;
 
       if (region.id === TEMP_REGION_ID) {
-        onTempSegmentUpdated(region.start, region.end);
+        onTempSubtitleLineUpdated(region.start, region.end);
       } else {
         const id = parseInt(region.id);
         if (!isNaN(id)) {
@@ -152,7 +152,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     regions.on('region-clicked', (region: Region, e: MouseEvent) => {
       e.stopPropagation();
       if (region.id === TEMP_REGION_ID) {
-        onClickTempSegment();
+        onTempSubtitleLineClicked();
       } else {
         const id = parseInt(region.id);
         if (!isNaN(id)) {

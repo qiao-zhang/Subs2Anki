@@ -13,6 +13,9 @@ import CardItem from './components/CardItem';
 import TemplateEditorModal from './components/TemplateEditorModal';
 import EditSubtitleLineModal from './components/EditSubtitleLineModal.tsx';
 import LLMSettingsModal from './components/LLMSettingsModal';
+import TempSubtitleLineControls from './components/controls/TempSubtitleLineControls';
+import ActiveSubtitleLineControls from './components/controls/ActiveSubtitleLineControls';
+import DefaultControls from './components/controls/DefaultControls';
 import { useAppStore } from '../core/store';
 import {
   FileText,
@@ -20,23 +23,19 @@ import {
   PlusCircle,
   Layers,
   AlertCircle,
-  Video as VideoIcon,
   Save,
   FolderOpen,
   Lock,
   Unlock,
   Settings,
-  Bot,
-  Play,
-  Check
 } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
-  const {
-    videoSrc, videoName, setVideo,
+  const { 
+    videoSrc, videoName, setVideo, 
     audioBuffer, setAudioBuffer,
-    subtitleLines, subtitleFileName, fileHandle, setSubtitles,
+    subtitleLines, subtitleFileName, fileHandle, setSubtitles, 
     updateSubtitleText, updateSubtitleTime, toggleSubtitleLock, addSubtitle, removeSubtitle,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
@@ -58,7 +57,9 @@ const App: React.FC = () => {
   // Editing context
   const [editingSubId, setEditingSubId] = useState<number | null>(null);
   const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
-  const [tempSegment, setTempSegment] = useState<{start: number, end: number} | null>(null);
+  
+  // Renamed from tempSegment to tempSubtitleLine
+  const [tempSubtitleLine, setTempSubtitleLine] = useState<{start: number, end: number} | null>(null);
 
   // Refs
   const videoRef = useRef<VideoPlayerHandle>(null);
@@ -72,7 +73,7 @@ const App: React.FC = () => {
     if (file) {
       const url = URL.createObjectURL(file);
       setVideo(url, file.name);
-
+      
       // Load audio buffer asynchronously
       loadAudioBuffer(url).then(setAudioBuffer).catch(err => console.error("Failed to load audio track", err));
     }
@@ -112,19 +113,19 @@ const App: React.FC = () => {
     event.target.value = '';
   };
 
-  // --- Temp Segment Workflow ---
+  // --- Temp Subtitle Line Workflow (Renamed) ---
 
-  const handleTempSegmentCreated = (start: number, end: number) => {
+  const handleTempSubtitleLineCreated = (start: number, end: number) => {
     setEditingSubId(null);
-    setTempSegment({ start, end });
+    setTempSubtitleLine({ start, end });
   };
 
-  const handleTempSegmentUpdated = (start: number, end: number) => {
-    setTempSegment({ start, end });
+  const handleTempSubtitleLineUpdated = (start: number, end: number) => {
+    setTempSubtitleLine({ start, end });
   };
 
-  const handleTempSegmentRemoved = () => {
-    setTempSegment(null);
+  const handleTempSubtitleLineRemoved = () => {
+    setTempSubtitleLine(null);
   }
 
   const playTimeSpan = (start: number, end: number) => {
@@ -133,15 +134,15 @@ const App: React.FC = () => {
     videoRef.current?.play();
   }
 
-  const handlePlayTempSegment = () => {
-    if (!tempSegment) return;
-    playTimeSpan(tempSegment.start, tempSegment.end);
+  const handleTempSubtitleLineClicked = () => {
+    if (!tempSubtitleLine) return;
+    playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
   };
 
-  const handleCommitTempSegment = () => {
-    if (!tempSegment) return;
+  const handleCommitTempSubtitleLine = () => {
+    if (!tempSubtitleLine) return;
     videoRef.current?.pause();
-    if (audioBuffer) setSubAudioBlob(sliceAudioBuffer(audioBuffer, tempSegment.start, tempSegment.end));
+    if (audioBuffer) setSubAudioBlob(sliceAudioBuffer(audioBuffer, tempSubtitleLine.start, tempSubtitleLine.end));
     setIsNewSubtitleModalOpen(true);
   };
 
@@ -151,11 +152,11 @@ const App: React.FC = () => {
     // Use store state directly
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (!sub) return;
-
+    
     videoRef.current?.pause();
     videoRef.current?.seekTo(sub.startTime);
     setEditingSubId(id);
-    setTempSegment(null);
+    setTempSubtitleLine(null);
     if (audioBuffer) setSubAudioBlob(sliceAudioBuffer(audioBuffer, sub.startTime, sub.endTime));
     setIsNewSubtitleModalOpen(true);
   };
@@ -163,19 +164,19 @@ const App: React.FC = () => {
   const handleSaveSubtitleFromModal = (text: string) => {
     if (editingSubId !== null) {
       updateSubtitleText(editingSubId, text);
-    } else if (tempSegment) {
+    } else if (tempSubtitleLine) {
       // Creating new from temp segment
       const lines = useAppStore.getState().subtitleLines;
       const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
-      const newSub: SubtitleLine = {
-        id: maxId + 1,
-        startTime: tempSegment.start,
-        endTime: tempSegment.end,
-        text,
-        locked: false
+      const newSub: SubtitleLine = { 
+        id: maxId + 1, 
+        startTime: tempSubtitleLine.start, 
+        endTime: tempSubtitleLine.end, 
+        text, 
+        locked: false 
       };
       addSubtitle(newSub);
-      setTempSegment(null);
+      setTempSubtitleLine(null);
     }
   };
 
@@ -199,8 +200,8 @@ const App: React.FC = () => {
         await writable.close();
         useAppStore.getState().setHasUnsavedChanges(false);
       } catch (err) { alert('Failed to save file.'); }
-    } else {
-      useAppStore.getState().setHasUnsavedChanges(false);
+    } else { 
+      useAppStore.getState().setHasUnsavedChanges(false); 
     }
     setIsSaveMenuOpen(false);
   };
@@ -236,7 +237,12 @@ const App: React.FC = () => {
       videoRef.current?.seekTo(pauseAtTime);
       setPauseAtTime(null);
     }
-    // Optional: Auto-scroll to subtitle could be re-enabled here if needed
+    const active = subtitleLines.find(s => time >= s.startTime && time <= s.endTime);
+    if (active && active.id !== activeSubtitleId) {
+      setActiveSubtitleId(active.id);
+      const el = document.getElementById(`sub-${active.id}`);
+      if (el && subtitleListRef.current) el.scrollIntoView({behavior: 'smooth', block: 'center'});
+    } else if (!active) setActiveSubtitleId(null);
   };
 
   const handleSeek = (time: number) => {
@@ -249,7 +255,7 @@ const App: React.FC = () => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
 
     if (sub && videoRef.current) {
-      setTempSegment(null);
+      setTempSubtitleLine(null);
       playTimeSpan(sub.startTime, sub.endTime);
     }
   };
@@ -261,35 +267,74 @@ const App: React.FC = () => {
     setPauseAtTime(null);
     const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
     const newCard: AnkiCard = { id: crypto.randomUUID(), subtitleId: sub.id, text: sub.text, translation: '', notes: '', screenshotDataUrl: screenshot || null, audioBlob: audioBlob, timestampStr: formatTime(sub.startTime) };
-
+    
     addCard(newCard);
-
+    
     if (llmSettings.autoAnalyze) handleAnalyzeCard(newCard);
   };
 
   const handleAnalyzeCard = async (card: AnkiCard) => {
     setProcessing({ isAnalyzing: true });
-
+    
     // Get fresh context
     const lines = useAppStore.getState().subtitleLines;
     const subIndex = lines.findIndex(s => s.id === card.subtitleId);
-
+    
     const result = await analyzeSubtitle(
-      card.text,
-      lines[subIndex - 1]?.text,
-      lines[subIndex + 1]?.text,
+      card.text, 
+      lines[subIndex - 1]?.text, 
+      lines[subIndex + 1]?.text, 
       llmSettings
     );
-
-    updateCard(card.id, {
-      translation: result.translation,
-      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}`
+    
+    updateCard(card.id, { 
+      translation: result.translation, 
+      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}` 
     });
-
+    
     setProcessing({ isAnalyzing: false });
   };
 
   const handleExport = async () => await generateAnkiDeck(ankiCards, videoName, ankiConfig);
+
+  // Helper to render the correct control bar
+  const renderControlBar = () => {
+    if (tempSubtitleLine) {
+      console.assert(activeSubtitleId === null);
+      return (
+        <TempSubtitleLineControls 
+          start={tempSubtitleLine.start}
+          end={tempSubtitleLine.end}
+          onPlay={handleTempSubtitleLineClicked}
+          onCommit={handleCommitTempSubtitleLine}
+          onDiscard={handleTempSubtitleLineRemoved}
+        />
+      );
+    }
+    
+    if (activeSubtitleId !== null) {
+      return (
+        <ActiveSubtitleLineControls 
+          videoName={videoName}
+          currentTime={currentTime}
+          llmSettings={llmSettings}
+          onVideoUpload={handleVideoUpload}
+          onOpenLLMSettings={() => setIsLLMSettingsOpen(true)}
+          onReplay={() => handlePlaySubtitle(activeSubtitleId)}
+        />
+      );
+    }
+
+    return (
+      <DefaultControls 
+        videoName={videoName}
+        currentTime={currentTime}
+        llmSettings={llmSettings}
+        onVideoUpload={handleVideoUpload}
+        onOpenLLMSettings={() => setIsLLMSettingsOpen(true)}
+      />
+    );
+  };
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden">
@@ -393,61 +438,7 @@ const App: React.FC = () => {
 
       {/* Control Bar - Full Width */}
       <div className="h-16 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
-
-        {tempSegment ? (
-          /* Temp Segment Controls Mode */
-          <div className="flex items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-300">
-            <div className="text-sm font-mono text-emerald-400 bg-emerald-950/30 px-3 py-1.5 rounded border border-emerald-900/50">
-              {formatTime(tempSegment.start)} - {formatTime(tempSegment.end)}
-            </div>
-
-            <div className="h-6 w-px bg-slate-700 mx-1"></div>
-
-            <button onClick={handlePlayTempSegment} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition border border-slate-700 font-medium">
-              <Play size={16} />
-            </button>
-
-            <button onClick={handleCommitTempSegment} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition shadow-lg shadow-emerald-500/20 font-bold">
-              <Check size={16} /> Add Subtitle
-            </button>
-
-            <span className="text-xs text-slate-500">Right click the temp region to dismiss it</span>
-          </div>
-        ) : (
-          /* Standard Controls Mode */
-          <>
-            {/* Video Selector */}
-            <label className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg cursor-pointer transition text-sm font-medium text-slate-300 border border-slate-700">
-              <VideoIcon size={16}/><span className="truncate max-w-[200px]">{videoName || "Select Video File"}</span>
-              <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden"/>
-            </label>
-
-            <div className="h-8 w-px bg-slate-800"></div>
-
-            {/* Time Display */}
-            <div className="font-mono text-xl text-indigo-400 font-bold tracking-widest min-w-[100px] text-center">
-              {formatTime(currentTime)}
-            </div>
-
-            {/* Replay Button for Active Subtitle */}
-            {activeSubtitleId !== null && (
-              <>
-                <div className="h-8 w-px bg-slate-800"></div>
-                <button onClick={() => handlePlaySubtitle(activeSubtitleId)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-lg transition border border-slate-700 font-medium text-sm animate-in fade-in zoom-in duration-200">
-                  <Play size={16} /> Play
-                </button>
-              </>
-            )}
-
-            <div className="h-8 w-px bg-slate-800"></div>
-
-            {/* AI Settings */}
-            <button onClick={() => setIsLLMSettingsOpen(true)} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg transition border ${llmSettings.apiKey ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-red-900/20 border-red-800/50 text-red-400'}`}>
-              <Bot size={16} /> <span>{llmSettings.model.split('-')[1]?.toUpperCase() || "AI"}</span>
-            </button>
-          </>
-        )}
-
+        {renderControlBar()}
       </div>
 
       {/* Bottom Part: Full-width Waveform */}
@@ -456,16 +447,16 @@ const App: React.FC = () => {
           audioSrc={videoSrc}
           currentTime={currentTime}
           onSeek={handleSeek}
-          onTempSegmentCreated={handleTempSegmentCreated}
-          onTempSegmentUpdated={handleTempSegmentUpdated}
-          onTempSegmentRemoved={handleTempSegmentRemoved}
+          onTempSubtitleLineCreated={handleTempSubtitleLineCreated}
+          onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
+          onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
+          onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
           onEditSubtitle={handleEditSubtitle}
           onPlaySubtitle={handlePlaySubtitle}
-          onClickTempSegment={handlePlayTempSegment}
           onToggleLock={toggleSubtitleLock}
-          onCreateCard={(id) => {
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
-            if(s) handleCreateCard(s);
+          onCreateCard={(id) => { 
+            const s = useAppStore.getState().subtitleLines.find(x => x.id === id); 
+            if(s) handleCreateCard(s); 
           }}
         />
       </div>
@@ -477,8 +468,8 @@ const App: React.FC = () => {
         isOpen={isNewSubtitleModalOpen}
         onRemove={handleRemoveBtnClicked}
         onClose={() => setIsNewSubtitleModalOpen(false)}
-        startTime={tempSegment ? tempSegment.start : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.startTime || 0) : 0)}
-        endTime={tempSegment ? tempSegment.end : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.endTime || 0) : 0)}
+        startTime={tempSubtitleLine ? tempSubtitleLine.start : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.startTime || 0) : 0)}
+        endTime={tempSubtitleLine ? tempSubtitleLine.end : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.endTime || 0) : 0)}
         initialText={editingSubId !== null ? subtitleLines.find(s => s.id === editingSubId)?.text : ''}
         audioBlob={subAudioBlob}
         llmSettings={llmSettings}
