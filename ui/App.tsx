@@ -33,10 +33,10 @@ import {
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
-  const { 
-    videoSrc, videoName, setVideo, 
+  const {
+    videoSrc, videoName, setVideo,
     audioBuffer, setAudioBuffer,
-    subtitleLines, subtitleFileName, fileHandle, setSubtitles, 
+    subtitleLines, subtitleFileName, fileHandle, setSubtitles,
     updateSubtitleText, updateSubtitleTime, toggleSubtitleLock, addSubtitle, removeSubtitle,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
@@ -72,7 +72,7 @@ const App: React.FC = () => {
     if (file) {
       const url = URL.createObjectURL(file);
       setVideo(url, file.name);
-      
+
       // Load audio buffer asynchronously
       loadAudioBuffer(url).then(setAudioBuffer).catch(err => console.error("Failed to load audio track", err));
     }
@@ -151,7 +151,7 @@ const App: React.FC = () => {
     // Use store state directly
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (!sub) return;
-    
+
     videoRef.current?.pause();
     videoRef.current?.seekTo(sub.startTime);
     setEditingSubId(id);
@@ -167,12 +167,12 @@ const App: React.FC = () => {
       // Creating new from temp segment
       const lines = useAppStore.getState().subtitleLines;
       const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
-      const newSub: SubtitleLine = { 
-        id: maxId + 1, 
-        startTime: tempSegment.start, 
-        endTime: tempSegment.end, 
-        text, 
-        locked: false 
+      const newSub: SubtitleLine = {
+        id: maxId + 1,
+        startTime: tempSegment.start,
+        endTime: tempSegment.end,
+        text,
+        locked: false
       };
       addSubtitle(newSub);
       setTempSegment(null);
@@ -199,8 +199,8 @@ const App: React.FC = () => {
         await writable.close();
         useAppStore.getState().setHasUnsavedChanges(false);
       } catch (err) { alert('Failed to save file.'); }
-    } else { 
-      useAppStore.getState().setHasUnsavedChanges(false); 
+    } else {
+      useAppStore.getState().setHasUnsavedChanges(false);
     }
     setIsSaveMenuOpen(false);
   };
@@ -261,31 +261,31 @@ const App: React.FC = () => {
     setPauseAtTime(null);
     const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
     const newCard: AnkiCard = { id: crypto.randomUUID(), subtitleId: sub.id, text: sub.text, translation: '', notes: '', screenshotDataUrl: screenshot || null, audioBlob: audioBlob, timestampStr: formatTime(sub.startTime) };
-    
+
     addCard(newCard);
-    
+
     if (llmSettings.autoAnalyze) handleAnalyzeCard(newCard);
   };
 
   const handleAnalyzeCard = async (card: AnkiCard) => {
     setProcessing({ isAnalyzing: true });
-    
+
     // Get fresh context
     const lines = useAppStore.getState().subtitleLines;
     const subIndex = lines.findIndex(s => s.id === card.subtitleId);
-    
+
     const result = await analyzeSubtitle(
-      card.text, 
-      lines[subIndex - 1]?.text, 
-      lines[subIndex + 1]?.text, 
+      card.text,
+      lines[subIndex - 1]?.text,
+      lines[subIndex + 1]?.text,
       llmSettings
     );
-    
-    updateCard(card.id, { 
-      translation: result.translation, 
-      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}` 
+
+    updateCard(card.id, {
+      translation: result.translation,
+      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}`
     });
-    
+
     setProcessing({ isAnalyzing: false });
   };
 
@@ -323,72 +323,13 @@ const App: React.FC = () => {
           </div>
         </aside>
 
-        {/* COL 2: VIDEO & CONTROLS (Center) */}
+        {/* COL 2: VIDEO (Center) */}
         <main className="flex-1 flex flex-col bg-slate-950 relative min-w-0">
           {/* Video Player Area */}
           <div className="flex-1 flex flex-col items-center justify-center p-2 bg-black/20 min-h-0">
             <div className="w-full h-full max-w-5xl flex flex-col justify-center">
               <VideoPlayer ref={videoRef} src={videoSrc} onTimeUpdate={handleTimeUpdate} />
             </div>
-          </div>
-
-          {/* Control Bar */}
-          <div className="h-16 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all">
-
-            {tempSegment ? (
-              /* Temp Segment Controls Mode */
-              <div className="flex items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                <div className="text-sm font-mono text-emerald-400 bg-emerald-950/30 px-3 py-1.5 rounded border border-emerald-900/50">
-                  {formatTime(tempSegment.start)} - {formatTime(tempSegment.end)}
-                </div>
-
-                <div className="h-6 w-px bg-slate-700 mx-1"></div>
-
-                <button onClick={handlePlayTempSegment} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition border border-slate-700 font-medium">
-                  <Play size={16} />
-                </button>
-
-                <button onClick={handleCommitTempSegment} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition shadow-lg shadow-emerald-500/20 font-bold">
-                  <Check size={16} /> Add Subtitle
-                </button>
-
-                <span className="text-xs text-slate-500">Right click the temp region to dismiss it</span>
-              </div>
-            ) : (
-              /* Standard Controls Mode */
-              <>
-                {/* Video Selector */}
-                <label className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg cursor-pointer transition text-sm font-medium text-slate-300 border border-slate-700">
-                  <VideoIcon size={16}/><span className="truncate max-w-[200px]">{videoName || "Select Video File"}</span>
-                  <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden"/>
-                </label>
-
-                <div className="h-8 w-px bg-slate-800"></div>
-
-                {/* Time Display */}
-                <div className="font-mono text-xl text-indigo-400 font-bold tracking-widest min-w-[100px] text-center">
-                  {formatTime(currentTime)}
-                </div>
-
-                {/* Replay Button for Active Subtitle */}
-                {activeSubtitleId !== null && (
-                  <>
-                    <div className="h-8 w-px bg-slate-800"></div>
-                    <button onClick={() => handlePlaySubtitle(activeSubtitleId)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-lg transition border border-slate-700 font-medium text-sm animate-in fade-in zoom-in duration-200">
-                      <Play size={16} /> Play
-                    </button>
-                  </>
-                )}
-
-                <div className="h-8 w-px bg-slate-800"></div>
-
-                {/* AI Settings */}
-                <button onClick={() => setIsLLMSettingsOpen(true)} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg transition border ${llmSettings.apiKey ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-red-900/20 border-red-800/50 text-red-400'}`}>
-                  <Bot size={16} /> <span>{llmSettings.model.split('-')[1]?.toUpperCase() || "AI"}</span>
-                </button>
-              </>
-            )}
-
           </div>
         </main>
 
@@ -450,6 +391,65 @@ const App: React.FC = () => {
         </aside>
       </div>
 
+      {/* Control Bar - Full Width */}
+      <div className="h-16 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
+
+        {tempSegment ? (
+          /* Temp Segment Controls Mode */
+          <div className="flex items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-300">
+            <div className="text-sm font-mono text-emerald-400 bg-emerald-950/30 px-3 py-1.5 rounded border border-emerald-900/50">
+              {formatTime(tempSegment.start)} - {formatTime(tempSegment.end)}
+            </div>
+
+            <div className="h-6 w-px bg-slate-700 mx-1"></div>
+
+            <button onClick={handlePlayTempSegment} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition border border-slate-700 font-medium">
+              <Play size={16} />
+            </button>
+
+            <button onClick={handleCommitTempSegment} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition shadow-lg shadow-emerald-500/20 font-bold">
+              <Check size={16} /> Add Subtitle
+            </button>
+
+            <span className="text-xs text-slate-500">Right click the temp region to dismiss it</span>
+          </div>
+        ) : (
+          /* Standard Controls Mode */
+          <>
+            {/* Video Selector */}
+            <label className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg cursor-pointer transition text-sm font-medium text-slate-300 border border-slate-700">
+              <VideoIcon size={16}/><span className="truncate max-w-[200px]">{videoName || "Select Video File"}</span>
+              <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden"/>
+            </label>
+
+            <div className="h-8 w-px bg-slate-800"></div>
+
+            {/* Time Display */}
+            <div className="font-mono text-xl text-indigo-400 font-bold tracking-widest min-w-[100px] text-center">
+              {formatTime(currentTime)}
+            </div>
+
+            {/* Replay Button for Active Subtitle */}
+            {activeSubtitleId !== null && (
+              <>
+                <div className="h-8 w-px bg-slate-800"></div>
+                <button onClick={() => handlePlaySubtitle(activeSubtitleId)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-lg transition border border-slate-700 font-medium text-sm animate-in fade-in zoom-in duration-200">
+                  <Play size={16} /> Play
+                </button>
+              </>
+            )}
+
+            <div className="h-8 w-px bg-slate-800"></div>
+
+            {/* AI Settings */}
+            <button onClick={() => setIsLLMSettingsOpen(true)} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg transition border ${llmSettings.apiKey ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-red-900/20 border-red-800/50 text-red-400'}`}>
+              <Bot size={16} /> <span>{llmSettings.model.split('-')[1]?.toUpperCase() || "AI"}</span>
+            </button>
+          </>
+        )}
+
+      </div>
+
       {/* Bottom Part: Full-width Waveform */}
       <div className="h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative">
         <WaveformDisplay
@@ -463,9 +463,9 @@ const App: React.FC = () => {
           onPlaySubtitle={handlePlaySubtitle}
           onClickTempSegment={handlePlayTempSegment}
           onToggleLock={toggleSubtitleLock}
-          onCreateCard={(id) => { 
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === id); 
-            if(s) handleCreateCard(s); 
+          onCreateCard={(id) => {
+            const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
+            if(s) handleCreateCard(s);
           }}
         />
       </div>
