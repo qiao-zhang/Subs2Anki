@@ -39,7 +39,8 @@ interface AppState {
   // Video Data
   videoSrc: string;
   videoName: string;
-  setVideo: (src: string, name: string) => void;
+  videoFile: File | null; // Added: Raw file object for FFmpeg
+  setVideo: (file: File) => void; // Changed: Takes File object
 
   // Subtitles
   subtitleLines: SubtitleLine[];
@@ -73,21 +74,25 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Video defaults
   videoSrc: '',
   videoName: '',
-  setVideo: (src, name) => set({ videoSrc: src, videoName: name }),
+  videoFile: null,
+  setVideo: (file) => {
+    const src = URL.createObjectURL(file);
+    set({ videoSrc: src, videoName: file.name, videoFile: file });
+  },
 
   // Subtitle defaults
   subtitleLines: [],
   subtitleFileName: '',
   fileHandle: null,
   hasUnsavedChanges: false,
-  setSubtitles: (lines, fileName, fileHandle = null) =>
+  setSubtitles: (lines, fileName, fileHandle = null) => 
     set({ subtitleLines: lines, subtitleFileName: fileName, fileHandle, hasUnsavedChanges: false }),
-
+  
   updateSubtitleText: (id, text) => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => (s.id === id && !s.locked) ? { ...s, text } : s),
     hasUnsavedChanges: true
   })),
-
+  
   updateSubtitleTime: (id, start, end) => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => (s.id === id && !s.locked) ? { ...s, startTime: start, endTime: end } : s),
     hasUnsavedChanges: true
@@ -129,7 +134,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (!parsed.apiKey && parsed.provider === 'gemini') {
-          parsed.apiKey = process.env.API_KEY || '';
+            parsed.apiKey = process.env.API_KEY || '';
         }
         return parsed;
       }

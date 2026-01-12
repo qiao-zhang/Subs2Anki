@@ -1,10 +1,12 @@
-
+/// <reference lib="dom" />
+/// <reference lib="dom.iterable" />
 import React, {useState, useRef} from 'react';
 import {SubtitleLine, AnkiCard} from '../core/types';
 import {parseSubtitles, serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
 import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
+import {ffmpegService} from '../core/ffmpeg';
 import saveAs from 'file-saver';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
@@ -27,13 +29,15 @@ import {
   Lock,
   Unlock,
   Settings,
+  Loader2,
+  Wand2
 } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
-  const {
-    videoSrc, videoName, setVideo,
-    subtitleLines, subtitleFileName, fileHandle, setSubtitles,
+  const { 
+    videoSrc, videoName, videoFile, setVideo, 
+    subtitleLines, subtitleFileName, fileHandle, setSubtitles, 
     updateSubtitleText, updateSubtitleTime, toggleSubtitleLock, addSubtitle, removeSubtitle,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
@@ -45,6 +49,9 @@ const App: React.FC = () => {
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
+  
+  // Processing States
+  const [isExtractingAudio, setIsExtractingAudio] = useState<boolean>(false);
 
   // Modals
   const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
@@ -54,7 +61,8 @@ const App: React.FC = () => {
 
   // Editing context
   const [editingSubId, setEditingSubId] = useState<number | null>(null);
-
+  const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
+  
   // Renamed from tempSegment to tempSubtitleLine
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{start: number, end: number} | null>(null);
 
@@ -68,10 +76,8 @@ const App: React.FC = () => {
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setVideo(url, file.name);
-      // NOTE: We no longer decode the full audio here to avoid OOM on large files.
-      // WaveformDisplay will handle playback via MediaElement.
+      // Pass the File object to the store (for FFmpeg access)
+      setVideo(file);
     }
   };
 
@@ -109,7 +115,7 @@ const App: React.FC = () => {
     event.target.value = '';
   };
 
-  // --- Temp Subtitle Line Workflow (Renamed) ---
+  // --- Temp Subtitle Line Workflow ---
 
   const handleTempSubtitleLineCreated = (start: number, end: number) => {
     setEditingSubId(null);
@@ -135,23 +141,50 @@ const App: React.FC = () => {
     playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
   };
 
-  const handleCommitTempSubtitleLine = () => {
+  /**
+   * Helper: Extract audio using FFmpeg
+   */
+  const extractAudio = async (start: number, end: number): Promise<Blob | null> => {
+    if (!videoFile) return null;
+    try {
+      setIsExtractingAudio(true);
+      videoRef.current?.pause(); // Ensure video is paused during extraction
+      
+      const blob = await ffmpegService.extractAudioClip(videoFile, start, end);
+      return blob;
+    } catch (e) {
+      console.error("Audio extraction failed", e);
+      alert("Failed to extract audio. Check console for details. (Ensure SharedArrayBuffer is enabled in server headers if using FFmpeg)");
+      return null;
+    } finally {
+      setIsExtractingAudio(false);
+    }
+  };
+
+  const handleCommitTempSubtitleLine = async () => {
     if (!tempSubtitleLine) return;
-    videoRef.current?.pause();
+    
+    const blob = await extractAudio(tempSubtitleLine.start, tempSubtitleLine.end);
+    setSubAudioBlob(blob);
     setIsNewSubtitleModalOpen(true);
   };
 
   // --- Edit Existing Subtitle ---
 
-  const handleEditSubtitle = (id: number) => {
-    // Use store state directly
+  const handleEditSubtitle = async (id: number) => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (!sub) return;
-
+    
+    // Pause video
     videoRef.current?.pause();
     videoRef.current?.seekTo(sub.startTime);
+
+    // Extract Audio
+    const blob = await extractAudio(sub.startTime, sub.endTime);
+
     setEditingSubId(id);
     setTempSubtitleLine(null);
+    setSubAudioBlob(blob);
     setIsNewSubtitleModalOpen(true);
   };
 
@@ -159,15 +192,14 @@ const App: React.FC = () => {
     if (editingSubId !== null) {
       updateSubtitleText(editingSubId, text);
     } else if (tempSubtitleLine) {
-      // Creating new from temp segment
       const lines = useAppStore.getState().subtitleLines;
       const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
-      const newSub: SubtitleLine = {
-        id: maxId + 1,
-        startTime: tempSubtitleLine.start,
-        endTime: tempSubtitleLine.end,
-        text,
-        locked: false
+      const newSub: SubtitleLine = { 
+        id: maxId + 1, 
+        startTime: tempSubtitleLine.start, 
+        endTime: tempSubtitleLine.end, 
+        text, 
+        locked: false 
       };
       addSubtitle(newSub);
       setTempSubtitleLine(null);
@@ -194,8 +226,8 @@ const App: React.FC = () => {
         await writable.close();
         useAppStore.getState().setHasUnsavedChanges(false);
       } catch (err) { alert('Failed to save file.'); }
-    } else {
-      useAppStore.getState().setHasUnsavedChanges(false);
+    } else { 
+      useAppStore.getState().setHasUnsavedChanges(false); 
     }
     setIsSaveMenuOpen(false);
   };
@@ -245,9 +277,7 @@ const App: React.FC = () => {
   };
 
   const handlePlaySubtitle = (id: number) => {
-    // Grab fresh from store to ensure no stale data
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
-
     if (sub && videoRef.current) {
       setTempSubtitleLine(null);
       playTimeSpan(sub.startTime, sub.endTime);
@@ -256,48 +286,58 @@ const App: React.FC = () => {
 
   const handleCreateCard = async (sub: SubtitleLine) => {
     if (!videoRef.current) return;
-    // Audio slicing disabled for performance/stability on large files without ffmpeg.wasm
-    const audioBlob: Blob | null = null;
-
+    
+    // 1. Capture Audio using FFmpeg (Fast, non-realtime)
+    const audioBlob = await extractAudio(sub.startTime, sub.endTime);
+    
     setPauseAtTime(null);
+    
+    // 2. Capture Screenshot
     const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
-    const newCard: AnkiCard = { id: crypto.randomUUID(), subtitleId: sub.id, text: sub.text, translation: '', notes: '', screenshotDataUrl: screenshot || null, audioBlob: audioBlob, timestampStr: formatTime(sub.startTime) };
-
+    
+    const newCard: AnkiCard = { 
+        id: crypto.randomUUID(), 
+        subtitleId: sub.id, 
+        text: sub.text, 
+        translation: '', 
+        notes: '', 
+        screenshotDataUrl: screenshot || null, 
+        audioBlob: audioBlob, 
+        timestampStr: formatTime(sub.startTime) 
+    };
+    
     addCard(newCard);
-
-    if (llmSettings.autoAnalyze) await handleAnalyzeCard(newCard);
+    
+    if (llmSettings.autoAnalyze) handleAnalyzeCard(newCard);
   };
 
   const handleAnalyzeCard = async (card: AnkiCard) => {
     setProcessing({ isAnalyzing: true });
-
-    // Get fresh context
+    
     const lines = useAppStore.getState().subtitleLines;
     const subIndex = lines.findIndex(s => s.id === card.subtitleId);
-
+    
     const result = await analyzeSubtitle(
-      card.text,
-      lines[subIndex - 1]?.text,
-      lines[subIndex + 1]?.text,
+      card.text, 
+      lines[subIndex - 1]?.text, 
+      lines[subIndex + 1]?.text, 
       llmSettings
     );
-
-    updateCard(card.id, {
-      translation: result.translation,
-      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}`
+    
+    updateCard(card.id, { 
+      translation: result.translation, 
+      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}` 
     });
-
+    
     setProcessing({ isAnalyzing: false });
   };
 
   const handleExport = async () => await generateAnkiDeck(ankiCards, videoName, ankiConfig);
 
-  // Helper to render the correct control bar
   const renderControlBar = () => {
     if (tempSubtitleLine) {
-      console.assert(activeSubtitleId === null);
       return (
-        <TempSubtitleLineControls
+        <TempSubtitleLineControls 
           start={tempSubtitleLine.start}
           end={tempSubtitleLine.end}
           onPlay={handleTempSubtitleLineClicked}
@@ -306,10 +346,10 @@ const App: React.FC = () => {
         />
       );
     }
-
+    
     if (activeSubtitleId !== null) {
       return (
-        <ActiveSubtitleLineControls
+        <ActiveSubtitleLineControls 
           videoName={videoName}
           currentTime={currentTime}
           llmSettings={llmSettings}
@@ -321,7 +361,7 @@ const App: React.FC = () => {
     }
 
     return (
-      <DefaultControls
+      <DefaultControls 
         videoName={videoName}
         currentTime={currentTime}
         llmSettings={llmSettings}
@@ -332,7 +372,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
+      
+      {/* FFmpeg Extraction Overlay */}
+      {isExtractingAudio && (
+        <div className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
+            <Wand2 size={48} className="text-indigo-500 animate-bounce mb-4" />
+            <div className="text-xl font-bold text-white">Extracting Audio...</div>
+            <div className="text-sm text-slate-400 mt-2">Processing via FFmpeg (WASM)</div>
+        </div>
+      )}
 
       {/* Top Part: 3 Columns */}
       <div className="flex flex-1 min-h-0 w-full">
@@ -449,9 +498,9 @@ const App: React.FC = () => {
           onEditSubtitle={handleEditSubtitle}
           onPlaySubtitle={handlePlaySubtitle}
           onToggleLock={toggleSubtitleLock}
-          onCreateCard={(id) => {
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
-            if(s) handleCreateCard(s);
+          onCreateCard={(id) => { 
+            const s = useAppStore.getState().subtitleLines.find(x => x.id === id); 
+            if(s) handleCreateCard(s); 
           }}
         />
       </div>
@@ -466,7 +515,7 @@ const App: React.FC = () => {
         startTime={tempSubtitleLine ? tempSubtitleLine.start : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.startTime || 0) : 0)}
         endTime={tempSubtitleLine ? tempSubtitleLine.end : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.endTime || 0) : 0)}
         initialText={editingSubId !== null ? subtitleLines.find(s => s.id === editingSubId)?.text : ''}
-        audioBlob={null}
+        audioBlob={subAudioBlob}
         llmSettings={llmSettings}
         onSave={handleSaveSubtitleFromModal}
       />

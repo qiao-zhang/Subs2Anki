@@ -1,110 +1,119 @@
+/// <reference lib="dom" />
 
 /**
- * DEPRECATED: loadAudioBuffer caused OOM on large files.
- * We now use WaveSurfer MediaElement backend for visualization and playback.
- * Audio extraction for cards is temporarily disabled or requires a robust WASM solution (ffmpeg).
+ * Captures an audio segment directly from the video element using the MediaRecorder API.
+ * This approach avoids decoding the entire audio file into memory (preventing OOM)
+ * and works with any format the browser can play.
+ * 
+ * Note: This is a real-time (or playback-speed) process. 
+ * A 5-second clip takes 5 seconds to capture.
+ * 
+ * @param video - The source HTMLVideoElement
+ * @param start - Start time in seconds
+ * @param end - End time in seconds
+ * @returns Promise resolving to the recorded Audio Blob
  */
-
-/**
- * Slices a segment from an AudioBuffer and returns it as a WAV Blob.
- * Uses the standard AudioBuffer constructor to avoid Context limits.
- *
- * @param buffer - The source AudioBuffer
- * @param startTime - Start time in seconds
- * @param endTime - End time in seconds
- * @returns Blob (audio/wav)
- */
-export const sliceAudioBuffer = (buffer: AudioBuffer, startTime: number, endTime: number): Blob => {
-  const sampleRate = buffer.sampleRate;
-  const startOffset = Math.max(0, Math.floor(startTime * sampleRate));
-  const endOffset = Math.min(buffer.length, Math.floor(endTime * sampleRate));
-  const frameCount = endOffset - startOffset;
-
-  if (frameCount <= 0) {
-    return new Blob([], { type: 'audio/wav' });
-  }
-
-  const numberOfChannels = buffer.numberOfChannels;
-
-  // Create new buffer using the standard constructor
-  // This avoids overhead and limits of creating offline contexts
-  const sliceBuffer = new AudioBuffer({
-    length: frameCount,
-    numberOfChannels: numberOfChannels,
-    sampleRate: sampleRate
-  });
-
-  // Copy data channel by channel
-  for (let channel = 0; channel < numberOfChannels; channel++) {
-    const channelData = buffer.getChannelData(channel);
-    const sliceData = sliceBuffer.getChannelData(channel);
-
-    // Use subarray for efficient copying
-    const segment = channelData.subarray(startOffset, endOffset);
-    sliceData.set(segment);
-  }
-
-  return bufferToWav(sliceBuffer);
-};
-
-/**
- * Encodes an AudioBuffer to WAV format (Blob).
- *
- * Based on standard RIFF WAVE encoding logic.
- */
-function bufferToWav(abuffer: AudioBuffer): Blob {
-  const numOfChan = abuffer.numberOfChannels;
-  const length = abuffer.length * numOfChan * 2 + 44;
-  const buffer = new ArrayBuffer(length);
-  const view = new DataView(buffer);
-  const channels = [];
-  let i;
-  let sample;
-  let offset = 0;
-  let pos = 0;
-
-  // Write WAV Header
-  setUint32(0x46464952); // "RIFF"
-  setUint32(length - 8); // file length - 8
-  setUint32(0x45564157); // "WAVE"
-
-  setUint32(0x20746d66); // "fmt " chunk
-  setUint32(16); // length = 16
-  setUint16(1); // PCM (uncompressed)
-  setUint16(numOfChan);
-  setUint32(abuffer.sampleRate);
-  setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
-  setUint16(numOfChan * 2); // block-align
-  setUint16(16); // 16-bit (hardcoded in this converter)
-
-  setUint32(0x61746164); // "data" - chunk
-  setUint32(length - pos - 4); // chunk length
-
-  // Write Interleaved Data
-  for (i = 0; i < abuffer.numberOfChannels; i++)
-    channels.push(abuffer.getChannelData(i));
-
-  while (pos < abuffer.length) {
-    for (i = 0; i < numOfChan; i++) {
-      // clamp
-      sample = Math.max(-1, Math.min(1, channels[i][pos]));
-      // scale to 16-bit signed int
-      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-      view.setInt16(offset, sample, true);
-      offset += 2;
+export const captureAudioFromVideo = (
+  video: HTMLVideoElement,
+  start: number,
+  end: number
+): Promise<Blob | null> => {
+  return new Promise((resolve, reject) => {
+    const duration = end - start;
+    if (!video || duration <= 0) {
+      resolve(null);
+      return;
     }
-    pos++;
-  }
 
-  return new Blob([buffer], { type: 'audio/wav' });
+    // 1. Save original state to restore later
+    const originalTime = video.currentTime;
+    const originalPaused = video.paused;
+    const originalMuted = video.muted;
+    const originalVolume = video.volume;
 
-  function setUint16(data: number) {
-    view.setUint16(offset, data, true);
-    offset += 2;
-  }
+    try {
+      // 2. Get the stream
+      // Handle cross-browser compatibility for captureStream
+      const stream: MediaStream = (video as any).captureStream ? (video as any).captureStream() : (video as any).mozCaptureStream();
+      
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length === 0) {
+        console.warn("No audio tracks found in video stream.");
+        resolve(null);
+        return;
+      }
 
-  function setUint32(data: number) {
-    view.setUint32(offset, data, true);
-    offset += 4;
-  }
-}
+      // Create a stream with only audio to save bandwidth/processing
+      const audioStream = new MediaStream(audioTracks);
+
+      // 3. Setup Recorder
+      // Try to use a widely supported mime type
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/mp4'; // Safari fallback
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = ''; // Let browser choose default
+        }
+      }
+
+      const recorder = new MediaRecorder(audioStream, mimeType ? { mimeType } : undefined);
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      // 4. Handle Stop
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType || 'audio/webm' });
+        
+        // Restore State
+        video.currentTime = originalTime;
+        if (originalPaused) video.pause();
+        else video.play();
+        video.muted = originalMuted;
+        video.volume = originalVolume;
+        
+        // Remove listener
+        video.removeEventListener('timeupdate', checkTime);
+        
+        resolve(blob);
+      };
+
+      // 5. Control Playback & Recording
+      const checkTime = () => {
+        if (video.currentTime >= end) {
+          if (recorder.state !== 'inactive') recorder.stop();
+          video.pause();
+        }
+      };
+
+      // Setup Playback for recording
+      video.currentTime = start;
+      // We must unmute for captureStream to capture audio on some browsers,
+      // but we can set volume low if we want (though capturing 'what is heard' usually requires volume > 0)
+      video.muted = false; 
+      // Optional: Set volume to 1.0 to ensure good capture level, or keep user volume
+      
+      video.addEventListener('timeupdate', checkTime);
+      
+      recorder.start();
+      video.play().catch(e => {
+        console.error("Playback failed during capture", e);
+        recorder.stop();
+        resolve(null);
+      });
+
+    } catch (e) {
+      console.error("Audio capture error:", e);
+      // Attempt restore
+      try {
+        video.currentTime = originalTime;
+        if (originalPaused) video.pause();
+      } catch {}
+      resolve(null);
+    }
+  });
+};

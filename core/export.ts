@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import JSZip from 'jszip';
 import saveAs from 'file-saver';
 import { AnkiCard, AnkiNoteType } from './types';

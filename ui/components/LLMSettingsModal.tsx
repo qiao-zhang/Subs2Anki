@@ -1,4 +1,4 @@
-
+/// <reference lib="dom" />
 import React from 'react';
 import { X, Bot, Save, Globe, Cpu, Zap } from 'lucide-react';
 import { LLMSettings } from '../../core/gemini';

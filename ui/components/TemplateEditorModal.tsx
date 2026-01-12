@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import React, { useState, useEffect } from 'react';
 import { AnkiNoteType, AnkiFieldSource, AnkiCardTemplate } from '../../core/types';
 import { X, Plus, Trash2, Layout, Type, Palette, GripVertical, Image as ImageIcon, Mic, Clock, BookOpen, Languages, SortAsc } from 'lucide-react';
