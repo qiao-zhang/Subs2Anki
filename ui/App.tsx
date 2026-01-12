@@ -30,6 +30,7 @@ const App: React.FC = () => {
     videoSrc, videoName, videoFile, setVideo,
     subtitleLines, subtitleFileName, fileHandle, setSubtitles,
     updateSubtitleText, toggleSubtitleLock, addSubtitle, removeSubtitle,
+    shiftSubtitles,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
     llmSettings, setLLMSettings,
@@ -374,6 +375,7 @@ const App: React.FC = () => {
           }}
           onSave={handleSaveSubtitles}
           onDownload={handleDownloadSubtitles}
+          onShiftSubtitles={shiftSubtitles}
         />
       </div>
 

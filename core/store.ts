@@ -53,6 +53,7 @@ interface AppState {
   toggleSubtitleLock: (id: number) => void;
   addSubtitle: (sub: SubtitleLine) => void;
   removeSubtitle: (id: number) => void;
+  shiftSubtitles: (offset: number) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
 
   // Anki Cards
@@ -85,14 +86,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   subtitleFileName: '',
   fileHandle: null,
   hasUnsavedChanges: false,
-  setSubtitles: (lines, fileName, fileHandle = null) => 
+  setSubtitles: (lines, fileName, fileHandle = null) =>
     set({ subtitleLines: lines, subtitleFileName: fileName, fileHandle, hasUnsavedChanges: false }),
-  
+
   updateSubtitleText: (id, text) => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => (s.id === id && !s.locked) ? { ...s, text } : s),
     hasUnsavedChanges: true
   })),
-  
+
   updateSubtitleTime: (id, start, end) => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => (s.id === id && !s.locked) ? { ...s, startTime: start, endTime: end } : s),
     hasUnsavedChanges: true
@@ -109,6 +110,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   removeSubtitle: (id) => set((state) => ({
     subtitleLines: state.subtitleLines.filter(s => s.id !== id),
+    hasUnsavedChanges: true
+  })),
+
+  // Shift all subtitles by offset. Applies to locked files too to maintain relative sync with video.
+  shiftSubtitles: (offset) => set((state) => ({
+    subtitleLines: state.subtitleLines.map(s => ({
+      ...s,
+      startTime: Math.max(0, s.startTime + offset),
+      endTime: Math.max(0, s.endTime + offset)
+    })),
     hasUnsavedChanges: true
   })),
 
@@ -134,7 +145,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (!parsed.apiKey && parsed.provider === 'gemini') {
-            parsed.apiKey = process.env.API_KEY || '';
+          parsed.apiKey = process.env.API_KEY || '';
         }
         return parsed;
       }
