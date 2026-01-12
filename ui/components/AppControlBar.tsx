@@ -17,6 +17,7 @@ interface AppControlBarProps {
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenLLMSettings: () => void;
   onReplayActive: () => void;
+  onShiftSubtitles: (offset: number) => void;
 }
 
 const AppControlBar: React.FC<AppControlBarProps> = ({
@@ -30,7 +31,8 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        onTempDiscard,
                                                        onVideoUpload,
                                                        onOpenLLMSettings,
-                                                       onReplayActive
+                                                       onReplayActive,
+                                                       onShiftSubtitles
                                                      }) => {
   if (tempSubtitleLine) {
     return (
@@ -64,6 +66,7 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
       llmSettings={llmSettings}
       onVideoUpload={onVideoUpload}
       onOpenLLMSettings={onOpenLLMSettings}
+      onShiftSubtitles={onShiftSubtitles}
     />
   );
 };

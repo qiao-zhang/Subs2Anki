@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { SubtitleLine } from '../../core/types';
 import { formatTime } from '../../core/time';
-import { FileText, FolderOpen, Save, Download, AlertCircle, Lock, Unlock, PlusCircle, MoveHorizontal, Check } from 'lucide-react';
+import { FileText, FolderOpen, Save, Download, AlertCircle, Lock, Unlock, PlusCircle } from 'lucide-react';
 import { parseSubtitles } from '../../core/parser';
 
 interface SubtitleColumnProps {
@@ -19,7 +19,6 @@ interface SubtitleColumnProps {
   onCreateCard: (sub: SubtitleLine) => void;
   onSave: () => void;
   onDownload: () => void;
-  onShiftSubtitles: (offset: number) => void;
 }
 
 const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
@@ -33,12 +32,9 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          onToggleLock,
                                                          onCreateCard,
                                                          onSave,
-                                                         onDownload,
-                                                         onShiftSubtitles
+                                                         onDownload
                                                        }) => {
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
-  const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
-  const [shiftAmount, setShiftAmount] = useState('0');
   const subtitleInputRef = useRef<HTMLInputElement>(null);
 
   const handleOpenSubtitle = async () => {
@@ -85,19 +81,6 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     setIsSaveMenuOpen(false);
   };
 
-  const handleApplyShift = () => {
-    const offset = parseFloat(shiftAmount);
-    if (!isNaN(offset) && offset !== 0) {
-      onShiftSubtitles(offset);
-      setIsShiftMenuOpen(false);
-      setShiftAmount('0');
-    }
-  };
-
-  const handleQuickShift = (amount: number) => {
-    onShiftSubtitles(amount);
-  };
-
   const renderSubtitleRow = (index: number) => {
     const sub = subtitleLines[index];
     const isActive = sub.id === activeSubtitleId;
@@ -136,44 +119,10 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
 
           {subtitleLines.length > 0 && (
             <>
-              {/* Shift Controls */}
-              <div className="relative">
-                <button
-                  onClick={() => { setIsShiftMenuOpen(!isShiftMenuOpen); setIsSaveMenuOpen(false); }}
-                  className={`p-2 rounded transition ${isShiftMenuOpen ? 'bg-slate-700 text-white' : 'hover:bg-slate-700 text-slate-400'}`}
-                  title="Global Time Shift"
-                >
-                  <MoveHorizontal size={16} />
-                </button>
-                {isShiftMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsShiftMenuOpen(false)}></div>
-                    <div className="absolute top-full right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded shadow-xl z-50 p-3">
-                      <h4 className="text-xs font-bold text-slate-400 mb-2 uppercase">Global Time Shift</h4>
-                      <div className="flex gap-2 mb-2">
-                        <input
-                          type="number"
-                          value={shiftAmount}
-                          onChange={(e) => setShiftAmount(e.target.value)}
-                          step="0.1"
-                          className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-sm text-white focus:border-indigo-500 outline-none"
-                          placeholder="+/- Sec"
-                        />
-                        <button onClick={handleApplyShift} className="px-2 bg-indigo-600 hover:bg-indigo-500 rounded text-white"><Check size={14}/></button>
-                      </div>
-                      <div className="flex gap-2 justify-between">
-                        <button onClick={() => handleQuickShift(-0.5)} className="flex-1 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs text-slate-300">-0.5s</button>
-                        <button onClick={() => handleQuickShift(0.5)} className="flex-1 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs text-slate-300">+0.5s</button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
               {/* Save Controls */}
               <div className="relative">
                 <button
-                  onClick={() => { setIsSaveMenuOpen(!isSaveMenuOpen); setIsShiftMenuOpen(false); }}
+                  onClick={() => { setIsSaveMenuOpen(!isSaveMenuOpen); }}
                   className={`p-2 rounded transition ${isSaveMenuOpen ? 'bg-slate-700 text-white' : 'hover:bg-slate-700 text-slate-400'}`}
                   title="Save/Download"
                 >

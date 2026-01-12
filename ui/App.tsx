@@ -375,7 +375,6 @@ const App: React.FC = () => {
           }}
           onSave={handleSaveSubtitles}
           onDownload={handleDownloadSubtitles}
-          onShiftSubtitles={shiftSubtitles}
         />
       </div>
 
@@ -395,6 +394,7 @@ const App: React.FC = () => {
           onReplayActive={() => {
             if (activeSubtitleId) handlePlaySubtitle(activeSubtitleId);
           }}
+          onShiftSubtitles={shiftSubtitles}
         />
       </div>
 

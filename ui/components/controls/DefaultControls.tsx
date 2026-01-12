@@ -1,5 +1,5 @@
-import React from 'react';
-import { Video as VideoIcon, Bot } from 'lucide-react';
+import React, { useState } from 'react';
+import { Video as VideoIcon, Bot, MoveHorizontal, Check } from 'lucide-react';
 import { formatTime } from '../../../core/time';
 import { LLMSettings } from '../../../core/gemini';
 
@@ -9,17 +9,48 @@ interface DefaultControlsProps {
   llmSettings: LLMSettings;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenLLMSettings: () => void;
+  onShiftSubtitles: (offset: number) => void;
 }
 
-const DefaultControls: React.FC<DefaultControlsProps> = ({ 
-  videoName, 
-  currentTime, 
-  llmSettings, 
-  onVideoUpload, 
-  onOpenLLMSettings 
-}) => {
+const DefaultControls: React.FC<DefaultControlsProps> = ({
+                                                           videoName,
+                                                           currentTime,
+                                                           llmSettings,
+                                                           onVideoUpload,
+                                                           onOpenLLMSettings,
+                                                           onShiftSubtitles
+                                                         }) => {
+  const MIN_SHIFT_MS = 10;
+  const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
+  const [shiftAmount, setShiftAmount] = useState(MIN_SHIFT_MS);
+
+  const handleShiftAmountChanged = (shiftAmountString: string) =>
+  {
+    const val = parseFloat(shiftAmountString);
+    if (!isNaN(val) && val > 0) {
+      setShiftAmount(val);
+    }
+    else {
+      setShiftAmount(MIN_SHIFT_MS);
+    }
+  }
+  /*
+  const handleApplyShift = () => {
+    const offset = parseFloat(shiftAmount);
+    if (!isNaN(offset) && offset !== 0) {
+      onShiftSubtitles(offset);
+      setIsShiftMenuOpen(false);
+      setShiftAmount('0');
+    }
+  };
+   */
+
+  const handleQuickShift = (ms: number) => {
+    onShiftSubtitles(ms / 1000);
+  };
+
   return (
-    <div className="flex items-center gap-4 w-full justify-center">
+    <div className="flex items-center gap-4 w-full justify-center relative">
       {/* Video Selector */}
       <label className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg cursor-pointer transition text-sm font-medium text-slate-300 border border-slate-700">
         <VideoIcon size={16}/>
@@ -36,12 +67,45 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
 
       <div className="h-8 w-px bg-slate-800"></div>
 
+      {/* Shift Controls */}
+      <div className="relative">
+        <button
+          onClick={() => setIsShiftMenuOpen(!isShiftMenuOpen)}
+          className={`p-2 rounded transition border ${isShiftMenuOpen ? 'bg-slate-700 text-white border-slate-600' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+          title="Global Time Shift"
+        >
+          <MoveHorizontal size={16} />
+        </button>
+        {isShiftMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsShiftMenuOpen(false)}></div>
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 rounded shadow-xl z-50 p-3">
+              <h4 className="text-xs font-bold text-slate-400 mb-2 uppercase">Global Time Shift</h4>
+              <div className="flex gap-2 items-center">
+                <button onClick={() => handleQuickShift(-shiftAmount)} className="flex-1 px-1 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs text-slate-300">-{shiftAmount}ms</button>
+                <input
+                  type="number"
+                  value={shiftAmount}
+                  onChange={(e) => handleShiftAmountChanged(e.target.value)}
+                  step={MIN_SHIFT_MS}
+                  min={MIN_SHIFT_MS}
+                  className="flex-1 bg-slate-900 border border-slate-600 rounded px-1 py-1 text-sm text-white focus:border-indigo-500 outline-none"
+                />
+                <button onClick={() => handleQuickShift(shiftAmount)} className="flex-1 px-1 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs text-slate-300">+{shiftAmount}ms</button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="h-8 w-px bg-slate-800"></div>
+
       {/* AI Settings */}
-      <button 
-        onClick={onOpenLLMSettings} 
+      <button
+        onClick={onOpenLLMSettings}
         className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg transition border ${llmSettings.apiKey ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-red-900/20 border-red-800/50 text-red-400'}`}
       >
-        <Bot size={16} /> 
+        <Bot size={16} />
         <span>{llmSettings.model.split('-')[1]?.toUpperCase() || "AI"}</span>
       </button>
     </div>
