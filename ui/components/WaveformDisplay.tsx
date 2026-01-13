@@ -9,6 +9,7 @@ import { useAppStore } from '../../core/store';
 interface WaveformDisplayProps {
   // Removed audioSrc as we use the videoElement directly
   videoElement: HTMLVideoElement | null;
+  videoSrc: string;
   currentTime: number;
   onSeek: (time: number) => void;
   onTempSubtitleLineCreated: (start: number, end: number) => void;
@@ -23,6 +24,7 @@ interface WaveformDisplayProps {
 
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            videoElement,
+                                                           videoSrc,
                                                            currentTime,
                                                            onSeek,
                                                            onTempSubtitleLineCreated,
@@ -180,7 +182,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     return () => {
       ws.destroy();
     };
-  }, [videoElement]); // Re-run when video source changes
+  }, [videoElement, videoSrc]); // Re-run when video source changes
 
   // Handle Zoom
   useEffect(() => {

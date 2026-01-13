@@ -1,7 +1,7 @@
 
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {SubtitleLine, AnkiCard} from '../core/types';
 import {serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
@@ -43,6 +43,8 @@ const App: React.FC = () => {
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
 
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  // Track when video metadata is loaded to ensure we can get the element for WaveSurfer
+  const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
 
   // Modals
   const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
@@ -59,6 +61,11 @@ const App: React.FC = () => {
   // Refs
   const videoRef = useRef<VideoPlayerHandle>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
+
+  // Reset video ready state when src changes
+  useEffect(() => {
+    setIsVideoReady(false);
+  }, [videoSrc]);
 
   // --- Background Media Processing ---
   const finalizeExport = async () => {
@@ -354,7 +361,12 @@ const App: React.FC = () => {
           {/* Video Player Area */}
           <div className="flex-1 flex flex-col items-center justify-center p-2 bg-black/20 min-h-0">
             <div className="w-full h-full max-w-5xl flex flex-col justify-center">
-              <VideoPlayer ref={videoRef} src={videoSrc} onTimeUpdate={handleTimeUpdate} />
+              <VideoPlayer
+                ref={videoRef}
+                src={videoSrc}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={() => setIsVideoReady(true)}
+              />
             </div>
           </div>
         </main>
@@ -402,6 +414,7 @@ const App: React.FC = () => {
       <div className="h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative">
         <WaveformDisplay
           videoElement={videoRef.current?.getVideoElement() || null}
+          videoSrc={videoSrc}
           currentTime={currentTime}
           onSeek={handleSeek}
           onTempSubtitleLineCreated={handleTempSubtitleLineCreated}
