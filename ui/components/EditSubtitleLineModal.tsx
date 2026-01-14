@@ -2,7 +2,6 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {X, Save, Clock} from 'lucide-react';
 import {formatTime} from '../../core/time';
-import {LLMSettings} from '../../core/gemini';
 
 interface EditSubtitleLineModalProps {
   isOpen: boolean;
@@ -13,7 +12,6 @@ interface EditSubtitleLineModalProps {
   onSave: (text: string) => void;
   initialText?: string;
   audioBlob?: Blob | null;
-  llmSettings?: LLMSettings;
 }
 
 const EditSubtitleLineModal: React.FC<EditSubtitleLineModalProps> = (
@@ -26,7 +24,6 @@ const EditSubtitleLineModal: React.FC<EditSubtitleLineModalProps> = (
     onSave,
     initialText = '',
     audioBlob,
-    llmSettings
   }) => {
   const [text, setText] = useState(initialText);
   const inputRef = useRef<HTMLTextAreaElement>(null);

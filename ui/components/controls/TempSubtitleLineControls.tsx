@@ -61,8 +61,6 @@ const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
       >
         <X size={18} />
       </button>
-
-      <span className="text-xs text-slate-500 ml-2 hidden sm:inline">Right click region to dismiss</span>
     </div>
   );
 };

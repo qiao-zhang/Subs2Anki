@@ -1,16 +1,12 @@
-
 import React, { useState } from 'react';
-import { Video as VideoIcon, Bot, MoveHorizontal, Repeat, PauseOctagon, Camera } from 'lucide-react';
+import { Video as VideoIcon, MoveHorizontal, Repeat, Camera } from 'lucide-react';
 import { formatTime } from '../../../core/time';
-import { LLMSettings } from '../../../core/gemini';
 import { useAppStore } from '../../../core/store';
 
 interface DefaultControlsProps {
   videoName: string;
   currentTime: number;
-  llmSettings: LLMSettings;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onOpenLLMSettings: () => void;
   onShiftSubtitles: (offset: number) => void;
   onCaptureFrame: () => void;
 }
@@ -18,9 +14,7 @@ interface DefaultControlsProps {
 const DefaultControls: React.FC<DefaultControlsProps> = ({
                                                            videoName,
                                                            currentTime,
-                                                           llmSettings,
                                                            onVideoUpload,
-                                                           onOpenLLMSettings,
                                                            onShiftSubtitles,
                                                            onCaptureFrame
                                                          }) => {
@@ -76,14 +70,7 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
       {/* Playback Mode Controls */}
       <div className="flex gap-2 bg-slate-800 p-1 rounded-lg border border-slate-700">
         <button
-          onClick={() => setPlaybackMode(playbackMode === 'auto-pause' ? 'continuous' : 'auto-pause')}
-          className={`p-1.5 rounded transition ${playbackMode === 'auto-pause' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}
-          title="Auto-Pause at end of subtitle (Hotkey: P)"
-        >
-          <PauseOctagon size={18} />
-        </button>
-        <button
-          onClick={() => setPlaybackMode(playbackMode === 'loop' ? 'continuous' : 'loop')}
+          onClick={() => setPlaybackMode(playbackMode === 'loop' ? 'auto-pause' : 'loop')}
           className={`p-1.5 rounded transition ${playbackMode === 'loop' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}
           title="Loop current subtitle (Hotkey: L)"
         >
@@ -126,14 +113,6 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
 
       <div className="h-8 w-px bg-slate-800"></div>
 
-      {/* AI Settings */}
-      <button
-        onClick={onOpenLLMSettings}
-        className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg transition border ${llmSettings.apiKey ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-red-900/20 border-red-800/50 text-red-400'}`}
-      >
-        <Bot size={16} />
-        <span>{llmSettings.model.split('-')[1]?.toUpperCase() || "AI"}</span>
-      </button>
     </div>
   );
 };

@@ -1,7 +1,5 @@
 
-// @ts-ignore
 import Kuroshiro from 'kuroshiro';
-// @ts-ignore
 import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
 
 /**

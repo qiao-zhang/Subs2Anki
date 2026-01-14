@@ -1,15 +1,12 @@
-
 import React, { useEffect, useState } from 'react';
 import { AnkiCard } from '../../core/types';
-import { Trash2, Wand2, Image as ImageIcon, Loader2, Clock, AlertCircle } from 'lucide-react';
+import { Trash2, Image as ImageIcon, Loader2, Clock, AlertCircle } from 'lucide-react';
 import { getMedia } from '../../core/db';
 
 interface CardItemProps {
   card: AnkiCard;
   onDelete: (id: string) => void;
-  onAnalyze: (card: AnkiCard) => void;
   onPreview: (card: AnkiCard) => void;
-  isAnalyzing: boolean;
 }
 
 /**
@@ -22,7 +19,7 @@ interface CardItemProps {
  * - Action buttons (Delete, Analyze).
  * - Audio processing status.
  */
-const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, onPreview, isAnalyzing }) => {
+const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onPreview }) => {
   const [thumbnailSrc, setThumbnailSrc] = useState<string | null>(null);
 
   // Async load thumbnail from IDB
@@ -108,19 +105,6 @@ const CardItem: React.FC<CardItemProps> = ({ card, onDelete, onAnalyze, onPrevie
             <Trash2 size={18} />
           </button>
           
-          {/* Analysis Button: Disabled during processing */}
-          <button
-            onClick={(e) => { e.stopPropagation(); onAnalyze(card); }}
-            disabled={isAnalyzing}
-            className={`p-2 rounded transition-colors ${
-              card.translation 
-                ? 'text-emerald-500 hover:bg-emerald-950/30' 
-                : 'text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/30'
-            } ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title="AI Analyze"
-          >
-            <Wand2 size={18} className={isAnalyzing ? "animate-pulse" : ""} />
-          </button>
         </div>
       </div>
     </div>

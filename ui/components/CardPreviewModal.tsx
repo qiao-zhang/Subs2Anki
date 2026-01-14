@@ -2,7 +2,7 @@
 /// <reference lib="dom" />
 import React, { useEffect, useState } from 'react';
 import { AnkiCard, AnkiNoteType } from '../../core/types';
-import { X, RotateCw, Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { useAppStore } from '../../core/store';
 import { getMedia } from '../../core/db';
 
@@ -99,18 +99,27 @@ const CardPreviewModal: React.FC<CardPreviewModalProps> = ({ isOpen, card, onClo
         </div>
 
         {/* Toolbar */}
-        <div className="bg-slate-800/50 p-2 border-b border-slate-700 flex justify-between items-center px-6">
+        <div className="bg-slate-800/50 p-2 border-b border-slate-700 flex justify-center items-center">
+          {/* Segmented Toggle Switch */}
+          <div className="bg-slate-950 p-1 rounded-lg border border-slate-700 inline-flex relative">
+            {/* Sliding Background */}
+            <div
+              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-slate-700 rounded-md transition-all duration-300 ease-out shadow-sm border border-slate-600 ${isBackSide ? 'left-[calc(50%)]' : 'left-1'}`}
+            />
 
-          {/* Side Toggle */}
-          <button
-            onClick={() => setIsBackSide(!isBackSide)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition font-medium text-sm border border-slate-600"
-          >
-            <RotateCw size={16} />
-            {isBackSide ? "Show Front" : "Show Back"}
-          </button>
-
-          <div className="w-[120px]"></div> {/* Spacer for alignment */}
+            <button
+              onClick={() => setIsBackSide(false)}
+              className={`relative z-10 px-8 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md ${!isBackSide ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Front
+            </button>
+            <button
+              onClick={() => setIsBackSide(true)}
+              className={`relative z-10 px-8 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md ${isBackSide ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Back
+            </button>
+          </div>
         </div>
 
         {/* Iframe Container */}

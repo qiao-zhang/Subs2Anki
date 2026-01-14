@@ -1,21 +1,17 @@
-
 import React from 'react';
 import TempSubtitleLineControls from './controls/TempSubtitleLineControls';
 import ActiveSubtitleLineControls from './controls/ActiveSubtitleLineControls';
 import DefaultControls from './controls/DefaultControls';
-import { LLMSettings } from '../../core/gemini';
 
 interface AppControlBarProps {
   tempSubtitleLine: {start: number, end: number} | null;
-  activeSubtitleId: number | null;
+  activeSubtitleLineId: number | null;
   videoName: string;
   currentTime: number;
-  llmSettings: LLMSettings;
   onTempPlay: () => void;
   onTempCommit: () => void;
   onTempDiscard: () => void;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onOpenLLMSettings: () => void;
   onReplayActive: () => void;
   onShiftSubtitles: (offset: number) => void;
   onCaptureFrame: () => void;
@@ -24,15 +20,13 @@ interface AppControlBarProps {
 
 const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        tempSubtitleLine,
-                                                       activeSubtitleId,
+                                                       activeSubtitleLineId,
                                                        videoName,
                                                        currentTime,
-                                                       llmSettings,
                                                        onTempPlay,
                                                        onTempCommit,
                                                        onTempDiscard,
                                                        onVideoUpload,
-                                                       onOpenLLMSettings,
                                                        onReplayActive,
                                                        onShiftSubtitles,
                                                        onCaptureFrame,
@@ -51,15 +45,14 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
     );
   }
 
-  if (activeSubtitleId !== null) {
+  if (activeSubtitleLineId !== null) {
     return (
       <ActiveSubtitleLineControls
         videoName={videoName}
         currentTime={currentTime}
-        llmSettings={llmSettings}
         onVideoUpload={onVideoUpload}
-        onOpenLLMSettings={onOpenLLMSettings}
-        onReplay={onReplayActive}
+        onPlay={onReplayActive}
+        onDownloadAudio={onDownloadAudio}
       />
     );
   }
@@ -68,9 +61,7 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
     <DefaultControls
       videoName={videoName}
       currentTime={currentTime}
-      llmSettings={llmSettings}
       onVideoUpload={onVideoUpload}
-      onOpenLLMSettings={onOpenLLMSettings}
       onShiftSubtitles={onShiftSubtitles}
       onCaptureFrame={onCaptureFrame}
     />

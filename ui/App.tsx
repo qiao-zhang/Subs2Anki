@@ -1,18 +1,16 @@
-
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {SubtitleLine, AnkiCard} from '../core/types';
 import {serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
-import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
 import {ffmpegService} from '../core/ffmpeg';
 import {storeMedia, deleteMedia} from '../core/db';
 import {furiganaService} from '../core/furigana';
 import {syncToAnki, checkConnection} from '../core/anki-connect';
 import saveAs from 'file-saver';
-import { VirtuosoHandle } from 'react-virtuoso';
+import {VirtuosoHandle} from 'react-virtuoso';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
 import DeckColumn from './components/DeckColumn';
@@ -20,12 +18,11 @@ import SubtitleColumn from './components/SubtitleColumn';
 import AppControlBar from './components/AppControlBar';
 import TemplateEditorModal from './components/TemplateEditorModal';
 import EditSubtitleLineModal from './components/EditSubtitleLineModal';
-import LLMSettingsModal from './components/LLMSettingsModal';
 import CardPreviewModal from './components/CardPreviewModal';
 import AnkiConnectSettingsModal from './components/AnkiConnectSettingsModal';
-import { useAppStore } from '../core/store';
-import { useMediaProcessing } from './hooks/useMediaProcessing';
-import { Loader2 } from 'lucide-react';
+import {useAppStore} from '../core/store';
+import {useMediaProcessing} from './hooks/useMediaProcessing';
+import {Loader2} from 'lucide-react';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
@@ -36,27 +33,24 @@ const App: React.FC = () => {
     shiftSubtitles,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
-    llmSettings, setLLMSettings,
     ankiConnectUrl, setAnkiConnectUrl,
-    processing, setProcessing,
     playbackMode, setPlaybackMode
   } = useAppStore();
 
   // --- Local UI State (Transient) ---
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
+  const [activeSubtitleLineId, setActiveSubtitleLineId] = useState<number | null>(null);
 
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
+  const [syncProgress, setSyncProgress] = useState({current: 0, total: 0});
 
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
 
   // Modals
   const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
-  const [isLLMSettingsOpen, setIsLLMSettingsOpen] = useState<boolean>(false);
   const [isAnkiSettingsOpen, setIsAnkiSettingsOpen] = useState<boolean>(false);
   const [previewCard, setPreviewCard] = useState<AnkiCard | null>(null);
 
@@ -64,7 +58,7 @@ const App: React.FC = () => {
   const [editingSubId, setEditingSubId] = useState<number | null>(null);
   const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
 
-  const [tempSubtitleLine, setTempSubtitleLine] = useState<{start: number, end: number} | null>(null);
+  const [tempSubtitleLine, setTempSubtitleLine] = useState<{ start: number, end: number } | null>(null);
 
   // Refs
   const videoRef = useRef<VideoPlayerHandle>(null);
@@ -94,7 +88,7 @@ const App: React.FC = () => {
 
       const deckName = videoName ? `Sub2Anki::${videoName}` : 'Sub2Anki Export';
       await syncToAnki(ankiConnectUrl, deckName, ankiConfig, ankiCards, (cur, tot) => {
-        setSyncProgress({ current: cur, total: tot });
+        setSyncProgress({current: cur, total: tot});
       });
 
       alert(`Successfully synced ${ankiCards.length} cards to Anki!`);
@@ -103,7 +97,7 @@ const App: React.FC = () => {
       alert(`Sync failed: ${(e as Error).message}`);
     } finally {
       setIsSyncing(false);
-      setSyncProgress({ current: 0, total: 0 });
+      setSyncProgress({current: 0, total: 0});
     }
   }
 
@@ -132,7 +126,7 @@ const App: React.FC = () => {
     if (subtitleLines.length === 0) return;
 
     let nextIndex: number;
-    const currentIndex = subtitleLines.findIndex(s => s.id === activeSubtitleId);
+    const currentIndex = subtitleLines.findIndex(s => s.id === activeSubtitleLineId);
 
     if (direction === 'next') {
       if (currentIndex === -1) {
@@ -156,7 +150,7 @@ const App: React.FC = () => {
     if (sub) {
       handlePlaySubtitle(sub.id);
     }
-  }, [subtitleLines, activeSubtitleId, currentTime]);
+  }, [subtitleLines, activeSubtitleLineId, currentTime]);
 
   // --- Handlers ---
 
@@ -169,11 +163,11 @@ const App: React.FC = () => {
 
   const handleTempSubtitleLineCreated = (start: number, end: number) => {
     setEditingSubId(null);
-    setTempSubtitleLine({ start, end });
+    setTempSubtitleLine({start, end});
   };
 
   const handleTempSubtitleLineUpdated = (start: number, end: number) => {
-    setTempSubtitleLine({ start, end });
+    setTempSubtitleLine({start, end});
   };
 
   const handleTempSubtitleLineRemoved = () => {
@@ -261,7 +255,9 @@ const App: React.FC = () => {
         // @ts-ignore
         await writable.close();
         useAppStore.getState().setHasUnsavedChanges(false);
-      } catch (err) { alert('Failed to save file.'); }
+      } catch (err) {
+        alert('Failed to save file.');
+      }
     } else {
       useAppStore.getState().setHasUnsavedChanges(false);
     }
@@ -275,7 +271,10 @@ const App: React.FC = () => {
       // @ts-ignore
       if (window.showSaveFilePicker) {
         // @ts-ignore
-        const handle = await window.showSaveFilePicker({ suggestedName: subtitleFileName, types: [{ description: 'Subtitle File', accept: { 'text/plain': [isVtt ? '.vtt' : '.srt'] } }] });
+        const handle = await window.showSaveFilePicker({
+          suggestedName: subtitleFileName,
+          types: [{description: 'Subtitle File', accept: {'text/plain': [isVtt ? '.vtt' : '.srt']}}]
+        });
         // @ts-ignore
         const writable = await handle.createWritable();
         // @ts-ignore
@@ -287,7 +286,8 @@ const App: React.FC = () => {
         saveAs(blob, subtitleFileName);
         useAppStore.getState().setHasUnsavedChanges(false);
       }
-    } catch (err) {}
+    } catch (err) {
+    }
   };
 
   const handleTimeUpdate = (time: number) => {
@@ -319,12 +319,12 @@ const App: React.FC = () => {
       }
     }
 
-    if (active && active.id !== activeSubtitleId) {
-      setActiveSubtitleId(active.id);
+    if (active && active.id !== activeSubtitleLineId) {
+      setActiveSubtitleLineId(active.id);
       // Virtual Scroll to index
-      virtuosoRef.current?.scrollToIndex({ index: activeIndex, align: 'center', behavior: 'smooth' });
+      virtuosoRef.current?.scrollToIndex({index: activeIndex, align: 'center', behavior: 'smooth'});
     } else if (!active) {
-      setActiveSubtitleId(null);
+      setActiveSubtitleLineId(null);
     }
   };
 
@@ -379,33 +379,9 @@ const App: React.FC = () => {
 
     // Trigger Furigana Generation (async)
     furiganaService.convert(sub.text).then(f => {
-      updateCard(cardId, { furigana: f });
+      updateCard(cardId, {furigana: f});
     });
-
-    if (llmSettings.autoAnalyze) handleAnalyzeCard(newCard);
   };
-
-  const handleAnalyzeCard = async (card: AnkiCard) => {
-    setProcessing({ isAnalyzing: true });
-
-    const lines = useAppStore.getState().subtitleLines;
-    const subIndex = lines.findIndex(s => s.id === card.subtitleId);
-
-    const result = await analyzeSubtitle(
-      card.text,
-      lines[subIndex - 1]?.text,
-      lines[subIndex + 1]?.text,
-      llmSettings
-    );
-
-    updateCard(card.id, {
-      translation: result.translation,
-      notes: `${result.notes} \nVocab: ${result.keyWords.join(', ')}`
-    });
-
-    setProcessing({ isAnalyzing: false });
-  };
-
   const handleDeleteCard = async (id: string) => {
     const card = ankiCards.find(c => c.id === id);
     if (card) {
@@ -447,13 +423,46 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDownloadTempAudio = async () => {
-    if (!tempSubtitleLine || !videoFile) return;
-    const blob = await extractAudioSync(tempSubtitleLine.start, tempSubtitleLine.end);
-    if (blob) {
-      const startStr = formatTime(tempSubtitleLine.start).replace(/:/g, '-');
-      const endStr = formatTime(tempSubtitleLine.end).replace(/:/g, '-');
-      saveAs(blob, `${videoName.replace(/\.[^/.]+$/, "")}_audio_${startStr}_${endStr}.wav`);
+  const handleDownloadAudio = async () => {
+    if (!videoFile) return;
+    if (tempSubtitleLine === null && activeSubtitleLineId === null) return;
+    let start: number, end: number;
+    if (tempSubtitleLine !== null) {
+      start = tempSubtitleLine.start;
+      end = tempSubtitleLine.end;
+    } else {
+      const currentSub = subtitleLines.find(s => s.id === activeSubtitleLineId);
+      if (currentSub == null) return;
+      start = currentSub.startTime;
+      end = currentSub.endTime;
+    }
+    const blob = await extractAudioSync(start, end);
+
+    const startStr = formatTime(start).replace(/:/g, '-');
+    const endStr = formatTime(end).replace(/:/g, '-');
+    const filename = `${videoName.replace(/\.[^/.]+$/, "")}_audio_${startStr}_${endStr}.wav`;
+
+    try {
+      // @ts-ignore
+      if (window.showSaveFilePicker) {
+        // @ts-ignore
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: 'Audio File',
+            // accept: "*.wav"
+          }]
+        });
+        // @ts-ignore
+        const writable = await handle.createWritable();
+        // @ts-ignore
+        await writable.write(blob);
+        // @ts-ignore
+        await writable.close();
+      } else {
+        saveAs(blob, filename);
+      }
+    } catch (err) {
     }
   };
 
@@ -496,29 +505,25 @@ const App: React.FC = () => {
           break;
         case 'KeyR':
           e.preventDefault();
-          if (activeSubtitleId) handlePlaySubtitle(activeSubtitleId);
+          if (activeSubtitleLineId) handlePlaySubtitle(activeSubtitleLineId);
           break;
         case 'KeyC':
           e.preventDefault();
-          if (activeSubtitleId) {
-            const s = subtitleLines.find(x => x.id === activeSubtitleId);
-            if(s) handleCreateCard(s);
+          if (activeSubtitleLineId) {
+            const s = subtitleLines.find(x => x.id === activeSubtitleLineId);
+            if (s) handleCreateCard(s);
           }
           break;
         case 'KeyL':
           e.preventDefault();
-          setPlaybackMode(playbackMode === 'loop' ? 'continuous' : 'loop');
-          break;
-        case 'KeyP':
-          e.preventDefault();
-          setPlaybackMode(playbackMode === 'auto-pause' ? 'continuous' : 'auto-pause');
+          setPlaybackMode('auto-pause');
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSubtitleId, subtitleLines, jumpToSubtitle, playbackMode]);
+  }, [activeSubtitleLineId, subtitleLines, jumpToSubtitle, playbackMode]);
 
 
   return (
@@ -526,8 +531,9 @@ const App: React.FC = () => {
 
       {/* Processing/Export/Sync Overlay */}
       {(isExporting || isSyncing) && (
-        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
-          <Loader2 size={48} className="text-indigo-500 animate-spin mb-4" />
+        <div
+          className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
+          <Loader2 size={48} className="text-indigo-500 animate-spin mb-4"/>
           <div className="text-xl font-bold text-white">
             {isSyncing ? `Syncing to Anki...` : "Preparing Export..."}
           </div>
@@ -552,9 +558,7 @@ const App: React.FC = () => {
         {/* COL 1: DECK (Left) */}
         <DeckColumn
           cards={ankiCards}
-          isAnalyzing={processing.isAnalyzing}
           onDelete={handleDeleteCard}
-          onAnalyze={handleAnalyzeCard}
           onPreview={(c) => setPreviewCard(c)}
           onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
           onExport={() => handleActionClick('export')}
@@ -580,7 +584,7 @@ const App: React.FC = () => {
         {/* COL 3: SUBTITLES (Right) */}
         <SubtitleColumn
           subtitleLines={subtitleLines}
-          activeSubtitleId={activeSubtitleId}
+          activeSubtitleId={activeSubtitleLineId}
           subtitleFileName={subtitleFileName}
           virtuosoRef={virtuosoRef}
           onSetSubtitles={setSubtitles}
@@ -589,7 +593,7 @@ const App: React.FC = () => {
           onToggleLock={toggleSubtitleLock}
           onCreateCard={(sub) => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
-            if(s) handleCreateCard(s);
+            if (s) handleCreateCard(s);
           }}
           onSave={handleSaveSubtitles}
           onDownload={handleDownloadSubtitles}
@@ -597,24 +601,23 @@ const App: React.FC = () => {
       </div>
 
       {/* Control Bar - Full Width */}
-      <div className="h-16 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
+      <div
+        className="h-16 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
         <AppControlBar
           tempSubtitleLine={tempSubtitleLine}
-          activeSubtitleId={activeSubtitleId}
+          activeSubtitleLineId={activeSubtitleLineId}
           videoName={videoName}
           currentTime={currentTime}
-          llmSettings={llmSettings}
           onTempPlay={handleTempSubtitleLineClicked}
           onTempCommit={handleCommitTempSubtitleLine}
           onTempDiscard={handleTempSubtitleLineRemoved}
           onVideoUpload={handleVideoUpload}
-          onOpenLLMSettings={() => setIsLLMSettingsOpen(true)}
           onReplayActive={() => {
-            if (activeSubtitleId) handlePlaySubtitle(activeSubtitleId);
+            if (activeSubtitleLineId) handlePlaySubtitle(activeSubtitleLineId);
           }}
           onShiftSubtitles={shiftSubtitles}
           onCaptureFrame={handleCaptureFrame}
-          onDownloadAudio={handleDownloadTempAudio}
+          onDownloadAudio={handleDownloadAudio}
         />
       </div>
 
@@ -634,15 +637,16 @@ const App: React.FC = () => {
           onToggleLock={toggleSubtitleLock}
           onCreateCard={(id) => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
-            if(s) handleCreateCard(s);
+            if (s) handleCreateCard(s);
           }}
         />
       </div>
 
       {/* Modals */}
-      <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} config={ankiConfig} onSave={setAnkiConfig} />
-      <LLMSettingsModal isOpen={isLLMSettingsOpen} onClose={() => setIsLLMSettingsOpen(false)} settings={llmSettings} onSave={setLLMSettings} />
-      <AnkiConnectSettingsModal isOpen={isAnkiSettingsOpen} onClose={() => setIsAnkiSettingsOpen(false)} url={ankiConnectUrl} onSave={setAnkiConnectUrl} />
+      <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)}
+                           config={ankiConfig} onSave={setAnkiConfig}/>
+      <AnkiConnectSettingsModal isOpen={isAnkiSettingsOpen} onClose={() => setIsAnkiSettingsOpen(false)}
+                                url={ankiConnectUrl} onSave={setAnkiConnectUrl}/>
       <CardPreviewModal
         isOpen={!!previewCard}
         card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}
@@ -656,7 +660,6 @@ const App: React.FC = () => {
         endTime={tempSubtitleLine ? tempSubtitleLine.end : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.endTime || 0) : 0)}
         initialText={editingSubId !== null ? subtitleLines.find(s => s.id === editingSubId)?.text : ''}
         audioBlob={subAudioBlob}
-        llmSettings={llmSettings}
         onSave={handleSaveSubtitleFromModal}
       />
     </div>

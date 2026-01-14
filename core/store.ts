@@ -35,7 +35,7 @@ const DEFAULT_LLM_SETTINGS: LLMSettings = {
   autoAnalyze: false
 };
 
-export type PlaybackMode = 'continuous' | 'auto-pause' | 'loop';
+export type PlaybackMode = 'auto-pause' | 'loop';
 
 interface AppState {
   // Video Data
@@ -72,10 +72,6 @@ interface AppState {
   setAnkiConfig: (config: AnkiNoteType) => void;
   setProcessing: (updates: Partial<ProcessingState>) => void;
 
-  // Settings
-  llmSettings: LLMSettings;
-  setLLMSettings: (settings: LLMSettings) => void;
-
   // Anki Connect
   ankiConnectUrl: string;
   setAnkiConnectUrl: (url: string) => void;
@@ -92,7 +88,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Playback defaults
-  playbackMode: 'continuous',
+  playbackMode: 'auto-pause',
   setPlaybackMode: (mode) => set({ playbackMode: mode }),
 
   // Subtitle defaults
@@ -150,25 +146,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteCard: (id) => set((state) => ({ ankiCards: state.ankiCards.filter(c => c.id !== id) })),
   setAnkiConfig: (config) => set({ ankiConfig: config }),
   setProcessing: (updates) => set((state) => ({ processing: { ...state.processing, ...updates } })),
-
-  // Settings defaults
-  llmSettings: (() => {
-    try {
-      const saved = localStorage.getItem('sub2anki_llm_settings');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (!parsed.apiKey && parsed.provider === 'gemini') {
-          parsed.apiKey = process.env.API_KEY || '';
-        }
-        return parsed;
-      }
-    } catch (e) {}
-    return DEFAULT_LLM_SETTINGS;
-  })(),
-  setLLMSettings: (settings) => {
-    localStorage.setItem('sub2anki_llm_settings', JSON.stringify(settings));
-    set({ llmSettings: settings });
-  },
 
   // Anki Connect
   ankiConnectUrl: localStorage.getItem('sub2anki_anki_url') || 'http://127.0.0.1:8765',

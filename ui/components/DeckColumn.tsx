@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Layers, Settings, Download, CloudUpload, Wifi } from 'lucide-react';
 import { AnkiCard } from '../../core/types';
@@ -6,9 +5,7 @@ import CardItem from './CardItem';
 
 interface DeckColumnProps {
   cards: AnkiCard[];
-  isAnalyzing: boolean;
   onDelete: (id: string) => void;
-  onAnalyze: (card: AnkiCard) => void;
   onPreview: (card: AnkiCard) => void;
   onOpenTemplateSettings: () => void;
   onExport: () => void;
@@ -18,9 +15,7 @@ interface DeckColumnProps {
 
 const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  cards,
-                                                 isAnalyzing,
                                                  onDelete,
-                                                 onAnalyze,
                                                  onPreview,
                                                  onOpenTemplateSettings,
                                                  onExport,
@@ -86,9 +81,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
               key={card.id}
               card={card}
               onDelete={onDelete}
-              onAnalyze={onAnalyze}
               onPreview={onPreview}
-              isAnalyzing={isAnalyzing}
             />
           ))
         )}
