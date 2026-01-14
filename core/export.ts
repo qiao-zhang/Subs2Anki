@@ -69,22 +69,6 @@ export const generateAnkiDeck = async (
       }
     }
 
-    // Process GIF
-    if (card.gifRef) {
-      const data = await getMedia(card.gifRef);
-      if (data && typeof data === 'string') {
-          const extension = "gif";
-          const filename = `sub2anki_gif_${index}_${creationTime}.${extension}`;
-          
-          const zipName = mediaIndex.toString();
-          const base64Data = data.split(',')[1];
-          
-          zip.file(zipName, base64Data, { base64: true });
-          mediaMap[zipName] = filename;
-          mediaIndex++;
-      }
-    }
-
     // Process Audio Blob
     if (card.audioRef) {
       const blob = await getMedia(card.audioRef);

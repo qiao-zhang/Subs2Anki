@@ -33,10 +33,8 @@ describe('CardItem Component', () => {
     notes: 'A greeting',
     screenshotRef: 'mock-screenshot-id',
     audioRef: null,
-    gifRef: null,
     timestampStr: '00:05',
     audioStatus: 'done',
-    preferredMediaType: 'image'
   };
 
   // Mock callback functions

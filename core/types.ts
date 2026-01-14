@@ -1,5 +1,3 @@
-
-
 /**
  * Represents a single subtitle line parsed from a file.
  */
@@ -25,13 +23,9 @@ export interface AnkiCard {
   // Media References (UUIDs pointing to IndexedDB)
   screenshotRef: string | null;
   audioRef: string | null;
-  gifRef: string | null;
 
   timestampStr: string;     // Formatted timestamp string for display (e.g., "01:23")
   audioStatus?: 'pending' | 'processing' | 'done' | 'error'; // Tracking background audio extraction
-  gifStatus?: 'pending' | 'processing' | 'done' | 'error';
-
-  preferredMediaType?: 'image' | 'gif';
 }
 
 /**
@@ -68,11 +62,4 @@ export interface AnkiNoteType {
   css: string;
   fields: AnkiField[];
   templates: AnkiCardTemplate[];
-}
-
-/**
- * Maps app data keys to Anki Field names
- */
-export interface FieldMapping {
-  [ankiFieldName: string]: keyof AnkiCard | 'custom';
 }

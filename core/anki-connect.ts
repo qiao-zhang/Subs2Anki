@@ -112,8 +112,6 @@ export const syncToAnki = async (
 
     const timestamp = Date.now();
     const fields: Record<string, string> = {};
-    const picturePayload: any[] = [];
-    const audioPayload: any[] = [];
 
     // Prepare Fields and Media
     for (const field of noteType.fields) {
@@ -128,18 +126,9 @@ export const syncToAnki = async (
           case 'Sequence': value = `${card.id}`; break;
 
           case 'Image':
-            // Handle Image/GIF
-            let mediaRef = card.screenshotRef;
-            let ext = 'jpg';
-
-            if (card.preferredMediaType === 'gif' && card.gifRef) {
-              mediaRef = card.gifRef;
-              ext = 'gif';
-            } else if (!mediaRef && card.gifRef) {
-              mediaRef = card.gifRef;
-              ext = 'gif';
-            }
-
+            // Handle Image
+            const mediaRef = card.screenshotRef;
+            const ext = 'jpg';
             if (mediaRef) {
               const data = await getMedia(mediaRef);
               if (data && typeof data === 'string') {
@@ -148,7 +137,7 @@ export const syncToAnki = async (
 
                 // We upload manually via storeMediaFile instead of addNote params for better control
                 await invoke('storeMediaFile', { filename, data: base64 }, url);
-                value = `<img src="${filename}">`;
+                value = `<img src="${filename}" alt="${card.text}">`;
               }
             }
             break;

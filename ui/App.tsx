@@ -25,7 +25,7 @@ import CardPreviewModal from './components/CardPreviewModal';
 import AnkiConnectSettingsModal from './components/AnkiConnectSettingsModal';
 import { useAppStore } from '../core/store';
 import { useMediaProcessing } from './hooks/useMediaProcessing';
-import { Loader2, XCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
@@ -51,7 +51,6 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
 
-  const [isBulkGenerating, setIsBulkGenerating] = useState<boolean>(false);
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
 
   // Modals
@@ -70,7 +69,6 @@ const App: React.FC = () => {
   // Refs
   const videoRef = useRef<VideoPlayerHandle>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const stopBulkRef = useRef<boolean>(false);
 
   // Reset video ready state when src changes
   useEffect(() => {
@@ -130,15 +128,10 @@ const App: React.FC = () => {
   );
 
   // --- Logic Helpers ---
-
-  const getActiveSubtitle = useCallback(() => {
-    return subtitleLines.find(s => s.id === activeSubtitleId);
-  }, [subtitleLines, activeSubtitleId]);
-
   const jumpToSubtitle = useCallback((direction: 'next' | 'prev') => {
     if (subtitleLines.length === 0) return;
 
-    let nextIndex = 0;
+    let nextIndex: number;
     const currentIndex = subtitleLines.findIndex(s => s.id === activeSubtitleId);
 
     if (direction === 'next') {
@@ -380,9 +373,6 @@ const App: React.FC = () => {
       audioRef: null,
       audioStatus: 'pending',
       timestampStr: formatTime(sub.startTime),
-      preferredMediaType: 'image',
-      gifStatus: undefined,
-      gifRef: null
     };
 
     addCard(newCard);
@@ -422,7 +412,6 @@ const App: React.FC = () => {
       try {
         if (card.screenshotRef) await deleteMedia(card.screenshotRef);
         if (card.audioRef) await deleteMedia(card.audioRef);
-        if (card.gifRef) await deleteMedia(card.gifRef);
       } catch (e) {
         console.error("Failed to delete media from DB", e);
       }
@@ -434,9 +423,8 @@ const App: React.FC = () => {
     pendingActionRef.current = action;
 
     const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
-    const pendingGif = ankiCards.some(c => c.gifStatus === 'pending' || c.gifStatus === 'processing');
 
-    if (pendingAudio || pendingGif) {
+    if (pendingAudio) {
       if (action === 'export') setIsExporting(true);
       // For sync, we might just show the spinner overlay without specific text for now or reuse isExporting UI with message
       // Let's reuse isExporting state but maybe add a message prop or check
@@ -545,7 +533,7 @@ const App: React.FC = () => {
           </div>
           <div className="text-sm text-slate-400 mt-2">
             {isSyncing ? `Card ${syncProgress.current} of ${syncProgress.total}` :
-              `Processing media ({ankiCards.filter(c => c.audioStatus !== 'done' || (c.preferredMediaType === 'gif' && c.gifStatus !== 'done')).length} remaining)`}
+              `Processing media ({ankiCards.filter(c => c.audioStatus !== 'done').length} remaining)`}
           </div>
           {!isSyncing && (
             <button
@@ -555,29 +543,6 @@ const App: React.FC = () => {
               Cancel
             </button>
           )}
-        </div>
-      )}
-
-      {/* Bulk Generate Overlay */}
-      {isBulkGenerating && (
-        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
-          <Loader2 size={48} className="text-amber-400 animate-spin mb-4" />
-          <div className="text-xl font-bold text-white">Generating Cards...</div>
-          <div className="text-sm text-slate-400 mt-2">
-            Processed {processing.progress} / {processing.total}
-          </div>
-          <div className="w-64 h-2 bg-slate-700 rounded-full mt-4 overflow-hidden">
-            <div
-              className="h-full bg-amber-500 transition-all duration-300"
-              style={{ width: `${(processing.progress / processing.total) * 100}%` }}
-            />
-          </div>
-          <button
-            onClick={() => { stopBulkRef.current = true; }}
-            className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:text-red-400 hover:border-red-400/50 hover:bg-slate-800 transition flex items-center gap-2"
-          >
-            <XCircle size={16} /> Stop
-          </button>
         </div>
       )}
 

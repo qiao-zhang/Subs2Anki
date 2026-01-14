@@ -13,7 +13,6 @@ export const useMediaProcessing = (
 ) => {
   const { ankiCards, updateCard } = useAppStore();
   const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
-  const [backgroundGifProcessingId, setBackgroundGifProcessingId] = useState<string | null>(null);
 
   // --- Background Audio Extraction Queue ---
   useEffect(() => {
@@ -28,32 +27,10 @@ export const useMediaProcessing = (
 
     if (nextCard && videoFile) {
       processCardAudio(nextCard.id, nextCard.subtitleId);
-    } else if (!nextCard && isExporting && !backgroundGifProcessingId) {
-      // Only finish export if GIF queue is also empty
+    } else if (!nextCard && isExporting) {
       finalizeExportIfReady();
     }
-  }, [ankiCards, backgroundProcessingId, previewCard, isExporting, videoFile, backgroundGifProcessingId]);
-
-  // --- Background GIF Extraction Queue ---
-  useEffect(() => {
-    if (backgroundGifProcessingId) return;
-
-    const cards = useAppStore.getState().ankiCards;
-    // 1. Prioritize preview card GIF
-    let nextCard = previewCard && cards.find(c => c.id === previewCard.id && c.gifStatus === 'pending');
-
-    // 2. Then others
-    if (!nextCard) {
-      nextCard = cards.find(c => c.gifStatus === 'pending');
-    }
-
-    if (nextCard && videoFile) {
-      processCardGif(nextCard.id, nextCard.subtitleId);
-    } else if (!nextCard && isExporting && !backgroundProcessingId) {
-      finalizeExportIfReady();
-    }
-  }, [ankiCards, backgroundGifProcessingId, previewCard, isExporting, videoFile, backgroundProcessingId]);
-
+  }, [ankiCards, backgroundProcessingId, previewCard, isExporting, videoFile]);
 
   const processCardAudio = async (cardId: string, subtitleId: number) => {
     if (!videoFile) return;
@@ -86,48 +63,16 @@ export const useMediaProcessing = (
     }
   };
 
-  const processCardGif = async (cardId: string, subtitleId: number) => {
-    if (!videoFile) return;
-
-    const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
-    if (!sub) {
-      updateCard(cardId, { gifStatus: 'error' });
-      return;
-    }
-
-    setBackgroundGifProcessingId(cardId);
-    updateCard(cardId, { gifStatus: 'processing' });
-
-    try {
-      const gifBase64 = await ffmpegService.extractGifClip(videoFile, sub.startTime, sub.endTime);
-
-      // Store GIF Base64 in IndexedDB
-      const gifId = crypto.randomUUID();
-      await storeMedia(gifId, gifBase64);
-
-      const currentCards = useAppStore.getState().ankiCards;
-      if (currentCards.find(c => c.id === cardId)) {
-        updateCard(cardId, { gifStatus: 'done', gifRef: gifId });
-      }
-    } catch (e) {
-      console.error("GIF extraction failed", e);
-      updateCard(cardId, { gifStatus: 'error' });
-    } finally {
-      setBackgroundGifProcessingId(null);
-    }
-  };
-
   const finalizeExportIfReady = () => {
     const cards = useAppStore.getState().ankiCards;
     const pendingAudio = cards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
-    const pendingGif = cards.some(c => c.gifStatus === 'pending' || c.gifStatus === 'processing');
 
-    if (!pendingAudio && !pendingGif) {
+    if (!pendingAudio) {
       onExportReady();
     }
   }
 
   return {
-    isProcessing: !!(backgroundProcessingId || backgroundGifProcessingId)
+    isProcessing: !!(backgroundProcessingId)
   };
 };

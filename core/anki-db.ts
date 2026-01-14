@@ -1,6 +1,4 @@
-
-
-import initSqlJs, {Database} from 'sql.js';
+import initSqlJs from 'sql.js';
 import {AnkiCard, AnkiNoteType} from './types';
 
 // Constants for Anki Database
@@ -230,20 +228,10 @@ export const createAnkiDatabase = async (
   cards.forEach((card, index) => {
     // Generate filenames for media
     // Note: We check if refs exist, not raw data
-    const safeImageFilename = card.screenshotRef ? `sub2anki_${index}_${creationTime}.jpg` : '';
-    const safeGifFilename = card.gifRef ? `sub2anki_gif_${index}_${creationTime}.gif` : '';
-
-    // Determine which image file to use based on preference
-    let usedImageFilename = safeImageFilename;
-    if (card.preferredMediaType === 'gif' && safeGifFilename) {
-      usedImageFilename = safeGifFilename;
-    } else if (!safeImageFilename && safeGifFilename) {
-      // Fallback if png missing
-      usedImageFilename = safeGifFilename;
-    }
+    const usedImageFilename = card.screenshotRef ? `sub2anki_${index}_${creationTime}.jpg` : '';
 
     // Force max height to 270px for images in the Media field
-    const imageTag = usedImageFilename ? `<img src="${usedImageFilename}" style="max-height: 270px;">` : '';
+    const imageTag = usedImageFilename ? `<img src="${usedImageFilename}" style="max-height: 270px;" alt="${usedImageFilename}">` : '';
 
     const safeAudioFilename = card.audioRef ? `sub2anki_audio_${index}_${creationTime}.wav` : '';
     const audioTag = safeAudioFilename ? `[sound:${safeAudioFilename}]` : '';
@@ -322,8 +310,7 @@ export const createAnkiDatabase = async (
   noteStmt.free();
   cardStmt.free();
 
-  const data = db.export();
-  return data;
+  return db.export();
 };
 
 // Helper for GUID generation (simplified)
