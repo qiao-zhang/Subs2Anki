@@ -1,7 +1,7 @@
 
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {SubtitleLine, AnkiCard} from '../core/types';
 import {serializeSubtitles} from '../core/parser';
 import {formatTime} from '../core/time';
@@ -34,7 +34,8 @@ const App: React.FC = () => {
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
     llmSettings, setLLMSettings,
-    processing, setProcessing
+    processing, setProcessing,
+    playbackMode, setPlaybackMode
   } = useAppStore();
 
   // --- Local UI State (Transient) ---
@@ -43,7 +44,6 @@ const App: React.FC = () => {
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
 
   const [isExporting, setIsExporting] = useState<boolean>(false);
-  // Track when video metadata is loaded to ensure we can get the element for WaveSurfer
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
 
   // Modals
@@ -74,6 +74,42 @@ const App: React.FC = () => {
   };
 
   useMediaProcessing(videoFile, previewCard, isExporting, finalizeExport);
+
+  // --- Logic Helpers ---
+
+  const getActiveSubtitle = useCallback(() => {
+    return subtitleLines.find(s => s.id === activeSubtitleId);
+  }, [subtitleLines, activeSubtitleId]);
+
+  const jumpToSubtitle = useCallback((direction: 'next' | 'prev') => {
+    if (subtitleLines.length === 0) return;
+
+    let nextIndex = 0;
+    const currentIndex = subtitleLines.findIndex(s => s.id === activeSubtitleId);
+
+    if (direction === 'next') {
+      if (currentIndex === -1) {
+        // Find first subtitle after current time
+        nextIndex = subtitleLines.findIndex(s => s.startTime > currentTime);
+        if (nextIndex === -1) nextIndex = 0;
+      } else {
+        nextIndex = Math.min(subtitleLines.length - 1, currentIndex + 1);
+      }
+    } else {
+      if (currentIndex === -1) {
+        // Find first subtitle before current time
+        const revIndex = [...subtitleLines].reverse().findIndex(s => s.startTime < currentTime);
+        nextIndex = revIndex === -1 ? 0 : subtitleLines.length - 1 - revIndex;
+      } else {
+        nextIndex = Math.max(0, currentIndex - 1);
+      }
+    }
+
+    const sub = subtitleLines[nextIndex];
+    if (sub) {
+      handlePlaySubtitle(sub.id);
+    }
+  }, [subtitleLines, activeSubtitleId, currentTime]);
 
   // --- Handlers ---
 
@@ -209,15 +245,32 @@ const App: React.FC = () => {
 
   const handleTimeUpdate = (time: number) => {
     setCurrentTime(time);
+
+    // Manual pause override (from Waveform selection or subtitle click)
     if (pauseAtTime !== null && time >= pauseAtTime) {
       videoRef.current?.pause();
       videoRef.current?.seekTo(pauseAtTime);
       setPauseAtTime(null);
+      return;
     }
 
     // Efficiently find active subtitle index
     const activeIndex = subtitleLines.findIndex(s => time >= s.startTime && time <= s.endTime);
     const active = activeIndex !== -1 ? subtitleLines[activeIndex] : null;
+
+    if (active) {
+      // --- Playback Logic (Auto-pause / Loop) ---
+      const nearEnd = time >= active.endTime - 0.1; // 100ms tolerance
+
+      if (nearEnd) {
+        if (playbackMode === 'auto-pause') {
+          videoRef.current?.pause();
+          videoRef.current?.seekTo(active.endTime);
+        } else if (playbackMode === 'loop') {
+          videoRef.current?.seekTo(active.startTime);
+        }
+      }
+    }
 
     if (active && active.id !== activeSubtitleId) {
       setActiveSubtitleId(active.id);
@@ -237,7 +290,16 @@ const App: React.FC = () => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (sub && videoRef.current) {
       setTempSubtitleLine(null);
-      playTimeSpan(sub.startTime, sub.endTime);
+      // If mode is loop, just seeking to start is enough, logic handles the rest.
+      // If continuous, we might want to just play.
+      // If auto-pause, we play until end.
+      // Using playTimeSpan forces a pause at end, overriding global mode momentarily, which is usually desired for explicit clicks.
+      if (playbackMode === 'loop') {
+        videoRef.current.seekTo(sub.startTime);
+        videoRef.current.play();
+      } else {
+        playTimeSpan(sub.startTime, sub.endTime);
+      }
     }
   };
 
@@ -311,7 +373,6 @@ const App: React.FC = () => {
   };
 
   const handleExportClick = () => {
-    // Check if audio processing is pending
     const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
     const pendingGif = ankiCards.some(c => c.gifStatus === 'pending' || c.gifStatus === 'processing');
 
@@ -321,6 +382,70 @@ const App: React.FC = () => {
       finalizeExport();
     }
   };
+
+  // --- Keyboard Shortcuts ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore inputs
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
+
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault();
+          if (videoRef.current?.getVideoElement()?.paused) {
+            videoRef.current?.play();
+          } else {
+            videoRef.current?.pause();
+          }
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (videoRef.current) {
+            const t = videoRef.current.getCurrentTime();
+            videoRef.current.seekTo(Math.max(0, t - 5));
+          }
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (videoRef.current) {
+            const t = videoRef.current.getCurrentTime();
+            videoRef.current.seekTo(t + 5);
+          }
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          jumpToSubtitle('prev');
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          jumpToSubtitle('next');
+          break;
+        case 'KeyR':
+          e.preventDefault();
+          if (activeSubtitleId) handlePlaySubtitle(activeSubtitleId);
+          break;
+        case 'KeyC':
+          e.preventDefault();
+          if (activeSubtitleId) {
+            const s = subtitleLines.find(x => x.id === activeSubtitleId);
+            if(s) handleCreateCard(s);
+          }
+          break;
+        case 'KeyL':
+          e.preventDefault();
+          setPlaybackMode(playbackMode === 'loop' ? 'continuous' : 'loop');
+          break;
+        case 'KeyP':
+          e.preventDefault();
+          setPlaybackMode(playbackMode === 'auto-pause' ? 'continuous' : 'auto-pause');
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSubtitleId, subtitleLines, jumpToSubtitle, playbackMode]);
+
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">

@@ -35,12 +35,18 @@ const DEFAULT_LLM_SETTINGS: LLMSettings = {
   autoAnalyze: false
 };
 
+export type PlaybackMode = 'continuous' | 'auto-pause' | 'loop';
+
 interface AppState {
   // Video Data
   videoSrc: string;
   videoName: string;
   videoFile: File | null; // Added: Raw file object for FFmpeg
   setVideo: (file: File) => void; // Changed: Takes File object
+
+  // Playback State
+  playbackMode: PlaybackMode;
+  setPlaybackMode: (mode: PlaybackMode) => void;
 
   // Subtitles
   subtitleLines: SubtitleLine[];
@@ -80,6 +86,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const src = URL.createObjectURL(file);
     set({ videoSrc: src, videoName: file.name, videoFile: file });
   },
+
+  // Playback defaults
+  playbackMode: 'continuous',
+  setPlaybackMode: (mode) => set({ playbackMode: mode }),
 
   // Subtitle defaults
   subtitleLines: [],

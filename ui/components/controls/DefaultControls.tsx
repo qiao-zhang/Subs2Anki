@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
-import { Video as VideoIcon, Bot, MoveHorizontal, Check } from 'lucide-react';
+import { Video as VideoIcon, Bot, MoveHorizontal, Repeat, PauseOctagon } from 'lucide-react';
 import { formatTime } from '../../../core/time';
 import { LLMSettings } from '../../../core/gemini';
+import { useAppStore } from '../../../core/store';
 
 interface DefaultControlsProps {
   videoName: string;
@@ -20,6 +22,7 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
                                                            onOpenLLMSettings,
                                                            onShiftSubtitles
                                                          }) => {
+  const { playbackMode, setPlaybackMode } = useAppStore();
   const MIN_SHIFT_MS = 10;
   const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
   const [shiftAmount, setShiftAmount] = useState(MIN_SHIFT_MS);
@@ -34,16 +37,6 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
       setShiftAmount(MIN_SHIFT_MS);
     }
   }
-  /*
-  const handleApplyShift = () => {
-    const offset = parseFloat(shiftAmount);
-    if (!isNaN(offset) && offset !== 0) {
-      onShiftSubtitles(offset);
-      setIsShiftMenuOpen(false);
-      setShiftAmount('0');
-    }
-  };
-   */
 
   const handleQuickShift = (ms: number) => {
     onShiftSubtitles(ms / 1000);
@@ -63,6 +56,26 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
       {/* Time Display */}
       <div className="font-mono text-xl text-indigo-400 font-bold tracking-widest min-w-[100px] text-center">
         {formatTime(currentTime)}
+      </div>
+
+      <div className="h-8 w-px bg-slate-800"></div>
+
+      {/* Playback Mode Controls */}
+      <div className="flex gap-2 bg-slate-800 p-1 rounded-lg border border-slate-700">
+        <button
+          onClick={() => setPlaybackMode(playbackMode === 'auto-pause' ? 'continuous' : 'auto-pause')}
+          className={`p-1.5 rounded transition ${playbackMode === 'auto-pause' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}
+          title="Auto-Pause at end of subtitle (Hotkey: P)"
+        >
+          <PauseOctagon size={18} />
+        </button>
+        <button
+          onClick={() => setPlaybackMode(playbackMode === 'loop' ? 'continuous' : 'loop')}
+          className={`p-1.5 rounded transition ${playbackMode === 'loop' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}
+          title="Loop current subtitle (Hotkey: L)"
+        >
+          <Repeat size={18} />
+        </button>
       </div>
 
       <div className="h-8 w-px bg-slate-800"></div>
