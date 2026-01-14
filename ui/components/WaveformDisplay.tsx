@@ -1,3 +1,4 @@
+
 /// <reference lib="dom" />
 import React, {useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
@@ -93,7 +94,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       // However, to see a waveform, WaveSurfer normally needs to decode.
       // Using 'media' binds the playhead.
       // NOTE: Without pre-decoded peaks, WaveSurfer might try to fetch the src of the video element.
-      // This is unavoidable for visualization unless we use peaks.
+      // This is unavoidable for visualization unless we use peaks. 
       // But for local files (blob:), standard fetch is often optimized or handled by browser cache better than decodeAudioData.
     });
 
@@ -108,6 +109,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // WaveSurfer 'interaction' event is triggered when user clicks/drags on waveform
     ws.on('interaction', (newTime) => {
+      videoElement.pause();
       onSeek(newTime);
       // Remove temp region if clicking elsewhere on timeline
       if (tempRegion.current) {
@@ -120,6 +122,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     regions.on('region-created', (region: Region) => {
       if (isSyncingSubtitles.current) return;
+      videoElement.pause();
 
       // Handle Temp Region logic
       if (region.id === TEMP_REGION_ID) {
@@ -144,6 +147,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     regions.on('region-updated', (region: Region) => {
       if (isSyncingSubtitles.current) return;
+      videoElement.pause();
 
       if (region.id === TEMP_REGION_ID) {
         onTempSubtitleLineUpdated(region.start, region.end);
