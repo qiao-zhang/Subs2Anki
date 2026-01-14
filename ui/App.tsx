@@ -10,6 +10,7 @@ import {generateAnkiDeck} from '../core/export';
 import {ffmpegService} from '../core/ffmpeg';
 import {storeMedia, deleteMedia} from '../core/db';
 import {furiganaService} from '../core/furigana';
+import {syncToAnki, checkConnection} from '../core/anki-connect';
 import saveAs from 'file-saver';
 import { VirtuosoHandle } from 'react-virtuoso';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
@@ -21,6 +22,7 @@ import TemplateEditorModal from './components/TemplateEditorModal';
 import EditSubtitleLineModal from './components/EditSubtitleLineModal';
 import LLMSettingsModal from './components/LLMSettingsModal';
 import CardPreviewModal from './components/CardPreviewModal';
+import AnkiConnectSettingsModal from './components/AnkiConnectSettingsModal';
 import { useAppStore } from '../core/store';
 import { useMediaProcessing } from './hooks/useMediaProcessing';
 import { Loader2, XCircle } from 'lucide-react';
@@ -35,6 +37,7 @@ const App: React.FC = () => {
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
     llmSettings, setLLMSettings,
+    ankiConnectUrl, setAnkiConnectUrl,
     processing, setProcessing,
     playbackMode, setPlaybackMode
   } = useAppStore();
@@ -45,12 +48,17 @@ const App: React.FC = () => {
   const [activeSubtitleId, setActiveSubtitleId] = useState<number | null>(null);
 
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
+
+  const [isBulkGenerating, setIsBulkGenerating] = useState<boolean>(false);
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
 
   // Modals
   const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [isLLMSettingsOpen, setIsLLMSettingsOpen] = useState<boolean>(false);
+  const [isAnkiSettingsOpen, setIsAnkiSettingsOpen] = useState<boolean>(false);
   const [previewCard, setPreviewCard] = useState<AnkiCard | null>(null);
 
   // Editing context
@@ -62,6 +70,7 @@ const App: React.FC = () => {
   // Refs
   const videoRef = useRef<VideoPlayerHandle>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const stopBulkRef = useRef<boolean>(false);
 
   // Reset video ready state when src changes
   useEffect(() => {
@@ -74,7 +83,51 @@ const App: React.FC = () => {
     await generateAnkiDeck(ankiCards, videoName, ankiConfig);
   };
 
-  useMediaProcessing(videoFile, previewCard, isExporting, finalizeExport);
+  const finalizeSync = async () => {
+    setIsSyncing(true);
+    try {
+      const connected = await checkConnection(ankiConnectUrl);
+      if (!connected) {
+        setIsSyncing(false);
+        alert('Could not connect to Anki. Please check your AnkiConnect settings and ensure Anki is running.');
+        setIsAnkiSettingsOpen(true);
+        return;
+      }
+
+      const deckName = videoName ? `Sub2Anki::${videoName}` : 'Sub2Anki Export';
+      await syncToAnki(ankiConnectUrl, deckName, ankiConfig, ankiCards, (cur, tot) => {
+        setSyncProgress({ current: cur, total: tot });
+      });
+
+      alert(`Successfully synced ${ankiCards.length} cards to Anki!`);
+    } catch (e) {
+      console.error(e);
+      alert(`Sync failed: ${(e as Error).message}`);
+    } finally {
+      setIsSyncing(false);
+      setSyncProgress({ current: 0, total: 0 });
+    }
+  }
+
+  // Reuse media processing hook but trigger different finalizers based on state
+  // We need a ref to know which action triggered the wait
+  const pendingActionRef = useRef<'export' | 'sync' | null>(null);
+
+  const onMediaReady = () => {
+    if (pendingActionRef.current === 'export') {
+      finalizeExport();
+    } else if (pendingActionRef.current === 'sync') {
+      finalizeSync();
+    }
+    pendingActionRef.current = null;
+  };
+
+  useMediaProcessing(
+    videoFile,
+    previewCard,
+    isExporting || isSyncing, // isProcessing if either active
+    onMediaReady
+  );
 
   // --- Logic Helpers ---
 
@@ -291,10 +344,6 @@ const App: React.FC = () => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (sub && videoRef.current) {
       setTempSubtitleLine(null);
-      // If mode is loop, just seeking to start is enough, logic handles the rest.
-      // If continuous, we might want to just play.
-      // If auto-pause, we play until end.
-      // Using playTimeSpan forces a pause at end, overriding global mode momentarily, which is usually desired for explicit clicks.
       if (playbackMode === 'loop') {
         videoRef.current.seekTo(sub.startTime);
         videoRef.current.play();
@@ -381,14 +430,19 @@ const App: React.FC = () => {
     }
   };
 
-  const handleExportClick = () => {
+  const handleActionClick = (action: 'export' | 'sync') => {
+    pendingActionRef.current = action;
+
     const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
     const pendingGif = ankiCards.some(c => c.gifStatus === 'pending' || c.gifStatus === 'processing');
 
     if (pendingAudio || pendingGif) {
-      setIsExporting(true);
+      if (action === 'export') setIsExporting(true);
+      // For sync, we might just show the spinner overlay without specific text for now or reuse isExporting UI with message
+      // Let's reuse isExporting state but maybe add a message prop or check
+      setIsExporting(true); // Using generic loading overlay
     } else {
-      finalizeExport();
+      onMediaReady();
     }
   };
 
@@ -482,19 +536,47 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
 
-      {/* Export Wait Overlay */}
-      {isExporting && (
+      {/* Processing/Export/Sync Overlay */}
+      {(isExporting || isSyncing) && (
         <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
           <Loader2 size={48} className="text-indigo-500 animate-spin mb-4" />
-          <div className="text-xl font-bold text-white">Finalizing Export...</div>
+          <div className="text-xl font-bold text-white">
+            {isSyncing ? `Syncing to Anki...` : "Preparing Export..."}
+          </div>
           <div className="text-sm text-slate-400 mt-2">
-            Processing media ({ankiCards.filter(c => c.audioStatus !== 'done' || (c.preferredMediaType === 'gif' && c.gifStatus !== 'done')).length} remaining)
+            {isSyncing ? `Card ${syncProgress.current} of ${syncProgress.total}` :
+              `Processing media ({ankiCards.filter(c => c.audioStatus !== 'done' || (c.preferredMediaType === 'gif' && c.gifStatus !== 'done')).length} remaining)`}
+          </div>
+          {!isSyncing && (
+            <button
+              onClick={() => setIsExporting(false)}
+              className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:bg-slate-800 transition"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Bulk Generate Overlay */}
+      {isBulkGenerating && (
+        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
+          <Loader2 size={48} className="text-amber-400 animate-spin mb-4" />
+          <div className="text-xl font-bold text-white">Generating Cards...</div>
+          <div className="text-sm text-slate-400 mt-2">
+            Processed {processing.progress} / {processing.total}
+          </div>
+          <div className="w-64 h-2 bg-slate-700 rounded-full mt-4 overflow-hidden">
+            <div
+              className="h-full bg-amber-500 transition-all duration-300"
+              style={{ width: `${(processing.progress / processing.total) * 100}%` }}
+            />
           </div>
           <button
-            onClick={() => setIsExporting(false)}
-            className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:bg-slate-800 transition"
+            onClick={() => { stopBulkRef.current = true; }}
+            className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:text-red-400 hover:border-red-400/50 hover:bg-slate-800 transition flex items-center gap-2"
           >
-            Cancel
+            <XCircle size={16} /> Stop
           </button>
         </div>
       )}
@@ -510,7 +592,9 @@ const App: React.FC = () => {
           onAnalyze={handleAnalyzeCard}
           onPreview={(c) => setPreviewCard(c)}
           onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
-          onExport={handleExportClick}
+          onExport={() => handleActionClick('export')}
+          onSyncAnki={() => handleActionClick('sync')}
+          onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
         />
 
         {/* COL 2: VIDEO (Center) */}
@@ -593,6 +677,7 @@ const App: React.FC = () => {
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} config={ankiConfig} onSave={setAnkiConfig} />
       <LLMSettingsModal isOpen={isLLMSettingsOpen} onClose={() => setIsLLMSettingsOpen(false)} settings={llmSettings} onSave={setLLMSettings} />
+      <AnkiConnectSettingsModal isOpen={isAnkiSettingsOpen} onClose={() => setIsAnkiSettingsOpen(false)} url={ankiConnectUrl} onSave={setAnkiConnectUrl} />
       <CardPreviewModal
         isOpen={!!previewCard}
         card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}

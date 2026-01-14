@@ -13,7 +13,7 @@ const DEFAULT_NOTE_TYPE: AnkiNoteType = {
     { name: "Before" },
     { name: "BeforeAudio" },
     { name: "CurrentFront", source: 'Text' },
-    { name: "CurrentBack", source: 'Furigana' },
+    { name: "CurrentBack", source: 'Text' },
     { name: "Audio", source: 'Audio' },
     { name: "After" },
     { name: "AfterAudio" },
@@ -75,6 +75,10 @@ interface AppState {
   // Settings
   llmSettings: LLMSettings;
   setLLMSettings: (settings: LLMSettings) => void;
+
+  // Anki Connect
+  ankiConnectUrl: string;
+  setAnkiConnectUrl: (url: string) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -149,7 +153,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Settings defaults
   llmSettings: (() => {
-    // Try to load from local storage immediately on store init
     try {
       const saved = localStorage.getItem('sub2anki_llm_settings');
       if (saved) {
@@ -165,5 +168,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLLMSettings: (settings) => {
     localStorage.setItem('sub2anki_llm_settings', JSON.stringify(settings));
     set({ llmSettings: settings });
+  },
+
+  // Anki Connect
+  ankiConnectUrl: localStorage.getItem('sub2anki_anki_url') || 'http://127.0.0.1:8765',
+  setAnkiConnectUrl: (url) => {
+    localStorage.setItem('sub2anki_anki_url', url);
+    set({ ankiConnectUrl: url });
   }
 }));

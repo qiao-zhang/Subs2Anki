@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Layers, Settings, Download } from 'lucide-react';
+import { Layers, Settings, Download, CloudUpload, Wifi } from 'lucide-react';
 import { AnkiCard } from '../../core/types';
 import CardItem from './CardItem';
 
@@ -12,6 +12,8 @@ interface DeckColumnProps {
   onPreview: (card: AnkiCard) => void;
   onOpenTemplateSettings: () => void;
   onExport: () => void;
+  onSyncAnki: () => void;
+  onOpenAnkiSettings: () => void;
 }
 
 const DeckColumn: React.FC<DeckColumnProps> = ({
@@ -21,7 +23,9 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  onAnalyze,
                                                  onPreview,
                                                  onOpenTemplateSettings,
-                                                 onExport
+                                                 onExport,
+                                                 onSyncAnki,
+                                                 onOpenAnkiSettings
                                                }) => {
   return (
     <aside className="w-80 flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900/50 z-20">
@@ -39,17 +43,33 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Deck ({cards.length})</h2>
         <div className="flex gap-1">
           <button
+            onClick={onOpenAnkiSettings}
+            className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition"
+            title="AnkiConnect Settings"
+          >
+            <Wifi size={14}/>
+          </button>
+          <button
             onClick={onOpenTemplateSettings}
             className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition"
             title="Template Settings"
           >
             <Settings size={14}/>
           </button>
+          <div className="w-px h-4 bg-slate-700 mx-1 self-center"></div>
+          <button
+            onClick={onSyncAnki}
+            disabled={cards.length === 0}
+            className="p-1.5 hover:bg-indigo-900/50 rounded text-indigo-400 hover:text-indigo-300 transition disabled:opacity-50 disabled:hover:bg-transparent disabled:text-slate-600"
+            title="Sync to Anki"
+          >
+            <CloudUpload size={16}/>
+          </button>
           <button
             onClick={onExport}
             disabled={cards.length === 0}
             className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition disabled:opacity-50 disabled:bg-slate-700"
-            title="Export Deck"
+            title="Export .apkg"
           >
             <Download size={14}/>
           </button>
