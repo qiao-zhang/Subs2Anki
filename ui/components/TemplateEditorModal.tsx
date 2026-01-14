@@ -1,7 +1,8 @@
+
 /// <reference lib="dom" />
 import React, { useState, useEffect } from 'react';
 import { AnkiNoteType, AnkiFieldSource, AnkiCardTemplate } from '../../core/types';
-import { X, Plus, Trash2, Layout, Type, Palette, GripVertical, Image as ImageIcon, Mic, Clock, BookOpen, Languages, SortAsc } from 'lucide-react';
+import { X, Plus, Trash2, Layout, Type, Palette, GripVertical, Image as ImageIcon, Mic, Clock, BookOpen, Languages, SortAsc, Subtitles } from 'lucide-react';
 
 interface TemplateEditorModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface TemplateEditorModalProps {
 const SOURCES: { type: AnkiFieldSource; label: string; icon: React.ReactNode; color: string }[] = [
   { type: 'Text', label: 'Text', icon: <Type size={14} />, color: 'bg-blue-600' },
   { type: 'Translation', label: 'Translation', icon: <Languages size={14} />, color: 'bg-emerald-600' },
+  { type: 'Furigana', label: 'Furigana', icon: <Subtitles size={14} />, color: 'bg-pink-600' },
   { type: 'Notes', label: 'Notes', icon: <BookOpen size={14} />, color: 'bg-amber-600' },
   { type: 'Image', label: 'Image', icon: <ImageIcon size={14} />, color: 'bg-purple-600' },
   { type: 'Audio', label: 'Audio', icon: <Mic size={14} />, color: 'bg-rose-600' },
@@ -51,7 +53,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
     newFields[index].name = val;
     setLocalConfig(prev => ({ ...prev, fields: newFields }));
   };
-  
+
   const handleFieldMapping = (index: number, source: AnkiFieldSource | undefined) => {
     const newFields = [...localConfig.fields];
     // Remove this source from any other field first (optional constraint: one-to-one or one-to-many? Anki usually allows one source to many fields, but user said "each Field most can correspond to one square", implying 1 field <- 1 source. But can 1 source go to multiple fields? Usually yes. )
@@ -71,19 +73,19 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
     onSave(localConfig);
     onClose();
   };
-  
+
   // Drag Handlers
   const onDragStart = (e: React.DragEvent, type: AnkiFieldSource) => {
     setDraggingType(type);
     e.dataTransfer.effectAllowed = 'copy';
     // Transparent drag image or default
   };
-  
+
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   };
-  
+
   const onDrop = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (draggingType) {
@@ -95,11 +97,11 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-        
+
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800">
           <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-            <Layout className="text-indigo-400" size={24} /> 
+            <Layout className="text-indigo-400" size={24} />
             Note Type Settings
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition">
@@ -131,7 +133,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6 bg-slate-900 flex flex-col">
-          
+
           {/* FIELDS TAB */}
           {activeTab === 'fields' && (
             <div className="flex flex-col h-full">
@@ -139,11 +141,11 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                 <p className="text-sm text-slate-400 mb-2">
                   Define your fields and map content by dragging the source blocks from the bottom onto the fields.
                 </p>
-                
+
                 {localConfig.fields.map((field, idx) => (
                   <div key={idx} className="flex gap-4 items-center animate-in slide-in-from-left-2 duration-200 group">
                     <span className="text-slate-500 w-6 text-right font-mono text-sm pt-2">{idx + 1}.</span>
-                    
+
                     {/* Field Name Input */}
                     <div className="flex-1">
                       <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Field Name</label>
@@ -159,11 +161,11 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                     {/* Mapping Drop Zone */}
                     <div className="flex-1">
                       <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Mapped Content</label>
-                      <div 
+                      <div
                         onDragOver={onDragOver}
                         onDrop={(e) => onDrop(e, idx)}
                         className={`h-[42px] border-2 border-dashed rounded flex items-center px-2 transition-colors ${
-                           draggingType ? 'border-indigo-500/50 bg-indigo-500/10' : 'border-slate-700 bg-slate-800/50'
+                          draggingType ? 'border-indigo-500/50 bg-indigo-500/10' : 'border-slate-700 bg-slate-800/50'
                         }`}
                       >
                         {field.source ? (
@@ -174,7 +176,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                               {SOURCES.find(s => s.type === field.source)?.icon}
                               {field.source}
                             </div>
-                            <button 
+                            <button
                               onClick={() => handleFieldMapping(idx, undefined)}
                               className="hover:bg-black/20 rounded p-0.5"
                             >
@@ -187,7 +189,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                       </div>
                     </div>
 
-                    <button 
+                    <button
                       onClick={() => handleRemoveField(idx)}
                       disabled={localConfig.fields.length <= 1}
                       className="mt-6 p-2 text-slate-500 hover:text-red-400 disabled:opacity-30 transition-colors"
@@ -208,22 +210,22 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
 
               {/* Source Palette */}
               <div className="mt-4 pt-4 border-t border-slate-700">
-                 <h4 className="text-xs uppercase font-bold text-slate-400 mb-3 flex items-center gap-2">
-                   <GripVertical size={14} /> Draggable Content Sources
-                 </h4>
-                 <div className="flex flex-wrap gap-3 select-none">
-                   {SOURCES.map((src) => (
-                     <div
-                       key={src.type}
-                       draggable
-                       onDragStart={(e) => onDragStart(e, src.type)}
-                       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-white shadow cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${src.color}`}
-                     >
-                       {src.icon}
-                       {src.label}
-                     </div>
-                   ))}
-                 </div>
+                <h4 className="text-xs uppercase font-bold text-slate-400 mb-3 flex items-center gap-2">
+                  <GripVertical size={14} /> Draggable Content Sources
+                </h4>
+                <div className="flex flex-wrap gap-3 select-none">
+                  {SOURCES.map((src) => (
+                    <div
+                      key={src.type}
+                      draggable
+                      onDragStart={(e) => onDragStart(e, src.type)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-white shadow cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${src.color}`}
+                    >
+                      {src.icon}
+                      {src.label}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -254,7 +256,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                     </div>
                   </div>
                   <div className="bg-slate-800/50 p-3 rounded border border-slate-700 text-xs text-slate-400">
-                     Tip: Use <code className="text-indigo-400">{'{{Field Name}}'}</code> to insert fields.
+                    Tip: Use <code className="text-indigo-400">{'{{Field Name}}'}</code> to insert fields.
                   </div>
                 </div>
               ))}

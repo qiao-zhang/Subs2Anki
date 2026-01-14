@@ -1,4 +1,5 @@
 
+
 /**
  * Represents a single subtitle line parsed from a file.
  */
@@ -19,16 +20,17 @@ export interface AnkiCard {
   text: string;             // The front text of the card
   translation: string;      // AI-generated translation
   notes: string;            // AI-generated notes (grammar, culture, vocab)
-  
+  furigana?: string;        // Generated ruby text
+
   // Media References (UUIDs pointing to IndexedDB)
-  screenshotRef: string | null; 
-  audioRef: string | null;   
+  screenshotRef: string | null;
+  audioRef: string | null;
   gifRef: string | null;
-  
+
   timestampStr: string;     // Formatted timestamp string for display (e.g., "01:23")
   audioStatus?: 'pending' | 'processing' | 'done' | 'error'; // Tracking background audio extraction
   gifStatus?: 'pending' | 'processing' | 'done' | 'error';
-  
+
   preferredMediaType?: 'image' | 'gif';
 }
 
@@ -44,7 +46,7 @@ export interface ProcessingState {
 /**
  * Available data sources that can be mapped to Anki fields.
  */
-export type AnkiFieldSource = 'Text' | 'Translation' | 'Notes' | 'Image' | 'Audio' | 'Time' | 'Sequence';
+export type AnkiFieldSource = 'Text' | 'Translation' | 'Notes' | 'Image' | 'Audio' | 'Time' | 'Sequence' | 'Furigana';
 
 /**
  * Anki Note Type Definition

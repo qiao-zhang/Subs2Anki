@@ -13,7 +13,7 @@ const DEFAULT_NOTE_TYPE: AnkiNoteType = {
     { name: "Before" },
     { name: "BeforeAudio" },
     { name: "CurrentFront", source: 'Text' },
-    { name: "CurrentBack", source: 'Text' },
+    { name: "CurrentBack", source: 'Furigana' },
     { name: "Audio", source: 'Audio' },
     { name: "After" },
     { name: "AfterAudio" },

@@ -1,4 +1,5 @@
 
+
 import initSqlJs, {Database} from 'sql.js';
 import {AnkiCard, AnkiNoteType} from './types';
 
@@ -231,14 +232,14 @@ export const createAnkiDatabase = async (
     // Note: We check if refs exist, not raw data
     const safeImageFilename = card.screenshotRef ? `sub2anki_${index}_${creationTime}.jpg` : '';
     const safeGifFilename = card.gifRef ? `sub2anki_gif_${index}_${creationTime}.gif` : '';
-    
+
     // Determine which image file to use based on preference
     let usedImageFilename = safeImageFilename;
     if (card.preferredMediaType === 'gif' && safeGifFilename) {
-        usedImageFilename = safeGifFilename;
+      usedImageFilename = safeGifFilename;
     } else if (!safeImageFilename && safeGifFilename) {
-        // Fallback if png missing
-        usedImageFilename = safeGifFilename;
+      // Fallback if png missing
+      usedImageFilename = safeGifFilename;
     }
 
     // Force max height to 270px for images in the Media field
@@ -258,6 +259,8 @@ export const createAnkiDatabase = async (
             return card.translation;
           case 'Notes':
             return card.notes;
+          case 'Furigana':
+            return card.furigana || card.text; // Fallback to text if generation failed/missing
           case 'Image':
             return imageTag;
           case 'Time':

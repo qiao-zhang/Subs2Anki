@@ -9,6 +9,7 @@ import {analyzeSubtitle} from '../core/gemini';
 import {generateAnkiDeck} from '../core/export';
 import {ffmpegService} from '../core/ffmpeg';
 import {storeMedia, deleteMedia} from '../core/db';
+import {furiganaService} from '../core/furigana';
 import saveAs from 'file-saver';
 import { VirtuosoHandle } from 'react-virtuoso';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
@@ -316,13 +317,16 @@ const App: React.FC = () => {
       await storeMedia(screenshotRef, screenshot);
     }
 
+    const cardId = crypto.randomUUID();
+
     // Add card with pending audio status
     const newCard: AnkiCard = {
-      id: crypto.randomUUID(),
+      id: cardId,
       subtitleId: sub.id,
       text: sub.text,
       translation: '',
       notes: '',
+      furigana: '', // Will be populated shortly
       screenshotRef: screenshotRef,
       audioRef: null,
       audioStatus: 'pending',
@@ -333,6 +337,12 @@ const App: React.FC = () => {
     };
 
     addCard(newCard);
+
+    // Trigger Furigana Generation (async)
+    furiganaService.convert(sub.text).then(f => {
+      console.log(f);
+      updateCard(cardId, { furigana: f });
+    });
 
     if (llmSettings.autoAnalyze) handleAnalyzeCard(newCard);
   };
