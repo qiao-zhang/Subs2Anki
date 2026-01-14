@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Video as VideoIcon, Bot, MoveHorizontal, Repeat, PauseOctagon } from 'lucide-react';
+import { Video as VideoIcon, Bot, MoveHorizontal, Repeat, PauseOctagon, Camera } from 'lucide-react';
 import { formatTime } from '../../../core/time';
 import { LLMSettings } from '../../../core/gemini';
 import { useAppStore } from '../../../core/store';
@@ -12,6 +12,7 @@ interface DefaultControlsProps {
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenLLMSettings: () => void;
   onShiftSubtitles: (offset: number) => void;
+  onCaptureFrame: () => void;
 }
 
 const DefaultControls: React.FC<DefaultControlsProps> = ({
@@ -20,7 +21,8 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
                                                            llmSettings,
                                                            onVideoUpload,
                                                            onOpenLLMSettings,
-                                                           onShiftSubtitles
+                                                           onShiftSubtitles,
+                                                           onCaptureFrame
                                                          }) => {
   const { playbackMode, setPlaybackMode } = useAppStore();
   const MIN_SHIFT_MS = 10;
@@ -57,6 +59,17 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
       <div className="font-mono text-xl text-indigo-400 font-bold tracking-widest min-w-[100px] text-center">
         {formatTime(currentTime)}
       </div>
+
+      <div className="h-8 w-px bg-slate-800"></div>
+
+      {/* Capture Frame Button */}
+      <button
+        onClick={onCaptureFrame}
+        className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition border border-slate-700"
+        title="Capture Snapshot"
+      >
+        <Camera size={18} />
+      </button>
 
       <div className="h-8 w-px bg-slate-800"></div>
 

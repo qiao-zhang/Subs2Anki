@@ -18,6 +18,8 @@ interface AppControlBarProps {
   onOpenLLMSettings: () => void;
   onReplayActive: () => void;
   onShiftSubtitles: (offset: number) => void;
+  onCaptureFrame: () => void;
+  onDownloadAudio: () => void;
 }
 
 const AppControlBar: React.FC<AppControlBarProps> = ({
@@ -32,7 +34,9 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        onVideoUpload,
                                                        onOpenLLMSettings,
                                                        onReplayActive,
-                                                       onShiftSubtitles
+                                                       onShiftSubtitles,
+                                                       onCaptureFrame,
+                                                       onDownloadAudio
                                                      }) => {
   if (tempSubtitleLine) {
     return (
@@ -42,6 +46,7 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
         onPlay={onTempPlay}
         onCommit={onTempCommit}
         onDiscard={onTempDiscard}
+        onDownloadAudio={onDownloadAudio}
       />
     );
   }
@@ -67,6 +72,7 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
       onVideoUpload={onVideoUpload}
       onOpenLLMSettings={onOpenLLMSettings}
       onShiftSubtitles={onShiftSubtitles}
+      onCaptureFrame={onCaptureFrame}
     />
   );
 };

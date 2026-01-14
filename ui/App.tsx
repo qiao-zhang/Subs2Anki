@@ -23,7 +23,7 @@ import LLMSettingsModal from './components/LLMSettingsModal';
 import CardPreviewModal from './components/CardPreviewModal';
 import { useAppStore } from '../core/store';
 import { useMediaProcessing } from './hooks/useMediaProcessing';
-import { Loader2 } from 'lucide-react';
+import { Loader2, XCircle } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
@@ -340,7 +340,6 @@ const App: React.FC = () => {
 
     // Trigger Furigana Generation (async)
     furiganaService.convert(sub.text).then(f => {
-      console.log(f);
       updateCard(cardId, { furigana: f });
     });
 
@@ -390,6 +389,29 @@ const App: React.FC = () => {
       setIsExporting(true);
     } else {
       finalizeExport();
+    }
+  };
+
+  const handleCaptureFrame = () => {
+    if (!videoRef.current) return;
+    const dataUrl = videoRef.current.captureFrame();
+    if (dataUrl) {
+      fetch(dataUrl)
+        .then(res => res.blob())
+        .then(blob => {
+          const timeStr = formatTime(videoRef.current?.getCurrentTime() || 0).replace(/:/g, '-');
+          saveAs(blob, `${videoName.replace(/\.[^/.]+$/, "")}_snapshot_${timeStr}.jpg`);
+        });
+    }
+  };
+
+  const handleDownloadTempAudio = async () => {
+    if (!tempSubtitleLine || !videoFile) return;
+    const blob = await extractAudioSync(tempSubtitleLine.start, tempSubtitleLine.end);
+    if (blob) {
+      const startStr = formatTime(tempSubtitleLine.start).replace(/:/g, '-');
+      const endStr = formatTime(tempSubtitleLine.end).replace(/:/g, '-');
+      saveAs(blob, `${videoName.replace(/\.[^/.]+$/, "")}_audio_${startStr}_${endStr}.wav`);
     }
   };
 
@@ -542,6 +564,8 @@ const App: React.FC = () => {
             if (activeSubtitleId) handlePlaySubtitle(activeSubtitleId);
           }}
           onShiftSubtitles={shiftSubtitles}
+          onCaptureFrame={handleCaptureFrame}
+          onDownloadAudio={handleDownloadTempAudio}
         />
       </div>
 
