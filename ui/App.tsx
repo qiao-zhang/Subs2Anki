@@ -17,7 +17,6 @@ import DeckColumn from './components/DeckColumn';
 import SubtitleColumn from './components/SubtitleColumn';
 import AppControlBar from './components/AppControlBar';
 import TemplateEditorModal from './components/TemplateEditorModal';
-import EditSubtitleLineModal from './components/EditSubtitleLineModal';
 import CardPreviewModal from './components/CardPreviewModal';
 import AnkiConnectSettingsModal from './components/AnkiConnectSettingsModal';
 import {useAppStore} from '../core/store';
@@ -49,14 +48,9 @@ const App: React.FC = () => {
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
 
   // Modals
-  const [isNewSubtitleModalOpen, setIsNewSubtitleModalOpen] = useState<boolean>(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [isAnkiSettingsOpen, setIsAnkiSettingsOpen] = useState<boolean>(false);
   const [previewCard, setPreviewCard] = useState<AnkiCard | null>(null);
-
-  // Editing context
-  const [editingSubId, setEditingSubId] = useState<number | null>(null);
-  const [subAudioBlob, setSubAudioBlob] = useState<Blob | null>(null);
 
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{ start: number, end: number } | null>(null);
 
@@ -162,7 +156,6 @@ const App: React.FC = () => {
   };
 
   const handleTempSubtitleLineCreated = (start: number, end: number) => {
-    setEditingSubId(null);
     setTempSubtitleLine({start, end});
   };
 
@@ -196,50 +189,25 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCommitTempSubtitleLine = async () => {
+  const handleCommitTempSubtitleLine = (text: string) => {
     if (!tempSubtitleLine) return;
-    const blob = await extractAudioSync(tempSubtitleLine.start, tempSubtitleLine.end);
-    setSubAudioBlob(blob);
-    setIsNewSubtitleModalOpen(true);
-  };
-
-  const handleEditSubtitle = async (id: number) => {
-    const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
-    if (!sub) return;
-
-    videoRef.current?.pause();
-    videoRef.current?.seekTo(sub.startTime);
-
-    const blob = await extractAudioSync(sub.startTime, sub.endTime);
-
-    setEditingSubId(id);
+    const lines = useAppStore.getState().subtitleLines;
+    const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
+    const newSub: SubtitleLine = {
+      id: maxId + 1,
+      startTime: tempSubtitleLine.start,
+      endTime: tempSubtitleLine.end,
+      text,
+      locked: false
+    };
+    addSubtitle(newSub);
     setTempSubtitleLine(null);
-    setSubAudioBlob(blob);
-    setIsNewSubtitleModalOpen(true);
   };
 
-  const handleSaveSubtitleFromModal = (text: string) => {
-    if (editingSubId !== null) {
-      updateSubtitleText(editingSubId, text);
-    } else if (tempSubtitleLine) {
-      const lines = useAppStore.getState().subtitleLines;
-      const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
-      const newSub: SubtitleLine = {
-        id: maxId + 1,
-        startTime: tempSubtitleLine.start,
-        endTime: tempSubtitleLine.end,
-        text,
-        locked: false
-      };
-      addSubtitle(newSub);
-      setTempSubtitleLine(null);
-    }
-  };
-
-  const handleRemoveBtnClicked = () => {
-    if (editingSubId) {
-      removeSubtitle(editingSubId);
-    }
+  // Called when double-clicking a region or clicking edit button
+  const handleEditSubtitle = (id: number) => {
+    // Just ensure it's active so it shows up in the control bar for editing
+    handlePlaySubtitle(id);
   };
 
   const handleSaveSubtitles = async () => {
@@ -382,6 +350,7 @@ const App: React.FC = () => {
       updateCard(cardId, {furigana: f});
     });
   };
+
   const handleDeleteCard = async (id: string) => {
     const card = ankiCards.find(c => c.id === id);
     if (card) {
@@ -402,8 +371,6 @@ const App: React.FC = () => {
 
     if (pendingAudio) {
       if (action === 'export') setIsExporting(true);
-      // For sync, we might just show the spinner overlay without specific text for now or reuse isExporting UI with message
-      // Let's reuse isExporting state but maybe add a message prop or check
       setIsExporting(true); // Using generic loading overlay
     } else {
       onMediaReady();
@@ -600,12 +567,12 @@ const App: React.FC = () => {
         />
       </div>
 
-      {/* Control Bar - Full Width */}
+      {/* Control Bar - Full Width with Auto Height for Editor */}
       <div
-        className="h-16 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
+        className="min-h-20 h-auto py-2 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
         <AppControlBar
           tempSubtitleLine={tempSubtitleLine}
-          activeSubtitleLineId={activeSubtitleLineId}
+          activeSubtitleLine={subtitleLines.find(s => s.id === activeSubtitleLineId) || null}
           videoName={videoName}
           currentTime={currentTime}
           onTempPlay={handleTempSubtitleLineClicked}
@@ -618,6 +585,8 @@ const App: React.FC = () => {
           onShiftSubtitles={shiftSubtitles}
           onCaptureFrame={handleCaptureFrame}
           onDownloadAudio={handleDownloadAudio}
+          onUpdateSubtitleText={updateSubtitleText}
+          onDeleteSubtitle={removeSubtitle}
         />
       </div>
 
@@ -651,16 +620,6 @@ const App: React.FC = () => {
         isOpen={!!previewCard}
         card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}
         onClose={() => setPreviewCard(null)}
-      />
-      <EditSubtitleLineModal
-        isOpen={isNewSubtitleModalOpen}
-        onRemove={handleRemoveBtnClicked}
-        onClose={() => setIsNewSubtitleModalOpen(false)}
-        startTime={tempSubtitleLine ? tempSubtitleLine.start : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.startTime || 0) : 0)}
-        endTime={tempSubtitleLine ? tempSubtitleLine.end : (editingSubId ? (subtitleLines.find(s => s.id === editingSubId)?.endTime || 0) : 0)}
-        initialText={editingSubId !== null ? subtitleLines.find(s => s.id === editingSubId)?.text : ''}
-        audioBlob={subAudioBlob}
-        onSave={handleSaveSubtitleFromModal}
       />
     </div>
   );

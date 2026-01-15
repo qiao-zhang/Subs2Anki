@@ -70,7 +70,6 @@ interface AppState {
   updateCard: (id: string, updates: Partial<AnkiCard>) => void;
   deleteCard: (id: string) => void;
   setAnkiConfig: (config: AnkiNoteType) => void;
-  setProcessing: (updates: Partial<ProcessingState>) => void;
 
   // Anki Connect
   ankiConnectUrl: string;
@@ -145,7 +144,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
   deleteCard: (id) => set((state) => ({ ankiCards: state.ankiCards.filter(c => c.id !== id) })),
   setAnkiConfig: (config) => set({ ankiConfig: config }),
-  setProcessing: (updates) => set((state) => ({ processing: { ...state.processing, ...updates } })),
 
   // Anki Connect
   ankiConnectUrl: localStorage.getItem('sub2anki_anki_url') || 'http://127.0.0.1:8765',

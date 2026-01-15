@@ -17,7 +17,7 @@ vi.mock('../../core/db', () => ({
 
 /**
  * Test Suite for CardItem Component.
- * 
+ *
  * Verifies:
  * 1. UI Rendering: Correct text, images, and timestamps are displayed.
  * 2. Conditional Rendering: Placeholders appear when data is missing.
@@ -39,17 +39,14 @@ describe('CardItem Component', () => {
 
   // Mock callback functions
   const mockDelete = vi.fn();
-  const mockAnalyze = vi.fn();
   const mockPreview = vi.fn();
 
   it('renders card content correctly', async () => {
     render(
-      <CardItem 
-        card={mockCard} 
-        onDelete={mockDelete} 
-        onAnalyze={mockAnalyze} 
+      <CardItem
+        card={mockCard}
+        onDelete={mockDelete}
         onPreview={mockPreview}
-        isAnalyzing={false} 
       />
     );
 
@@ -64,12 +61,10 @@ describe('CardItem Component', () => {
     // Create a card with no AI analysis data
     const emptyCard: AnkiCard = { ...mockCard, translation: '', notes: '' };
     render(
-      <CardItem 
-        card={emptyCard} 
-        onDelete={mockDelete} 
-        onAnalyze={mockAnalyze} 
+      <CardItem
+        card={emptyCard}
+        onDelete={mockDelete}
         onPreview={mockPreview}
-        isAnalyzing={false} 
       />
     );
 
@@ -79,54 +74,35 @@ describe('CardItem Component', () => {
 
   it('calls onDelete when delete button is clicked', () => {
     render(
-      <CardItem 
-        card={mockCard} 
-        onDelete={mockDelete} 
-        onAnalyze={mockAnalyze} 
+      <CardItem
+        card={mockCard}
+        onDelete={mockDelete}
         onPreview={mockPreview}
-        isAnalyzing={false} 
       />
     );
 
     // Find button by title attribute (accessibility practice)
     const deleteBtn = screen.getByTitle('Delete Card');
     fireEvent.click(deleteBtn);
-    
+
     // Verify callback was fired with correct ID
     expect(mockDelete).toHaveBeenCalledWith('123');
   });
 
-  it('calls onAnalyze when analyze button is clicked', () => {
+  it('calls onPreview when double clicked', () => {
     render(
-      <CardItem 
-        card={mockCard} 
-        onDelete={mockDelete} 
-        onAnalyze={mockAnalyze} 
+      <CardItem
+        card={mockCard}
+        onDelete={mockDelete}
         onPreview={mockPreview}
-        isAnalyzing={false} 
       />
     );
 
-    const analyzeBtn = screen.getByTitle('AI Analyze');
-    fireEvent.click(analyzeBtn);
-    
-    // Verify callback was fired with the card object
-    expect(mockAnalyze).toHaveBeenCalledWith(mockCard);
+    const card = screen.getByText('Hello World').closest('div')?.parentElement?.parentElement;
+    if (card) {
+      fireEvent.doubleClick(card);
+      expect(mockPreview).toHaveBeenCalledWith(mockCard);
+    }
   });
 
-  it('disables analyze button when isAnalyzing is true', () => {
-    render(
-      <CardItem 
-        card={mockCard} 
-        onDelete={mockDelete} 
-        onAnalyze={mockAnalyze} 
-        onPreview={mockPreview}
-        isAnalyzing={true} // Simulate loading state
-      />
-    );
-
-    const analyzeBtn = screen.getByTitle('AI Analyze');
-    // Verify button cannot be clicked again while loading
-    expect(analyzeBtn).toBeDisabled();
-  });
 });

@@ -1,26 +1,30 @@
+
 import React from 'react';
 import TempSubtitleLineControls from './controls/TempSubtitleLineControls';
 import ActiveSubtitleLineControls from './controls/ActiveSubtitleLineControls';
 import DefaultControls from './controls/DefaultControls';
+import { SubtitleLine } from '../../core/types';
 
 interface AppControlBarProps {
   tempSubtitleLine: {start: number, end: number} | null;
-  activeSubtitleLineId: number | null;
+  activeSubtitleLine: SubtitleLine | null;
   videoName: string;
   currentTime: number;
   onTempPlay: () => void;
-  onTempCommit: () => void;
+  onTempCommit: (text: string) => void;
   onTempDiscard: () => void;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onReplayActive: () => void;
   onShiftSubtitles: (offset: number) => void;
   onCaptureFrame: () => void;
   onDownloadAudio: () => void;
+  onUpdateSubtitleText: (id: number, text: string) => void;
+  onDeleteSubtitle: (id: number) => void;
 }
 
 const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        tempSubtitleLine,
-                                                       activeSubtitleLineId,
+                                                       activeSubtitleLine,
                                                        videoName,
                                                        currentTime,
                                                        onTempPlay,
@@ -30,7 +34,9 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        onReplayActive,
                                                        onShiftSubtitles,
                                                        onCaptureFrame,
-                                                       onDownloadAudio
+                                                       onDownloadAudio,
+                                                       onUpdateSubtitleText,
+                                                       onDeleteSubtitle
                                                      }) => {
   if (tempSubtitleLine) {
     return (
@@ -45,14 +51,17 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
     );
   }
 
-  if (activeSubtitleLineId !== null) {
+  if (activeSubtitleLine) {
     return (
       <ActiveSubtitleLineControls
         videoName={videoName}
         currentTime={currentTime}
+        subtitle={activeSubtitleLine}
         onVideoUpload={onVideoUpload}
         onPlay={onReplayActive}
         onDownloadAudio={onDownloadAudio}
+        onTextChange={onUpdateSubtitleText}
+        onDelete={onDeleteSubtitle}
       />
     );
   }
