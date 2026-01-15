@@ -37,7 +37,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onToggleLock
                                                          }) => {
   // Access store for direct reads in listeners and reactive updates
-  const { subtitleLines, updateSubtitleTime } = useAppStore();
+  const { subtitleLines, updateSubtitleTime, hasUnsavedChanges } = useAppStore();
 
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -246,7 +246,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     });
 
     existingRegions.forEach((r, id) => {
-      if (id === TEMP_REGION_ID) return;
+      // if (id === TEMP_REGION_ID) return;
       if (!processedIds.has(id)) {
         r.remove();
       }
@@ -254,7 +254,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     isSyncingSubtitles.current = false;
 
-  }, [subtitleLines, isReady]);
+  }, [subtitleLines, isReady, hasUnsavedChanges]);
 
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));

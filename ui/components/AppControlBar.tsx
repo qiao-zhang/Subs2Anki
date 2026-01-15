@@ -1,12 +1,11 @@
-
 import React from 'react';
 import TempSubtitleLineControls from './controls/TempSubtitleLineControls';
 import ActiveSubtitleLineControls from './controls/ActiveSubtitleLineControls';
 import DefaultControls from './controls/DefaultControls';
-import { SubtitleLine } from '../../core/types';
+import {SubtitleLine} from '../../core/types';
 
 interface AppControlBarProps {
-  tempSubtitleLine: {start: number, end: number} | null;
+  tempSubtitleLine: { start: number, end: number } | null;
   activeSubtitleLine: SubtitleLine | null;
   videoName: string;
   currentTime: number;
@@ -14,6 +13,7 @@ interface AppControlBarProps {
   onTempCommit: (text: string) => void;
   onTempDiscard: () => void;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onPlay: () => void;
   onReplayActive: () => void;
   onShiftSubtitles: (offset: number) => void;
   onCaptureFrame: () => void;
@@ -31,6 +31,7 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        onTempCommit,
                                                        onTempDiscard,
                                                        onVideoUpload,
+  onPlay,
                                                        onReplayActive,
                                                        onShiftSubtitles,
                                                        onCaptureFrame,
@@ -38,42 +39,30 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        onUpdateSubtitleText,
                                                        onDeleteSubtitle
                                                      }) => {
-  if (tempSubtitleLine) {
-    return (
-      <TempSubtitleLineControls
+  return (
+    <div className="flex flex-col w-full max-w-5xl gap-2 animate-in fade-in duration-200">
+      <DefaultControls
+        videoName={videoName}
+        currentTime={currentTime}
+        onVideoUpload={onVideoUpload}
+        onShiftSubtitles={onShiftSubtitles}
+        onPlay={onPlay}
+        onCaptureFrame={onCaptureFrame}
+      />
+      {tempSubtitleLine && <TempSubtitleLineControls
         start={tempSubtitleLine.start}
         end={tempSubtitleLine.end}
-        onPlay={onTempPlay}
         onCommit={onTempCommit}
         onDiscard={onTempDiscard}
         onDownloadAudio={onDownloadAudio}
-      />
-    );
-  }
-
-  if (activeSubtitleLine) {
-    return (
-      <ActiveSubtitleLineControls
-        videoName={videoName}
-        currentTime={currentTime}
+      />}
+      {activeSubtitleLine && <ActiveSubtitleLineControls
         subtitle={activeSubtitleLine}
-        onVideoUpload={onVideoUpload}
-        onPlay={onReplayActive}
         onDownloadAudio={onDownloadAudio}
         onTextChange={onUpdateSubtitleText}
         onDelete={onDeleteSubtitle}
-      />
-    );
-  }
-
-  return (
-    <DefaultControls
-      videoName={videoName}
-      currentTime={currentTime}
-      onVideoUpload={onVideoUpload}
-      onShiftSubtitles={onShiftSubtitles}
-      onCaptureFrame={onCaptureFrame}
-    />
+      />}
+    </div>
   );
 };
 

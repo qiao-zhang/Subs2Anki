@@ -33,7 +33,6 @@ const App: React.FC = () => {
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
     ankiConnectUrl, setAnkiConnectUrl,
-    playbackMode, setPlaybackMode
   } = useAppStore();
 
   // --- Local UI State (Transient) ---
@@ -142,7 +141,7 @@ const App: React.FC = () => {
 
     const sub = subtitleLines[nextIndex];
     if (sub) {
-      handlePlaySubtitle(sub.id);
+      playTimeSpan(sub.startTime, sub.endTime);
     }
   }, [subtitleLines, activeSubtitleLineId, currentTime]);
 
@@ -156,10 +155,12 @@ const App: React.FC = () => {
   };
 
   const handleTempSubtitleLineCreated = (start: number, end: number) => {
+    setActiveSubtitleLineId(null);
     setTempSubtitleLine({start, end});
   };
 
   const handleTempSubtitleLineUpdated = (start: number, end: number) => {
+    setActiveSubtitleLineId(null);
     setTempSubtitleLine({start, end});
   };
 
@@ -168,6 +169,7 @@ const App: React.FC = () => {
   }
 
   const playTimeSpan = (start: number, end: number) => {
+    if (videoRef.current === null) return;
     setPauseAtTime(end);
     videoRef.current?.seekTo(start);
     videoRef.current?.play();
@@ -207,7 +209,7 @@ const App: React.FC = () => {
   // Called when double-clicking a region or clicking edit button
   const handleEditSubtitle = (id: number) => {
     // Just ensure it's active so it shows up in the control bar for editing
-    handlePlaySubtitle(id);
+    handlePlaySubtitleLine(id);
   };
 
   const handleSaveSubtitles = async () => {
@@ -273,20 +275,6 @@ const App: React.FC = () => {
     const activeIndex = subtitleLines.findIndex(s => time >= s.startTime && time <= s.endTime);
     const active = activeIndex !== -1 ? subtitleLines[activeIndex] : null;
 
-    if (active) {
-      // --- Playback Logic (Auto-pause / Loop) ---
-      const nearEnd = time >= active.endTime - 0.1; // 100ms tolerance
-
-      if (nearEnd) {
-        if (playbackMode === 'auto-pause') {
-          videoRef.current?.pause();
-          videoRef.current?.seekTo(active.endTime);
-        } else if (playbackMode === 'loop') {
-          videoRef.current?.seekTo(active.startTime);
-        }
-      }
-    }
-
     if (active && active.id !== activeSubtitleLineId) {
       setActiveSubtitleLineId(active.id);
       // Virtual Scroll to index
@@ -301,16 +289,21 @@ const App: React.FC = () => {
     videoRef.current?.seekTo(time);
   };
 
-  const handlePlaySubtitle = (id: number) => {
+  const handlePlay = () => {
+    if (activeSubtitleLineId !== null) {
+      handlePlaySubtitleLine(activeSubtitleLineId);
+      return;
+    }
+    if (tempSubtitleLine !== null) {
+      playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
+    }
+  }
+
+  const handlePlaySubtitleLine = (id: number) => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (sub && videoRef.current) {
       setTempSubtitleLine(null);
-      if (playbackMode === 'loop') {
-        videoRef.current.seekTo(sub.startTime);
-        videoRef.current.play();
-      } else {
-        playTimeSpan(sub.startTime, sub.endTime);
-      }
+      playTimeSpan(sub.startTime, sub.endTime);
     }
   };
 
@@ -472,7 +465,7 @@ const App: React.FC = () => {
           break;
         case 'KeyR':
           e.preventDefault();
-          if (activeSubtitleLineId) handlePlaySubtitle(activeSubtitleLineId);
+          if (activeSubtitleLineId) handlePlaySubtitleLine(activeSubtitleLineId);
           break;
         case 'KeyC':
           e.preventDefault();
@@ -481,16 +474,12 @@ const App: React.FC = () => {
             if (s) handleCreateCard(s);
           }
           break;
-        case 'KeyL':
-          e.preventDefault();
-          setPlaybackMode('auto-pause');
-          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSubtitleLineId, subtitleLines, jumpToSubtitle, playbackMode]);
+  }, [activeSubtitleLineId, subtitleLines, jumpToSubtitle]);
 
 
   return (
@@ -556,7 +545,7 @@ const App: React.FC = () => {
           virtuosoRef={virtuosoRef}
           onSetSubtitles={setSubtitles}
           onUpdateText={updateSubtitleText}
-          onPlaySubtitle={handlePlaySubtitle}
+          onPlaySubtitle={handlePlaySubtitleLine}
           onToggleLock={toggleSubtitleLock}
           onCreateCard={(sub) => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
@@ -579,8 +568,9 @@ const App: React.FC = () => {
           onTempCommit={handleCommitTempSubtitleLine}
           onTempDiscard={handleTempSubtitleLineRemoved}
           onVideoUpload={handleVideoUpload}
+          onPlay={handlePlay}
           onReplayActive={() => {
-            if (activeSubtitleLineId) handlePlaySubtitle(activeSubtitleLineId);
+            if (activeSubtitleLineId) handlePlaySubtitleLine(activeSubtitleLineId);
           }}
           onShiftSubtitles={shiftSubtitles}
           onCaptureFrame={handleCaptureFrame}
@@ -602,7 +592,7 @@ const App: React.FC = () => {
           onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
           onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
           onEditSubtitle={handleEditSubtitle}
-          onPlaySubtitle={handlePlaySubtitle}
+          onPlaySubtitle={handlePlaySubtitleLine}
           onToggleLock={toggleSubtitleLock}
           onCreateCard={(id) => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
