@@ -7,7 +7,7 @@ import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
  * Wraps Kuroshiro and handles lazy initialization of the dictionary.
  */
 class FuriganaService {
-  private kuroshiro: any;
+  private readonly kuroshiro: Kuroshiro;
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
 
