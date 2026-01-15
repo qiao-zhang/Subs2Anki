@@ -1,6 +1,5 @@
-
-import { AnkiCard, AnkiNoteType } from './types';
-import { getMedia } from './db';
+import {AnkiCard, AnkiNoteType} from './types';
+import {getMedia} from './db';
 
 /**
  * Communicates with Anki via the AnkiConnect plugin.
@@ -18,7 +17,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
     reader.onloadend = () => {
       const dataUrl = reader.result as string;
       // Strip "data:*/*;base64," header
-      const base64 = dataUrl.split(',')[1];
+      const base64 = stringToBase64(dataUrl)
       resolve(base64);
     };
     reader.onerror = reject;
@@ -31,28 +30,32 @@ const stringToBase64 = (dataUrl: string): string => {
 }
 
 async function invoke<T>(action: string, params: any = {}, url: string): Promise<T> {
+  let response: Response;
   try {
-    const response = await fetch(url, {
+    response = await fetch(url, {
       method: 'POST',
-      body: JSON.stringify({ action, version: 6, params }),
+      body: JSON.stringify({action, version: 6, params}),
       mode: 'cors', // AnkiConnect must be configured to allow CORS
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const json = await response.json() as AnkiConnectResponse<T>;
-
-    if (json.error) {
-      throw new Error(json.error);
-    }
-
-    return json.result;
   } catch (e) {
     console.error(`AnkiConnect Error (${action}):`, e);
     throw e;
   }
+
+  if (!response.ok) {
+    const message = `HTTP error! status: ${response.status}`;
+    console.log(message);
+    throw new Error(message);
+  }
+
+  const json = await response.json() as AnkiConnectResponse<T>;
+
+  if (json.error) {
+    console.log(json.error);
+    throw new Error(json.error);
+  }
+
+  return json.result;
 }
 
 /**
@@ -83,12 +86,12 @@ export const syncToAnki = async (
   onProgress: (current: number, total: number) => void
 ) => {
   // 1. Create Deck
-  await invoke('createDeck', { deck: deckName }, url);
+  await invoke('createDeck', {deck: deckName}, url);
 
-  // 2. Create Model
-  // We try to create it. If it fails (exists), we assume it matches or AnkiConnect will error on addNote.
-  // Ideally we should check model fields, but for simplicity we proceed.
-  try {
+  // 2. Create a new empty deck. Will not overwrite a deck that exists with the same name
+  const modelNames = await invoke<string[]>('modelNames', {}, url);
+  console.log(modelNames);
+  if (modelNames.find(n => n === noteType.name) === undefined) {
     await invoke('createModel', {
       modelName: noteType.name,
       inOrderFields: noteType.fields.map(f => f.name),
@@ -99,9 +102,6 @@ export const syncToAnki = async (
         Back: t.Back
       }))
     }, url);
-  } catch (e) {
-    // Model likely exists. Proceeding.
-    console.warn("Model creation skipped (likely exists):", e);
   }
 
   // 3. Process Cards
@@ -118,30 +118,38 @@ export const syncToAnki = async (
       let value = '';
       if (field.source) {
         switch (field.source) {
-          case 'Text': value = card.text; break;
-          case 'Translation': value = card.translation; break;
-          case 'Notes': value = card.notes; break;
-          case 'Furigana': value = card.furigana || card.text; break;
-          case 'Time': value = card.timestampStr; break;
-          case 'Sequence': value = `${card.id}`; break;
-
+          case 'Text':
+            value = card.text;
+            break;
+          case 'Translation':
+            value = card.translation;
+            break;
+          case 'Notes':
+            value = card.notes;
+            break;
+          case 'Furigana':
+            value = card.furigana || card.text;
+            break;
+          case 'Time':
+            value = card.timestampStr;
+            break;
+          case 'Sequence':
+            value = `${card.id}`;
+            break;
           case 'Image':
             // Handle Image
-            const mediaRef = card.screenshotRef;
-            const ext = 'jpg';
-            if (mediaRef) {
-              const data = await getMedia(mediaRef);
+            if (card.screenshotRef) {
+              const data = await getMedia(card.screenshotRef);
               if (data && typeof data === 'string') {
-                const filename = `sub2anki_${card.id}_${timestamp}.${ext}`;
+                const filename = `sub2anki_${card.id}_${timestamp}.jpg`;
                 const base64 = stringToBase64(data);
 
                 // We upload manually via storeMediaFile instead of addNote params for better control
-                await invoke('storeMediaFile', { filename, data: base64 }, url);
+                await invoke('storeMediaFile', {filename, data: base64}, url);
                 value = `<img src="${filename}" alt="${card.text}">`;
               }
             }
             break;
-
           case 'Audio':
             if (card.audioRef) {
               const blob = await getMedia(card.audioRef);
@@ -149,7 +157,7 @@ export const syncToAnki = async (
                 const filename = `sub2anki_audio_${card.id}_${timestamp}.wav`;
                 const base64 = await blobToBase64(blob);
 
-                await invoke('storeMediaFile', { filename, data: base64 }, url);
+                await invoke('storeMediaFile', {filename, data: base64}, url);
                 value = `[sound:${filename}]`;
               }
             }
