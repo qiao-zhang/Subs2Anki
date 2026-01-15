@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import {Check, Download} from 'lucide-react';
+import { Check, Clock } from 'lucide-react';
 import { formatTime } from '../../../core/time';
 
 interface TempSubtitleLineControlsProps {
@@ -13,25 +13,30 @@ interface TempSubtitleLineControlsProps {
 const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
                                                                              start,
                                                                              end,
-                                                                             onCommit,
-                                                                             onDiscard,
-                                                                             onDownloadAudio
+                                                                             onCommit
                                                                            }) => {
   const [text, setText] = useState('');
+
+  // Shared button styles
+  const btnBase = "h-9 flex items-center justify-center gap-2 px-3 rounded-md border transition-all text-sm font-medium shadow-sm select-none";
+  const btnPrimary = "bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-500 shadow-md shadow-emerald-900/20";
+  const kbdStyle = "hidden sm:inline-flex items-center ml-2 px-1.5 h-5 text-[10px] font-mono bg-black/20 border border-white/10 rounded text-current opacity-70 leading-none";
 
   return (
     <div className="flex flex-col w-full max-w-5xl gap-2 animate-in fade-in duration-200">
 
-      {/* Row 2: Editor */}
       <div className="flex items-center gap-3 bg-slate-800/50 p-1.5 rounded-lg border border-slate-800">
 
         {/* Timestamp Info */}
-        <div className="flex flex-col px-2 py-1 bg-slate-900 rounded border border-slate-700 min-w-[140px] text-center shrink-0">
-          <div className="font-mono text-xs text-indigo-400">
-            {formatTime(start)} - {formatTime(end)}
-          </div>
-          <div className="text-[10px] text-slate-500">
-            {(end - start).toFixed(2)}s
+        <div className="flex flex-col px-3 py-1 bg-slate-900 rounded border border-slate-700 min-w-[140px] text-center shrink-0 h-9 justify-center">
+          <div className="flex items-center justify-center gap-2">
+            <Clock size={12} className="text-slate-600"/>
+            <span className="font-mono text-xs text-indigo-400">
+              {formatTime(start)} - {formatTime(end)}
+            </span>
+            <span className="text-[10px] text-slate-600 ml-1 border-l border-slate-700 pl-2">
+              {(end - start).toFixed(2)}s
+            </span>
           </div>
         </div>
 
@@ -40,26 +45,20 @@ const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="flex-1 bg-transparent border-none text-lg text-white placeholder-slate-600 focus:ring-0 focus:outline-none px-2"
-            placeholder="Type subtitle text... (Press Enter to Add)"
+            className="flex-1 bg-transparent border-none text-lg text-white placeholder-slate-600 focus:ring-0 focus:outline-none px-2 h-9"
+            placeholder="Type subtitle text..."
             autoFocus
           />
           <button
             onClick={() => onCommit(text)}
-            className="px-4 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold text-sm transition shadow-lg shadow-emerald-600/20 flex items-center gap-1"
+            className={`${btnBase} ${btnPrimary}`}
           >
-            <Check size={16} /> Add
+            <Check size={16} />
+            Add
+            <kbd className={kbdStyle}>Enter</kbd>
           </button>
         </div>
 
-        <button
-          disabled={text === ''}
-          onClick={onDownloadAudio}
-          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700"
-          title="Download Audio Clip"
-        >
-          <Download size={18} /> Capture Audio
-        </button>
       </div>
     </div>
   );

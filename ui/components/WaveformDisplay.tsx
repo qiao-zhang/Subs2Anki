@@ -154,6 +154,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       } else {
         const id = parseInt(region.id);
         if (!isNaN(id)) {
+          tempRegion.current?.remove();
+          tempRegion.current = null;
           updateSubtitleTime(id, region.start, region.end);
         }
       }
@@ -166,11 +168,15 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       } else {
         const id = parseInt(region.id);
         if (!isNaN(id)) {
+          tempRegion.current?.remove();
+          tempRegion.current = null;
+          onTempSubtitleLineRemoved();
           onPlaySubtitle(id);
         }
       }
     });
 
+    /*
     regions.on('region-double-clicked', (region: Region, e: MouseEvent) => {
       e.stopPropagation();
       if (region.id !== TEMP_REGION_ID) {
@@ -180,6 +186,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         }
       }
     });
+     */
 
     wavesurfer.current = ws;
 
