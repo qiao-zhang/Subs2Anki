@@ -286,7 +286,7 @@ const App: React.FC = () => {
 
   const handlePlay = () => {
     if (activeSubtitleLineId !== null) {
-      handlePlaySubtitleLine(activeSubtitleLineId);
+      handleSubtitleLineClicked(activeSubtitleLineId);
       return;
     }
     if (tempSubtitleLine !== null) {
@@ -294,7 +294,7 @@ const App: React.FC = () => {
     }
   }
 
-  const handlePlaySubtitleLine = (id: number) => {
+  const handleSubtitleLineClicked = (id: number) => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (sub && videoRef.current) {
       setTempSubtitleLine(null);
@@ -460,7 +460,7 @@ const App: React.FC = () => {
           break;
         case 'KeyR':
           e.preventDefault();
-          if (activeSubtitleLineId) handlePlaySubtitleLine(activeSubtitleLineId);
+          if (activeSubtitleLineId) handleSubtitleLineClicked(activeSubtitleLineId);
           break;
         case 'KeyC':
           e.preventDefault();
@@ -541,7 +541,7 @@ const App: React.FC = () => {
           canSave={fileHandle !== null}
           onSetSubtitles={setSubtitles}
           onUpdateText={updateSubtitleText}
-          onPlaySubtitle={handlePlaySubtitleLine}
+          onPlaySubtitle={handleSubtitleLineClicked}
           onToggleLock={toggleSubtitleLock}
           onCreateCard={(sub) => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
@@ -583,8 +583,9 @@ const App: React.FC = () => {
           onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
           onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
           onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
-          onPlaySubtitle={handlePlaySubtitleLine}
-          onToggleLock={toggleSubtitleLock}
+          onSubtitleLineClicked={handleSubtitleLineClicked}
+          onSubtitleLineDoubleClicked={toggleSubtitleLock}
+          onSubtitleLineRemoved={removeSubtitle}
           onCreateCard={(id) => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
             if (s) handleCreateCard(s).then();

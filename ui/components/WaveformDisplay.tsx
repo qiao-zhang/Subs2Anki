@@ -16,8 +16,9 @@ interface WaveformDisplayProps {
   onTempSubtitleLineUpdated: (start: number, end: number) => void;
   onTempSubtitleLineClicked: () => void;
   onTempSubtitleLineRemoved: () => void;
-  onPlaySubtitle: (id: number) => void;
-  onToggleLock: (id: number) => void;
+  onSubtitleLineClicked: (id: number) => void;
+  onSubtitleLineDoubleClicked: (id: number) => void;
+  onSubtitleLineRemoved: (id: number) => void;
   onCreateCard: (id: number) => void;
 }
 
@@ -30,8 +31,9 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onTempSubtitleLineUpdated,
                                                            onTempSubtitleLineClicked,
                                                            onTempSubtitleLineRemoved,
-                                                           onPlaySubtitle,
-                                                           onToggleLock
+                                                           onSubtitleLineClicked,
+                                                           onSubtitleLineDoubleClicked,
+                                                           onSubtitleLineRemoved,
                                                          }) => {
   // Access store for direct reads in listeners and reactive updates
   const {subtitleLines, updateSubtitleTime, hasUnsavedChanges} = useAppStore();
@@ -133,12 +135,20 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         // Add right-click to dismiss behavior
         region.element.addEventListener('contextmenu', (e: MouseEvent) => {
           e.preventDefault();
-          region.remove();
+          tempRegion.current.remove();
           tempRegion.current = null;
           onTempSubtitleLineRemoved();
         });
 
         onTempSubtitleLineCreated(region.start, region.end);
+      } else {
+        const id = parseInt(region.id);
+        if (isNaN(id)) return;
+        region.element.addEventListener('contextmenu', (e: MouseEvent) => {
+          e.preventDefault();
+          region.remove();
+          onSubtitleLineRemoved(id);
+        });
       }
     });
 
@@ -150,11 +160,10 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         onTempSubtitleLineUpdated(region.start, region.end);
       } else {
         const id = parseInt(region.id);
-        if (!isNaN(id)) {
-          tempRegion.current?.remove();
-          tempRegion.current = null;
-          updateSubtitleTime(id, region.start, region.end);
-        }
+        if (isNaN(id)) return;
+        tempRegion.current?.remove();
+        tempRegion.current = null;
+        updateSubtitleTime(id, region.start, region.end);
       }
     });
 
@@ -164,26 +173,22 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         onTempSubtitleLineClicked();
       } else {
         const id = parseInt(region.id);
-        if (!isNaN(id)) {
-          tempRegion.current?.remove();
-          tempRegion.current = null;
-          onTempSubtitleLineRemoved();
-          onPlaySubtitle(id);
-        }
+        if (isNaN(id)) return;
+        tempRegion.current?.remove();
+        tempRegion.current = null;
+        onSubtitleLineClicked(id);
       }
     });
 
-    /*
     regions.on('region-double-clicked', (region: Region, e: MouseEvent) => {
       e.stopPropagation();
-      if (region.id !== TEMP_REGION_ID) {
-        const id = parseInt(region.id);
-        if (!isNaN(id)) {
-          onEditSubtitle(id);
-        }
-      }
+      if (region.id === TEMP_REGION_ID) return;
+      const id = parseInt(region.id);
+      if (isNaN(id)) return;
+      tempRegion.current?.remove();
+      tempRegion.current = null;
+      onSubtitleLineDoubleClicked(id);
     });
-     */
 
     wavesurfer.current = ws;
 
@@ -231,7 +236,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           content
         });
       } else {
-        const newRegion = regionsPlugin.addRegion({
+        regionsPlugin.addRegion({
           id: idStr,
           start: sub.startTime,
           end: sub.endTime,
@@ -240,17 +245,10 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           drag: !sub.locked,
           resize: !sub.locked,
         });
-        if (newRegion.element) {
-          newRegion.element.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            onToggleLock(sub.id);
-          });
-        }
       }
     });
 
     existingRegions.forEach((r, id) => {
-      // if (id === TEMP_REGION_ID) return;
       if (!processedIds.has(id)) {
         r.remove();
       }
