@@ -1,10 +1,9 @@
-
 /// <reference lib="dom" />
-import React, { useEffect, useState } from 'react';
-import { AnkiCard, AnkiNoteType } from '../../core/types';
-import { X, Loader2 } from 'lucide-react';
-import { useAppStore } from '../../core/store';
-import { getMedia } from '../../core/db';
+import React, {useEffect, useState} from 'react';
+import {X, Loader2} from 'lucide-react';
+import {AnkiCard, AnkiNoteType} from '../../core/types';
+import {useAppStore} from '../../core/store';
+import {getMedia} from '../../core/db';
 
 interface CardPreviewModalProps {
   isOpen: boolean;
@@ -12,8 +11,8 @@ interface CardPreviewModalProps {
   onClose: () => void;
 }
 
-const CardPreviewModal: React.FC<CardPreviewModalProps> = ({ isOpen, card, onClose }) => {
-  const { ankiConfig} = useAppStore();
+const CardPreviewModal: React.FC<CardPreviewModalProps> = ({isOpen, card, onClose}) => {
+  const {ankiConfig} = useAppStore();
 
   // Loaded Media State
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -80,8 +79,10 @@ const CardPreviewModal: React.FC<CardPreviewModalProps> = ({ isOpen, card, onClo
   if (!isOpen || !card) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
+      <div
+        className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800">
@@ -94,7 +95,7 @@ const CardPreviewModal: React.FC<CardPreviewModalProps> = ({ isOpen, card, onClo
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition">
-            <X size={20} />
+            <X size={20}/>
           </button>
         </div>
 
@@ -158,15 +159,32 @@ const generatePreviewHtml = (
 
     if (field.source) {
       switch (field.source) {
-        case 'Text': value = card.text; break;
-        case 'Translation': value = card.translation; break;
-        case 'Notes': value = card.notes; break;
-        case 'Furigana': value = card.furigana || card.text; break;
-        case 'Image': value = mediaHtml; break;
-        case 'Audio': value = audioUrl ? `<div style="text-align:center; margin: 5px;"><audio controls src="${audioUrl}" style="height: 30px;"></audio></div>` : '(Audio Pending)'; break;
-        case 'Time': value = card.timestampStr; break;
-        case 'Sequence': value = card.timestampStr; break;
-        default: value = '';
+        case 'Text':
+          value = card.text;
+          break;
+        case 'Translation':
+          value = card.translation;
+          break;
+        case 'Notes':
+          value = card.notes;
+          break;
+        case 'Furigana':
+          value = card.furigana || card.text;
+          break;
+        case 'Image':
+          value = mediaHtml;
+          break;
+        case 'Audio':
+          value = audioUrl ? `<div style="text-align:center; margin: 5px;"><audio controls src="${audioUrl}" style="height: 30px;"></audio></div>` : '(Audio Pending)';
+          break;
+        case 'Time':
+          value = card.timestampStr;
+          break;
+        case 'Sequence':
+          value = card.timestampStr;
+          break;
+        default:
+          value = '';
       }
     }
 
@@ -233,11 +251,11 @@ const renderTemplateString = (template: string, fields: Record<string, string>):
   Object.keys(fields).forEach(key => {
     const value = fields[key];
     const regex = new RegExp(`{{#${key}}}([\\s\\S]*?){{/${key}}}`, 'gm');
-    result = result.replace(regex, (match, innerContent) => {
+    result = result.replace(regex, (_match, innerContent) => {
       return value && value.trim() !== '' ? innerContent : '';
     });
     const regexInverted = new RegExp(`{{^${key}}}([\\s\\S]*?){{/${key}}}`, 'gm');
-    result = result.replace(regexInverted, (match, innerContent) => {
+    result = result.replace(regexInverted, (_match, innerContent) => {
       return (!value || value.trim() === '') ? innerContent : '';
     });
   });
