@@ -44,6 +44,7 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncProgress, setSyncProgress] = useState({current: 0, total: 0});
 
+  // noinspection JSUnusedLocalSymbols
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
 
   // Modals
@@ -100,9 +101,9 @@ const App: React.FC = () => {
 
   const onMediaReady = () => {
     if (pendingActionRef.current === 'export') {
-      finalizeExport();
+      finalizeExport().then();
     } else if (pendingActionRef.current === 'sync') {
-      finalizeSync();
+      finalizeSync().then();
     }
     pendingActionRef.current = null;
   };
@@ -204,12 +205,6 @@ const App: React.FC = () => {
     };
     addSubtitle(newSub);
     setTempSubtitleLine(null);
-  };
-
-  // Called when double-clicking a region or clicking edit button
-  const handleEditSubtitle = (id: number) => {
-    // Just ensure it's active so it shows up in the control bar for editing
-    handlePlaySubtitleLine(id);
   };
 
   const handleSaveSubtitles = async () => {
@@ -471,7 +466,7 @@ const App: React.FC = () => {
           e.preventDefault();
           if (activeSubtitleLineId) {
             const s = subtitleLines.find(x => x.id === activeSubtitleLineId);
-            if (s) handleCreateCard(s);
+            if (s) handleCreateCard(s).then();
           }
           break;
       }
@@ -543,13 +538,14 @@ const App: React.FC = () => {
           activeSubtitleId={activeSubtitleLineId}
           subtitleFileName={subtitleFileName}
           virtuosoRef={virtuosoRef}
+          canSave={fileHandle !== null}
           onSetSubtitles={setSubtitles}
           onUpdateText={updateSubtitleText}
           onPlaySubtitle={handlePlaySubtitleLine}
           onToggleLock={toggleSubtitleLock}
           onCreateCard={(sub) => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
-            if (s) handleCreateCard(s);
+            if (s) handleCreateCard(s).then();
           }}
           onSave={handleSaveSubtitles}
           onDownload={handleDownloadSubtitles}
@@ -564,14 +560,10 @@ const App: React.FC = () => {
           activeSubtitleLine={subtitleLines.find(s => s.id === activeSubtitleLineId) || null}
           videoName={videoName}
           currentTime={currentTime}
-          onTempPlay={handleTempSubtitleLineClicked}
           onTempCommit={handleCommitTempSubtitleLine}
           onTempDiscard={handleTempSubtitleLineRemoved}
           onVideoUpload={handleVideoUpload}
           onPlay={handlePlay}
-          onReplayActive={() => {
-            if (activeSubtitleLineId) handlePlaySubtitleLine(activeSubtitleLineId);
-          }}
           onShiftSubtitles={shiftSubtitles}
           onCaptureFrame={handleCaptureFrame}
           onDownloadAudio={handleDownloadAudio}
@@ -591,12 +583,11 @@ const App: React.FC = () => {
           onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
           onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
           onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
-          onEditSubtitle={handleEditSubtitle}
           onPlaySubtitle={handlePlaySubtitleLine}
           onToggleLock={toggleSubtitleLock}
           onCreateCard={(id) => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
-            if (s) handleCreateCard(s);
+            if (s) handleCreateCard(s).then();
           }}
         />
       </div>
