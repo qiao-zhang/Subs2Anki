@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import React, { useRef, forwardRef, useImperativeHandle } from 'react';
+import React, {useRef, forwardRef, useImperativeHandle} from 'react';
 
 interface VideoPlayerProps {
   src: string;
@@ -29,7 +29,7 @@ export interface VideoPlayerHandle {
  * - Implements frame capture logic using an internal Canvas.
  * - Supports capturing frames at specific timestamps regardless of visibility.
  */
-const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ src, onTimeUpdate, onLoadedMetadata }, ref) => {
+const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTimeUpdate, onLoadedMetadata}, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -70,7 +70,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({ src, onTi
         };
 
         // Attach event listener before triggering seek
-        video.addEventListener('seeked', onSeeked, { once: true });
+        video.addEventListener('seeked', onSeeked, {once: true});
 
         // Trigger seek
         video.currentTime = time;
