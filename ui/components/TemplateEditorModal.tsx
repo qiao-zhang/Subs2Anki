@@ -1,8 +1,22 @@
-
 /// <reference lib="dom" />
-import React, { useState, useEffect } from 'react';
-import { AnkiNoteType, AnkiFieldSource, AnkiCardTemplate } from '../../core/types';
-import { X, Plus, Trash2, Layout, Type, Palette, GripVertical, Image as ImageIcon, Mic, Clock, BookOpen, Languages, SortAsc, Subtitles } from 'lucide-react';
+import React, {useState, useEffect} from 'react';
+import {AnkiNoteType, AnkiFieldSource, AnkiCardTemplate} from '../../core/types';
+import {
+  X,
+  Plus,
+  Trash2,
+  Layout,
+  Type,
+  Palette,
+  GripVertical,
+  Image as ImageIcon,
+  Mic,
+  Clock,
+  BookOpen,
+  Languages,
+  SortAsc,
+  Subtitles
+} from 'lucide-react';
 
 interface TemplateEditorModalProps {
   isOpen: boolean;
@@ -12,17 +26,17 @@ interface TemplateEditorModalProps {
 }
 
 const SOURCES: { type: AnkiFieldSource; label: string; icon: React.ReactNode; color: string }[] = [
-  { type: 'Text', label: 'Text', icon: <Type size={14} />, color: 'bg-blue-600' },
-  { type: 'Translation', label: 'Translation', icon: <Languages size={14} />, color: 'bg-emerald-600' },
-  { type: 'Furigana', label: 'Furigana', icon: <Subtitles size={14} />, color: 'bg-pink-600' },
-  { type: 'Notes', label: 'Notes', icon: <BookOpen size={14} />, color: 'bg-amber-600' },
-  { type: 'Image', label: 'Image', icon: <ImageIcon size={14} />, color: 'bg-purple-600' },
-  { type: 'Audio', label: 'Audio', icon: <Mic size={14} />, color: 'bg-rose-600' },
-  { type: 'Time', label: 'Time', icon: <Clock size={14} />, color: 'bg-slate-600' },
-  { type: 'Sequence', label: 'Sequence', icon: <SortAsc size={14} />, color: 'bg-cyan-600' },
+  {type: 'Text', label: 'Text', icon: <Type size={14}/>, color: 'bg-blue-600'},
+  {type: 'Translation', label: 'Translation', icon: <Languages size={14}/>, color: 'bg-emerald-600'},
+  {type: 'Furigana', label: 'Furigana', icon: <Subtitles size={14}/>, color: 'bg-pink-600'},
+  {type: 'Notes', label: 'Notes', icon: <BookOpen size={14}/>, color: 'bg-amber-600'},
+  {type: 'Image', label: 'Image', icon: <ImageIcon size={14}/>, color: 'bg-purple-600'},
+  {type: 'Audio', label: 'Audio', icon: <Mic size={14}/>, color: 'bg-rose-600'},
+  {type: 'Time', label: 'Time', icon: <Clock size={14}/>, color: 'bg-slate-600'},
+  {type: 'Sequence', label: 'Sequence', icon: <SortAsc size={14}/>, color: 'bg-cyan-600'},
 ];
 
-const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClose, config, onSave }) => {
+const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClose, config, onSave}) => {
   const [activeTab, setActiveTab] = useState<'fields' | 'templates' | 'styling'>('fields');
   const [localConfig, setLocalConfig] = useState<AnkiNoteType>(config);
   const [draggingType, setDraggingType] = useState<AnkiFieldSource | null>(null);
@@ -37,7 +51,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
   const handleAddField = () => {
     setLocalConfig(prev => ({
       ...prev,
-      fields: [...prev.fields, { name: `Field ${prev.fields.length + 1}` }]
+      fields: [...prev.fields, {name: `Field ${prev.fields.length + 1}`}]
     }));
   };
 
@@ -51,7 +65,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
   const handleFieldNameChange = (index: number, val: string) => {
     const newFields = [...localConfig.fields];
     newFields[index].name = val;
-    setLocalConfig(prev => ({ ...prev, fields: newFields }));
+    setLocalConfig(prev => ({...prev, fields: newFields}));
   };
 
   const handleFieldMapping = (index: number, source: AnkiFieldSource | undefined) => {
@@ -59,14 +73,14 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
     // Remove this source from any other field first (optional constraint: one-to-one or one-to-many? Anki usually allows one source to many fields, but user said "each Field most can correspond to one square", implying 1 field <- 1 source. But can 1 source go to multiple fields? Usually yes. )
     // Let's allow one source to be mapped to multiple fields, but one field only accepts one source.
     newFields[index].source = source;
-    setLocalConfig(prev => ({ ...prev, fields: newFields }));
+    setLocalConfig(prev => ({...prev, fields: newFields}));
   }
 
   const handleTemplateChange = (index: number, key: keyof AnkiCardTemplate, val: string) => {
     const newTemplates = [...localConfig.templates];
     // @ts-ignore
     newTemplates[index][key] = val;
-    setLocalConfig(prev => ({ ...prev, templates: newTemplates }));
+    setLocalConfig(prev => ({...prev, templates: newTemplates}));
   };
 
   const handleSave = () => {
@@ -96,16 +110,17 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div
+        className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
 
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800">
           <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-            <Layout className="text-indigo-400" size={24} />
+            <Layout className="text-indigo-400" size={24}/>
             Note Type Settings
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition">
-            <X size={24} />
+            <X size={24}/>
           </button>
         </div>
 
@@ -115,19 +130,19 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
             onClick={() => setActiveTab('fields')}
             className={`px-6 py-3 text-sm font-medium flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'fields' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
           >
-            <Type size={16} /> Fields
+            <Type size={16}/> Fields
           </button>
           <button
             onClick={() => setActiveTab('templates')}
             className={`px-6 py-3 text-sm font-medium flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'templates' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
           >
-            <Layout size={16} /> Card Types
+            <Layout size={16}/> Card Types
           </button>
           <button
             onClick={() => setActiveTab('styling')}
             className={`px-6 py-3 text-sm font-medium flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'styling' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
           >
-            <Palette size={16} /> Styling
+            <Palette size={16}/> Styling
           </button>
         </div>
 
@@ -160,7 +175,8 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
 
                     {/* Mapping Drop Zone */}
                     <div className="flex-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Mapped Content</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Mapped
+                        Content</label>
                       <div
                         onDragOver={onDragOver}
                         onDrop={(e) => onDrop(e, idx)}
@@ -169,9 +185,10 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                         }`}
                       >
                         {field.source ? (
-                          <div className={`flex items-center gap-2 px-3 py-1 rounded text-xs font-semibold text-white shadow-sm w-full justify-between ${
-                            SOURCES.find(s => s.type === field.source)?.color || 'bg-slate-600'
-                          }`}>
+                          <div
+                            className={`flex items-center gap-2 px-3 py-1 rounded text-xs font-semibold text-white shadow-sm w-full justify-between ${
+                              SOURCES.find(s => s.type === field.source)?.color || 'bg-slate-600'
+                            }`}>
                             <div className="flex items-center gap-2">
                               {SOURCES.find(s => s.type === field.source)?.icon}
                               {field.source}
@@ -180,11 +197,12 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                               onClick={() => handleFieldMapping(idx, undefined)}
                               className="hover:bg-black/20 rounded p-0.5"
                             >
-                              <X size={12} />
+                              <X size={12}/>
                             </button>
                           </div>
                         ) : (
-                          <span className="text-slate-600 text-xs italic pl-2 pointer-events-none">Drop content here</span>
+                          <span
+                            className="text-slate-600 text-xs italic pl-2 pointer-events-none">Drop content here</span>
                         )}
                       </div>
                     </div>
@@ -195,7 +213,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                       className="mt-6 p-2 text-slate-500 hover:text-red-400 disabled:opacity-30 transition-colors"
                       title="Remove Field"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={18}/>
                     </button>
                   </div>
                 ))}
@@ -204,14 +222,14 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                   onClick={handleAddField}
                   className="mt-2 flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 font-semibold px-2"
                 >
-                  <Plus size={16} /> Add Field
+                  <Plus size={16}/> Add Field
                 </button>
               </div>
 
               {/* Source Palette */}
               <div className="mt-4 pt-4 border-t border-slate-700">
                 <h4 className="text-xs uppercase font-bold text-slate-400 mb-3 flex items-center gap-2">
-                  <GripVertical size={14} /> Draggable Content Sources
+                  <GripVertical size={14}/> Draggable Content Sources
                 </h4>
                 <div className="flex flex-wrap gap-3 select-none">
                   {SOURCES.map((src) => (
@@ -269,7 +287,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
               <label className="text-xs uppercase font-bold text-slate-500">Card Styling (CSS)</label>
               <textarea
                 value={localConfig.css}
-                onChange={(e) => setLocalConfig(prev => ({ ...prev, css: e.target.value }))}
+                onChange={(e) => setLocalConfig(prev => ({...prev, css: e.target.value}))}
                 className="flex-1 bg-slate-800 border border-slate-700 rounded p-3 text-sm font-mono text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
                 spellCheck={false}
               />
