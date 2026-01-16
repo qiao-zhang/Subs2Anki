@@ -14,9 +14,20 @@ export const createAnkiDatabase = async (
   creationTime: number // New parameter to synchronize filenames
 ): Promise<Uint8Array> => {
   const SQL = await initSqlJs({
-    // In a real build, you might need to point to the wasm file.
-    // esm.sh usually handles this, or we might need a CDN URL.
-    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/${file}`
+    locateFile: (file) => {
+      // Check if we're in a Tauri environment
+      // @ts-ignore
+      const isTauri = typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__);
+
+      if (isTauri) {
+        // Tauri environment - use assets from public directory
+        // This assumes WASM files are copied to public/sql.js/ during build
+        return `/sql.js/${file}`;
+      } else {
+        // Web environment - use CDN
+        return `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/${file}`;
+      }
+    }
   });
 
   const db = new SQL.Database();
@@ -283,7 +294,7 @@ export const createAnkiDatabase = async (
     });
 
     // Create cards for each template
-    noteType.templates.forEach((tpl, tplIdx) => {
+    noteType.templates.forEach((_tpl, tplIdx) => {
       cardStmt.run({
         ':id': noteId + tplIdx + 1,
         ':nid': noteId,

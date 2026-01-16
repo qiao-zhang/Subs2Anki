@@ -3,11 +3,54 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { copyFileSync, existsSync, mkdirSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Function to copy WASM files
+const copyWasmFiles = () => {
+  const sqlJsDistDir = path.resolve(__dirname, 'node_modules/sql.js/dist');
+  const publicSqlJsDir = path.resolve(__dirname, 'dist/assets/sql.js');
+
+  // Create destination directory if it doesn't exist
+  if (!existsSync(publicSqlJsDir)) {
+    mkdirSync(publicSqlJsDir, { recursive: true });
+  }
+
+  // Define WASM files to copy
+  const wasmFiles = [
+    'sql-wasm.wasm',
+    'sql-asm.js',
+    'sql-wasm.js',
+  ];
+
+  // Copy each WASM file
+  wasmFiles.forEach(file => {
+    const sourcePath = path.join(sqlJsDistDir, file);
+    const destPath = path.join(publicSqlJsDir, file);
+
+    if (existsSync(sourcePath)) {
+      copyFileSync(sourcePath, destPath);
+      console.log(`Copied ${sourcePath} to ${destPath}`);
+    } else {
+      console.warn(`Warning: ${sourcePath} does not exist`);
+    }
+  });
+};
+
+// Custom plugin to copy WASM files
+const copyWasmPlugin = {
+  name: 'copy-wasm-files',
+  apply: 'build', // Only run during build
+  configResolved() {
+    // Copy files when config is resolved
+    copyWasmFiles();
+  }
+};
+
 // https://vitejs.dev/config/
+// @ts-ignore
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
@@ -20,7 +63,7 @@ export default defineConfig(({ mode }) => {
         'Cross-Origin-Embedder-Policy': 'require-corp',
       },
     },
-    plugins: [react()],
+    plugins: [react(), copyWasmPlugin],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)

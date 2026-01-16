@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Check, Clock } from 'lucide-react';
-import { formatTime } from '../../../core/time';
+import React, {useState} from 'react';
+import {Check, Clock} from 'lucide-react';
+import {formatTime} from '../../../core/time';
 
 interface TempSubtitleLineControlsProps {
   start: number;
@@ -28,7 +28,8 @@ const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
       <div className="flex items-center gap-3 bg-slate-800/50 p-1.5 rounded-lg border border-slate-800">
 
         {/* Timestamp Info */}
-        <div className="flex flex-col px-3 py-1 bg-slate-900 rounded border border-slate-700 min-w-[140px] text-center shrink-0 h-9 justify-center">
+        <div
+          className="flex flex-col px-3 py-1 bg-slate-900 rounded border border-slate-700 min-w-[140px] text-center shrink-0 h-9 justify-center">
           <div className="flex items-center justify-center gap-2">
             <Clock size={12} className="text-slate-600"/>
             <span className="font-mono text-xs text-indigo-400">
@@ -53,7 +54,7 @@ const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
             onClick={() => onCommit(text)}
             className={`${btnBase} ${btnPrimary}`}
           >
-            <Check size={16} />
+            <Check size={16}/>
             Add
             <kbd className={kbdStyle}>Enter</kbd>
           </button>

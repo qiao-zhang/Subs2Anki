@@ -1,8 +1,7 @@
-
-import React, { useEffect, useState } from 'react';
-import { Download, Trash2, Clock } from 'lucide-react';
-import { formatTime } from '../../../core/time';
-import { SubtitleLine } from '../../../core/types';
+import React, {useEffect, useState} from 'react';
+import {Download, Trash2, Clock} from 'lucide-react';
+import {formatTime} from '../../../core/time';
+import {SubtitleLine} from '../../../core/types';
 
 interface ActiveSubtitleLineControlsProps {
   subtitle: SubtitleLine;
@@ -39,7 +38,8 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
 
       <div className="flex items-center gap-3 bg-slate-800/50 p-1.5 rounded-lg border border-slate-800">
         {/* Timestamp Info */}
-        <div className="flex flex-col px-3 py-1 bg-slate-900 rounded border border-slate-700 min-w-[140px] text-center shrink-0 h-9 justify-center">
+        <div
+          className="flex flex-col px-3 py-1 bg-slate-900 rounded border border-slate-700 min-w-[140px] text-center shrink-0 h-9 justify-center">
           <div className="flex items-center justify-center gap-2">
             <Clock size={12} className="text-slate-600"/>
             <span className="font-mono text-xs text-emerald-400">
@@ -65,14 +65,14 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
           className={`${btnBase} ${btnSecondary}`}
           title="Download Audio Clip"
         >
-          <Download size={18} /> Capture Audio Clip
+          <Download size={18}/> Capture Audio Clip
         </button>
         <button
           onClick={() => onDelete(subtitle.id)}
           className={`${btnBase} ${btnDanger}`}
           title="Delete Subtitle"
         >
-          <Trash2 size={16} /> Delete
+          <Trash2 size={16}/> Delete
         </button>
       </div>
     </div>
