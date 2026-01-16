@@ -1,6 +1,6 @@
 import React from 'react';
-import { Layers, Settings, Download, CloudUpload, Wifi } from 'lucide-react';
-import { AnkiCard } from '../../core/types';
+import {Layers, Settings, Download, CloudUpload, Wifi} from 'lucide-react';
+import {AnkiCard} from '../../core/types';
 import CardItem from './CardItem';
 
 interface DeckColumnProps {
@@ -28,7 +28,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
       {/* Logo Section */}
       <div className="h-14 flex items-center px-4 border-b border-slate-800 bg-slate-950 select-none">
         <div className="flex items-center gap-2 text-indigo-400">
-          <Layers size={20} className="text-indigo-500" />
+          <Layers size={20} className="text-indigo-500"/>
           <span className="text-lg font-bold tracking-tight text-slate-200">Subs2Anki</span>
         </div>
       </div>
