@@ -1,11 +1,10 @@
-
 /// <reference lib="dom" />
 import React, {useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Minimap from 'wavesurfer.js/dist/plugins/minimap.esm.js';
-import {ZoomIn, ZoomOut, Activity, AlertTriangle} from 'lucide-react';
-import { useAppStore } from '../../core/store';
+import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
+import {useAppStore} from '../../core/store';
 
 interface WaveformDisplayProps {
   // Removed audioSrc as we use the videoElement directly
@@ -17,27 +16,25 @@ interface WaveformDisplayProps {
   onTempSubtitleLineUpdated: (start: number, end: number) => void;
   onTempSubtitleLineClicked: () => void;
   onTempSubtitleLineRemoved: () => void;
-  onEditSubtitle: (id: number) => void;
   onPlaySubtitle: (id: number) => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (id: number) => void;
 }
 
+// TODO: add timeline
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            videoElement,
                                                            videoSrc,
-                                                           currentTime,
                                                            onSeek,
                                                            onTempSubtitleLineCreated,
                                                            onTempSubtitleLineUpdated,
                                                            onTempSubtitleLineClicked,
                                                            onTempSubtitleLineRemoved,
-                                                           onEditSubtitle,
                                                            onPlaySubtitle,
                                                            onToggleLock
                                                          }) => {
   // Access store for direct reads in listeners and reactive updates
-  const { subtitleLines, updateSubtitleTime, hasUnsavedChanges } = useAppStore();
+  const {subtitleLines, updateSubtitleTime, hasUnsavedChanges} = useAppStore();
 
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
