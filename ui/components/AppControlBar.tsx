@@ -9,12 +9,10 @@ interface AppControlBarProps {
   activeSubtitleLine: SubtitleLine | null;
   videoName: string;
   currentTime: number;
-  onTempPlay: () => void;
   onTempCommit: (text: string) => void;
   onTempDiscard: () => void;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onPlay: () => void;
-  onReplayActive: () => void;
   onShiftSubtitles: (offset: number) => void;
   onCaptureFrame: () => void;
   onDownloadAudio: () => void;
@@ -27,12 +25,10 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        activeSubtitleLine,
                                                        videoName,
                                                        currentTime,
-                                                       onTempPlay,
                                                        onTempCommit,
                                                        onTempDiscard,
                                                        onVideoUpload,
-  onPlay,
-                                                       onReplayActive,
+                                                       onPlay,
                                                        onShiftSubtitles,
                                                        onCaptureFrame,
                                                        onDownloadAudio,
