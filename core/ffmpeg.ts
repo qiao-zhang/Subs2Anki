@@ -13,7 +13,6 @@ class FFmpegService {
 
   /**
    * Initializes the FFmpeg WASM core.
-   * Loads from unpkg CDN.
    */
   async load() {
     if (this.loaded) return;
@@ -21,8 +20,7 @@ class FFmpegService {
 
     this.loadPromise = (async () => {
       const ffmpeg = new FFmpeg();
-      // Use version 0.12.x
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+      const baseURL = './ffmpeg';
       
       try {
         await ffmpeg.load({

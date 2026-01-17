@@ -12,6 +12,7 @@ interface WaveformDisplayProps {
   videoSrc: string;
   currentTime: number;
   onSeek: (time: number) => void;
+  regionsHidden: boolean;
   onTempSubtitleLineCreated: (start: number, end: number) => void;
   onTempSubtitleLineUpdated: (start: number, end: number) => void;
   onTempSubtitleLineClicked: () => void;
@@ -27,6 +28,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            videoElement,
                                                            videoSrc,
                                                            onSeek,
+                                                           regionsHidden,
                                                            onTempSubtitleLineCreated,
                                                            onTempSubtitleLineUpdated,
                                                            onTempSubtitleLineClicked,
@@ -74,6 +76,14 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       cursorColor: '#ef4444',
     });
 
+    const removeTempRegion = () => {
+      if (tempRegion.current) {
+        tempRegion.current.remove();
+        tempRegion.current = null;
+        onTempSubtitleLineRemoved();
+      }
+    }
+
     const ws = WaveSurfer.create({
       container: waveformContainerRef.current,
       media: videoElement, // Use the video element directly!
@@ -100,6 +110,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     regions.enableDragSelection({
       id: TEMP_REGION_ID,
       color: 'rgba(74, 222, 128, 0.4)',
+      content: 'Shift-click to dismiss'
     });
 
     ws.on('ready', () => {
@@ -111,10 +122,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       videoElement.pause();
       onSeek(newTime);
       // Remove temp region if clicking elsewhere on timeline
-      if (tempRegion.current) {
-        tempRegion.current.remove();
-        onTempSubtitleLineRemoved();
-      }
+      removeTempRegion();
     });
 
     // --- Region Events ---
@@ -124,32 +132,13 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       videoElement.pause();
 
       // Handle Temp Region logic
-      if (region.id === TEMP_REGION_ID) {
-        // remove the previous temp region if there is one (to enforce singleton)
-        if (tempRegion.current && tempRegion.current !== region) {
-          tempRegion.current.remove();
-        }
-        tempRegion.current = region;
-        region.setOptions({content: 'Right click to dismiss'});
-
-        // Add right-click to dismiss behavior
-        region.element.addEventListener('contextmenu', (e: MouseEvent) => {
-          e.preventDefault();
-          tempRegion.current.remove();
-          tempRegion.current = null;
-          onTempSubtitleLineRemoved();
-        });
-
-        onTempSubtitleLineCreated(region.start, region.end);
-      } else {
-        const id = parseInt(region.id);
-        if (isNaN(id)) return;
-        region.element.addEventListener('contextmenu', (e: MouseEvent) => {
-          e.preventDefault();
-          region.remove();
-          onSubtitleLineRemoved(id);
-        });
+      if (region.id !== TEMP_REGION_ID) return;
+      // remove the previous temp region if there is one (to enforce singleton)
+      if (tempRegion.current && tempRegion.current !== region) {
+        tempRegion.current.remove();
       }
+      tempRegion.current = region;
+      onTempSubtitleLineCreated(region.start, region.end);
     });
 
     regions.on('region-updated', (region: Region) => {
@@ -158,36 +147,38 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
       if (region.id === TEMP_REGION_ID) {
         onTempSubtitleLineUpdated(region.start, region.end);
-      } else {
-        const id = parseInt(region.id);
-        if (isNaN(id)) return;
-        tempRegion.current?.remove();
-        tempRegion.current = null;
-        updateSubtitleTime(id, region.start, region.end);
+        return;
       }
+      const id = parseInt(region.id);
+      if (isNaN(id)) return;
+      removeTempRegion();
+      updateSubtitleTime(id, region.start, region.end);
     });
 
     regions.on('region-clicked', (region: Region, e: MouseEvent) => {
       e.stopPropagation();
       if (region.id === TEMP_REGION_ID) {
+        if (e.shiftKey) {
+          removeTempRegion();
+          return;
+        }
         onTempSubtitleLineClicked();
-      } else {
-        const id = parseInt(region.id);
-        if (isNaN(id)) return;
-        tempRegion.current?.remove();
-        tempRegion.current = null;
-        onSubtitleLineClicked(id);
+        return;
       }
-    });
-
-    regions.on('region-double-clicked', (region: Region, e: MouseEvent) => {
-      e.stopPropagation();
-      if (region.id === TEMP_REGION_ID) return;
       const id = parseInt(region.id);
       if (isNaN(id)) return;
-      tempRegion.current?.remove();
-      tempRegion.current = null;
-      onSubtitleLineDoubleClicked(id);
+      removeTempRegion();
+
+      if (e.shiftKey) {
+        region.remove();
+        onSubtitleLineRemoved(id);
+        return;
+      }
+      if (e.ctrlKey) {
+        onSubtitleLineDoubleClicked(id);
+        return;
+      }
+      onSubtitleLineClicked(id);
     });
 
     wavesurfer.current = ws;
@@ -214,6 +205,13 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     const existingRegions = new Map<string, Region>(
       regionsPlugin.getRegions().map((r: Region) => [r.id, r])
     );
+    if (regionsHidden) {
+      console.log('hide all regions');
+      existingRegions.forEach((r: Region) => {
+        r.remove();
+      });
+      return;
+    }
     const processedIds = new Set<string>();
 
     subtitleLines.forEach(sub => {
@@ -256,7 +254,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     isSyncingSubtitles.current = false;
 
-  }, [subtitleLines, isReady, hasUnsavedChanges]);
+  }, [subtitleLines, isReady, regionsHidden, hasUnsavedChanges]);
 
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));

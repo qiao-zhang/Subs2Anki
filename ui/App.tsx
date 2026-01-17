@@ -46,6 +46,7 @@ const App: React.FC = () => {
 
   // noinspection JSUnusedLocalSymbols
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
+  const [regionsHidden, setRegionsHidden] = useState<boolean>(false);
 
   // Modals
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
@@ -298,6 +299,7 @@ const App: React.FC = () => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
     if (sub && videoRef.current) {
       setTempSubtitleLine(null);
+      setActiveSubtitleLineId(id);
       playTimeSpan(sub.startTime, sub.endTime);
     }
   };
@@ -391,7 +393,9 @@ const App: React.FC = () => {
       start = currentSub.startTime;
       end = currentSub.endTime;
     }
+    console.log('before extracting...');
     const blob = await extractAudioSync(start, end);
+    console.log('after extracting...');
 
     const startStr = formatTime(start).replace(/:/g, '-');
     const endStr = formatTime(end).replace(/:/g, '-');
@@ -440,14 +444,14 @@ const App: React.FC = () => {
           e.preventDefault();
           if (videoRef.current) {
             const t = videoRef.current.getCurrentTime();
-            videoRef.current.seekTo(Math.max(0, t - 5));
+            videoRef.current.seekTo(Math.max(0, t - 0.5));
           }
           break;
         case 'ArrowRight':
           e.preventDefault();
           if (videoRef.current) {
             const t = videoRef.current.getCurrentTime();
-            videoRef.current.seekTo(t + 5);
+            videoRef.current.seekTo(t + 0.5);
           }
           break;
         case 'ArrowUp':
@@ -469,12 +473,19 @@ const App: React.FC = () => {
             if (s) handleCreateCard(s).then();
           }
           break;
+        case 'KeyH':
+          e.preventDefault();
+          console.log("h", regionsHidden);
+          setActiveSubtitleLineId(null);
+          setTempSubtitleLine(null);
+          setRegionsHidden(!regionsHidden);
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSubtitleLineId, subtitleLines, jumpToSubtitle]);
+  }, [activeSubtitleLineId, subtitleLines, regionsHidden, jumpToSubtitle]);
 
 
   return (
@@ -557,7 +568,7 @@ const App: React.FC = () => {
         className="min-h-20 h-auto py-2 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
         <AppControlBar
           tempSubtitleLine={tempSubtitleLine}
-          activeSubtitleLine={subtitleLines.find(s => s.id === activeSubtitleLineId) || null}
+          activeSubtitleLineId={activeSubtitleLineId}
           videoName={videoName}
           currentTime={currentTime}
           onTempCommit={handleCommitTempSubtitleLine}
@@ -579,6 +590,7 @@ const App: React.FC = () => {
           videoSrc={videoSrc}
           currentTime={currentTime}
           onSeek={handleSeek}
+          regionsHidden={regionsHidden}
           onTempSubtitleLineCreated={handleTempSubtitleLineCreated}
           onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
           onTempSubtitleLineClicked={handleTempSubtitleLineClicked}

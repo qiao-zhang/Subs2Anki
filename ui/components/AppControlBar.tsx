@@ -2,11 +2,10 @@ import React from 'react';
 import TempSubtitleLineControls from './controls/TempSubtitleLineControls';
 import ActiveSubtitleLineControls from './controls/ActiveSubtitleLineControls';
 import DefaultControls from './controls/DefaultControls';
-import {SubtitleLine} from '../../core/types';
 
 interface AppControlBarProps {
   tempSubtitleLine: { start: number, end: number } | null;
-  activeSubtitleLine: SubtitleLine | null;
+  activeSubtitleLineId: number | null;
   videoName: string;
   currentTime: number;
   onTempCommit: (text: string) => void;
@@ -22,7 +21,7 @@ interface AppControlBarProps {
 
 const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        tempSubtitleLine,
-                                                       activeSubtitleLine,
+                                                       activeSubtitleLineId,
                                                        videoName,
                                                        currentTime,
                                                        onTempCommit,
@@ -52,8 +51,8 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
         onDiscard={onTempDiscard}
         onDownloadAudio={onDownloadAudio}
       />}
-      {activeSubtitleLine && <ActiveSubtitleLineControls
-        subtitle={activeSubtitleLine}
+      {activeSubtitleLineId && <ActiveSubtitleLineControls
+        subtitleLineId={activeSubtitleLineId}
         onDownloadAudio={onDownloadAudio}
         onTextChange={onUpdateSubtitleText}
         onDelete={onDeleteSubtitle}

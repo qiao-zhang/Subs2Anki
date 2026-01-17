@@ -9,26 +9,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Function to copy WASM files
-const copyWasmFiles = () => {
-  const sqlJsDistDir = path.resolve(__dirname, 'node_modules/sql.js/dist');
-  const publicSqlJsDir = path.resolve(__dirname, 'dist/assets/sql.js');
-
+const copyWasmFiles = (sourceDir: string, destDir: string, files: string[]) => {
   // Create destination directory if it doesn't exist
-  if (!existsSync(publicSqlJsDir)) {
-    mkdirSync(publicSqlJsDir, { recursive: true });
+  if (!existsSync(destDir)) {
+    mkdirSync(destDir, { recursive: true });
   }
 
-  // Define WASM files to copy
-  const wasmFiles = [
-    'sql-wasm.wasm',
-    'sql-asm.js',
-    'sql-wasm.js',
-  ];
-
-  // Copy each WASM file
-  wasmFiles.forEach(file => {
-    const sourcePath = path.join(sqlJsDistDir, file);
-    const destPath = path.join(publicSqlJsDir, file);
+  files.forEach(file => {
+    const sourcePath = path.join(sourceDir, file);
+    const destPath = path.join(destDir, file);
 
     if (existsSync(sourcePath)) {
       copyFileSync(sourcePath, destPath);
@@ -45,7 +34,22 @@ const copyWasmPlugin = {
   apply: 'build', // Only run during build
   configResolved() {
     // Copy files when config is resolved
-    copyWasmFiles();
+    copyWasmFiles(
+      path.resolve(__dirname, 'node_modules/sql.js/dist'),
+      path.resolve(__dirname, 'dist/assets/sql.js'),
+      [
+      'sql-wasm.wasm',
+      'sql-asm.js',
+      'sql-wasm.js',
+    ]);
+    copyWasmFiles(
+      path.resolve(__dirname, 'node_modules/@ffmpeg/core/dist/esm'),
+      path.resolve(__dirname, 'dist/assets/ffmpeg'),
+      [
+        'ffmpeg-core.js',
+        'ffmpeg-core.wasm',
+      ]
+    )
   }
 };
 
@@ -76,7 +80,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     optimizeDeps: {
-      exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
+      exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util', '@ffmpeg/core'],
     },
   };
 });
