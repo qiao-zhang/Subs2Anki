@@ -23,6 +23,7 @@ import {useAppStore} from '../core/store';
 import {useMediaProcessing} from './hooks/useMediaProcessing';
 import {Loader2} from 'lucide-react';
 import ShortcutsCheatSheetModal from './components/ShortcutsCheatSheetModal';
+import StatusBar, {StatusMessage, OperationMessage} from './components/StatusBar';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
@@ -44,6 +45,10 @@ const App: React.FC = () => {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncProgress, setSyncProgress] = useState({current: 0, total: 0});
+
+  // Status bar state
+  const [statusMessage, setStatusMessage] = useState<StatusMessage>('To open video & subtitle file');
+  const [operationMessage, setOperationMessage] = useState<OperationMessage>('');
 
   // noinspection JSUnusedLocalSymbols
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
@@ -68,17 +73,23 @@ const App: React.FC = () => {
 
   // --- Background Media Processing ---
   const finalizeExport = async () => {
-    setIsExporting(false);
-    await generateAnkiDeck(ankiCards, videoName, ankiConfig);
+    setOperationMessage('Exporting deck...');
+
+    try {
+      await generateAnkiDeck(ankiCards, videoName, ankiConfig);
+      setOperationMessage('Export completed successfully');
+    } catch (error) {
+      setOperationMessage(`Export failed: ${(error as Error).message}`);
+    }
   };
 
   const finalizeSync = async () => {
-    setIsSyncing(true);
+    setOperationMessage('Syncing to Anki...');
+
     try {
       const connected = await checkConnection(ankiConnectUrl);
       if (!connected) {
-        setIsSyncing(false);
-        alert('Could not connect to Anki. Please check your AnkiConnect settings and ensure Anki is running.');
+        setOperationMessage('Could not connect to Anki. Please check Anki & AnkiConnect is set up properly');
         setIsAnkiSettingsOpen(true);
         return;
       }
@@ -86,12 +97,19 @@ const App: React.FC = () => {
       const deckName = videoName ? `Sub2Anki::${videoName}` : 'Sub2Anki Export';
       await syncToAnki(ankiConnectUrl, deckName, ankiConfig, ankiCards, (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
+        setStatusMessage(`Syncing to Anki: ${cur}/${tot}`);
       });
 
-      alert(`Successfully synced ${ankiCards.length} cards to Anki!`);
+      setStatusMessage(`Successfully synced ${ankiCards.length} cards to Anki!`);
+      setTimeout(() => {
+        setStatusMessage('Ready');
+      }, 3000);
     } catch (e) {
       console.error(e);
-      alert(`Sync failed: ${(e as Error).message}`);
+      setStatusMessage(`Sync failed: ${(e as Error).message}`);
+      setTimeout(() => {
+        setStatusMessage('Ready');
+      }, 5000);
     } finally {
       setIsSyncing(false);
       setSyncProgress({current: 0, total: 0});
@@ -117,6 +135,23 @@ const App: React.FC = () => {
     isExporting || isSyncing, // isProcessing if either active
     onMediaReady
   );
+
+  // Update status bar based on card audio processing
+  useEffect(() => {
+    const pendingAudioCount = ankiCards.filter(c => c.audioStatus === 'pending' || c.audioStatus === 'processing').length;
+    const totalAudioCount = ankiCards.length;
+
+    if (pendingAudioCount > 0) {
+      const processedCount = totalAudioCount - pendingAudioCount;
+      const progressValue = totalAudioCount > 0 ? (processedCount / totalAudioCount) * 100 : 0;
+
+      setStatusMessage(`Processing audio: ${processedCount}/${totalAudioCount}`);
+    } else if (isExporting || isSyncing) {
+      // Already handled by other functions
+    } else {
+      setStatusMessage('Ready');
+    }
+  }, [ankiCards, isExporting, isSyncing]);
 
   // --- Logic Helpers ---
   const jumpToSubtitle = useCallback((direction: 'next' | 'prev') => {
@@ -362,9 +397,18 @@ const App: React.FC = () => {
     const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
 
     if (pendingAudio) {
-      if (action === 'export') setIsExporting(true);
-      setIsExporting(true); // Using generic loading overlay
+      if (action === 'export') {
+        setStatusMessage('Processing audio for export...');
+        setIsExporting(true);
+      } else if (action === 'sync') {
+        setStatusMessage('Processing audio for sync...');
+      }
     } else {
+      if (action === 'export') {
+        setStatusMessage('Exporting deck...');
+      } else if (action === 'sync') {
+        setStatusMessage('Syncing to Anki...');
+      }
       onMediaReady();
     }
   };
@@ -608,6 +652,12 @@ const App: React.FC = () => {
           onUpdateSubtitleText={updateSubtitleText}
         />
       </div>
+
+      {/* Status Bar */}
+      <StatusBar
+        statusMessage={statusMessage}
+        operationMessage={operationMessage}
+      />
 
       {/* Bottom Part: Full-width Waveform */}
       <div className="h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative">
