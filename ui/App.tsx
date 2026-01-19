@@ -440,25 +440,52 @@ const App: React.FC = () => {
             videoRef.current?.pause();
           }
           break;
+        case 'KeyH':
+          e.preventDefault();
+          if (e.shiftKey) {
+            // TODO
+            // toggleShortcutsCheatSheetModal();
+            break;
+          }
+          /* fallthrough */
         case 'ArrowLeft':
           e.preventDefault();
           if (videoRef.current) {
+            let d = 0.5;
+            if (e.shiftKey) {
+              d = 5;
+            }
+            if (e.ctrlKey)
+            {
+              d = 0.1;
+            }
             const t = videoRef.current.getCurrentTime();
-            videoRef.current.seekTo(Math.max(0, t - 0.5));
+            videoRef.current.seekTo(Math.max(0, t - d));
           }
           break;
         case 'ArrowRight':
+        case 'keyL':
           e.preventDefault();
           if (videoRef.current) {
+            let d = 0.5;
+            if (e.shiftKey) {
+              d = 5;
+            }
+            if (e.ctrlKey)
+            {
+              d = 0.1;
+            }
             const t = videoRef.current.getCurrentTime();
-            videoRef.current.seekTo(t + 0.5);
+            videoRef.current.seekTo(t + d);
           }
           break;
         case 'ArrowUp':
+        case 'KeyK':
           e.preventDefault();
           jumpToSubtitle('prev');
           break;
         case 'ArrowDown':
+        case 'KeyJ':
           e.preventDefault();
           jumpToSubtitle('next');
           break;
@@ -473,7 +500,7 @@ const App: React.FC = () => {
             if (s) handleCreateCard(s).then();
           }
           break;
-        case 'KeyH':
+        case 'KeyN':
           e.preventDefault();
           console.log("h", regionsHidden);
           setActiveSubtitleLineId(null);
