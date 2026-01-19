@@ -22,6 +22,7 @@ import AnkiConnectSettingsModal from './components/AnkiConnectSettingsModal';
 import {useAppStore} from '../core/store';
 import {useMediaProcessing} from './hooks/useMediaProcessing';
 import {Loader2} from 'lucide-react';
+import ShortcutsCheatSheetModal from './components/ShortcutsCheatSheetModal';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
@@ -52,6 +53,7 @@ const App: React.FC = () => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [isAnkiSettingsOpen, setIsAnkiSettingsOpen] = useState<boolean>(false);
   const [previewCard, setPreviewCard] = useState<AnkiCard | null>(null);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
 
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{ start: number, end: number } | null>(null);
 
@@ -443,8 +445,7 @@ const App: React.FC = () => {
         case 'KeyH':
           e.preventDefault();
           if (e.shiftKey) {
-            // TODO
-            // toggleShortcutsCheatSheetModal();
+            setIsShortcutsModalOpen(prev => !prev);
             break;
           }
           /* fallthrough */
@@ -639,6 +640,10 @@ const App: React.FC = () => {
         isOpen={!!previewCard}
         card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}
         onClose={() => setPreviewCard(null)}
+      />
+      <ShortcutsCheatSheetModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
       />
     </div>
   );
