@@ -9,14 +9,12 @@ interface AppControlBarProps {
   videoName: string;
   currentTime: number;
   onTempCommit: (text: string) => void;
-  onTempDiscard: () => void;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onPlay: () => void;
   onShiftSubtitles: (offset: number) => void;
   onCaptureFrame: () => void;
   onDownloadAudio: () => void;
   onUpdateSubtitleText: (id: number, text: string) => void;
-  onDeleteSubtitle: (id: number) => void;
 }
 
 const AppControlBar: React.FC<AppControlBarProps> = ({
@@ -25,14 +23,12 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        videoName,
                                                        currentTime,
                                                        onTempCommit,
-                                                       onTempDiscard,
                                                        onVideoUpload,
                                                        onPlay,
                                                        onShiftSubtitles,
                                                        onCaptureFrame,
                                                        onDownloadAudio,
-                                                       onUpdateSubtitleText,
-                                                       onDeleteSubtitle
+                                                       onUpdateSubtitleText
                                                      }) => {
   return (
     <div className="flex flex-col w-full max-w-5xl gap-2 animate-in fade-in duration-200">
@@ -48,14 +44,12 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
         start={tempSubtitleLine.start}
         end={tempSubtitleLine.end}
         onCommit={onTempCommit}
-        onDiscard={onTempDiscard}
         onDownloadAudio={onDownloadAudio}
       />}
       {activeSubtitleLineId && <ActiveSubtitleLineControls
         subtitleLineId={activeSubtitleLineId}
         onDownloadAudio={onDownloadAudio}
         onTextChange={onUpdateSubtitleText}
-        onDelete={onDeleteSubtitle}
       />}
     </div>
   );

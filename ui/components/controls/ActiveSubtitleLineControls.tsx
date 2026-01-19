@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Download, Trash2, Clock} from 'lucide-react';
+import {Download, Clock} from 'lucide-react';
 import AutoResizeEditableTextArea from "@/ui/components/AutoResizeEditableTextArea.tsx";
 import {useAppStore} from "@/core/store.ts";
 import {formatTime} from '../../../core/time';
@@ -9,14 +9,12 @@ interface ActiveSubtitleLineControlsProps {
   subtitleLineId: number,
   onDownloadAudio: () => void;
   onTextChange: (id: number, text: string) => void;
-  onDelete: (id: number) => void;
 }
 
 const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
                                                                                  subtitleLineId,
                                                                                  onDownloadAudio,
                                                                                  onTextChange,
-                                                                                 onDelete
                                                                                }) => {
   const {
     subtitleLines
@@ -39,7 +37,6 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
   // Shared button styles
   const btnBase = "h-9 flex items-center justify-center gap-2 px-3 rounded-md border transition-all text-sm font-medium shadow-sm select-none";
   const btnSecondary = "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-slate-600";
-  const btnDanger = "bg-slate-800 border-slate-700 text-slate-400 hover:bg-red-900/20 hover:text-red-400 hover:border-red-800/50";
 
   if (subtitleLine === null) {
     return null;
@@ -80,14 +77,7 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
           className={`${btnBase} ${btnSecondary}`}
           title="Download Audio Clip"
         >
-          <Download size={18}/> Capture Audio Clip
-        </button>
-        <button
-          onClick={() => onDelete(subtitleLineId)}
-          className={`${btnBase} ${btnDanger}`}
-          title="Delete Subtitle"
-        >
-          <Trash2 size={16}/> Delete
+          <Download size={18}/> Clip Audio
         </button>
       </div>
     </div>

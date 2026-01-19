@@ -572,14 +572,12 @@ const App: React.FC = () => {
           videoName={videoName}
           currentTime={currentTime}
           onTempCommit={handleCommitTempSubtitleLine}
-          onTempDiscard={handleTempSubtitleLineRemoved}
           onVideoUpload={handleVideoUpload}
           onPlay={handlePlay}
           onShiftSubtitles={shiftSubtitles}
           onCaptureFrame={handleCaptureFrame}
           onDownloadAudio={handleDownloadAudio}
           onUpdateSubtitleText={updateSubtitleText}
-          onDeleteSubtitle={removeSubtitle}
         />
       </div>
 

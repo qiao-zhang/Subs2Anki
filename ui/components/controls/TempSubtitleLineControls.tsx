@@ -1,25 +1,26 @@
 import React, {useState} from 'react';
-import {Check, Clock} from 'lucide-react';
+import {Check, Clock, Download} from 'lucide-react';
 import {formatTime} from '../../../core/time';
 
 interface TempSubtitleLineControlsProps {
   start: number;
   end: number;
-  onCommit: (text: string) => void;
-  onDiscard: () => void;
   onDownloadAudio: () => void;
+  onCommit: (text: string) => void;
 }
 
 const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
                                                                              start,
                                                                              end,
-                                                                             onCommit
+                                                                             onDownloadAudio,
+                                                                             onCommit,
                                                                            }) => {
   const [text, setText] = useState('');
 
   // Shared button styles
   const btnBase = "h-9 flex items-center justify-center gap-2 px-3 rounded-md border transition-all text-sm font-medium shadow-sm select-none";
   const btnPrimary = "bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-500 shadow-md shadow-emerald-900/20";
+  const btnSecondary = "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-slate-600";
   const kbdStyle = "hidden sm:inline-flex items-center ml-2 px-1.5 h-5 text-[10px] font-mono bg-black/20 border border-white/10 rounded text-current opacity-70 leading-none";
 
   return (
@@ -57,6 +58,13 @@ const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
             <Check size={16}/>
             Add
             <kbd className={kbdStyle}>Enter</kbd>
+          </button>
+          <button
+            onClick={onDownloadAudio}
+            className={`${btnBase} ${btnSecondary}`}
+            title="Download Audio Clip"
+          >
+            <Download size={18}/> Clip Audio
           </button>
         </div>
 
