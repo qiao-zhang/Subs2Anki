@@ -1,107 +1,127 @@
-# Sub2Anki AI
+# Subs2Anki
 
-A powerful video-to-flashcard tool using **Google Gemini** to analyze subtitles, capture screenshots, and generate comprehensive Anki cards directly from your local video files.
+Subs2Anki 是一个视频字幕处理工具，提供字幕处理和记忆卡片制作解决方案，旨在帮助语言学习者从视频内容中提取有用的语言材料并自动生成Anki记忆卡片。
 
-## Features
+## 功能特色
 
-*   **Video Player Integration**: Seamlessly syncs local video files with subtitle tracks.
-*   **Subtitle Parsing**: Robust support for `.srt` and `.vtt` formats.
-*   **AI Analysis**: Uses Gemini 2.5 Flash to automatically provide translations, grammar notes, and vocabulary lists.
-*   **Smart Capture**: Automatically captures the video frame when creating a card.
-*   **Anki Export**: Generates a ready-to-import `.zip` file containing the deck and media assets.
+### 🎥 视频播放器
+- 内置HTML5视频播放器，支持基本播放控制
+- 视频帧捕获功能，可截取任意时刻的画面
+- 时间轴精确控制，支持微调播放进度
 
----
+### 📄 字幕处理
+- 支持SRT和VTT格式字幕文件
+- 字幕编辑功能，可修改字幕文本
+- 字幕锁定功能，防止意外修改
+- 字幕时间轴偏移调整，同步视频播放
 
-## Prerequisites
+### 📺 字幕显示
+- 视频播放器上实时显示当前字幕
+- 美观的字幕样式，半透明背景便于阅读
+- 自动匹配视频播放时间与字幕显示
 
-*   **Node.js**: v18 or higher recommended.
-*   **API Key**: A valid Google GenAI API Key.
+### 🃏 Anki卡片生成
+- 一键生成Anki记忆卡片
+- 支持自定义卡片模板
+- 自动生成音频剪辑
+- 支持furigana（日文假名标注）
 
----
+### 🔤 Furigana处理
+- 集成Kuroshiro库进行日文假名标注
+- 自动为汉字添加平假名片假名标注
 
-## Installation & Setup
+### 🔄 Anki连接
+- 支持通过AnkiConnect直接同步卡片到Anki桌面应用
+- 支持导出为apkg
 
-1.  **Install Dependencies**
-    
-    Run the following command to install the required packages:
-    ```bash
-    npm install
-    ```
+### ⌨️ 快捷键支持
+- 丰富的键盘快捷键提升操作效率
+- Shift+H 显示快捷键提示表
 
-2.  **Configure API Key**
+## 安装与运行
 
-    The application requires the `API_KEY` environment variable to be set.
-    
-    *   **Local Development**: Create a `.env` file in the root directory:
-        ```env
-        API_KEY=your_actual_api_key_here
-        ```
-    *   **Cloud IDEs**: Set the `API_KEY` in your environment secrets configuration.
+### 系统要求
+- Node.js 18+ 
+- npm 或 yarn
 
----
+### 安装步骤
 
-## Running the Application
+1. 克隆项目仓库：
+```bash
+git clone <this-repo>
+cd Subs2Anki
+```
 
-To start the local development server:
+2. 安装依赖：
+```bash
+npm install
+```
 
+3. 启动开发服务器：
 ```bash
 npm run dev
 ```
 
-*   The application usually runs at `http://localhost:5173` (or the port specified by your bundler).
-*   Open this URL in your browser to start using the app.
-
----
-
-## Running Tests
-
-This project uses **Vitest** and **React Testing Library** to ensure code quality and reliability.
-
-### Run All Tests
-To execute the full test suite once:
-
+4. 构建生产版本：
 ```bash
-npm test
+npm run build
 ```
 
-### Watch Mode
-To run tests and watch for file changes (useful during development):
+## 使用指南
 
-```bash
-npm run test:watch
+### 基本工作流
+
+1. **加载视频**：点击视频区域或使用控制栏上传视频文件
+2. **加载字幕**：点击右侧面板的文件夹图标加载字幕文件
+3. **预览和编辑**：在右侧字幕面板查看和编辑字幕
+4. **创建卡片**：点击字幕行上的 "+" 按钮或使用快捷键 C 创建Anki卡片
+5. **导出或同步**：点击左侧面板的导出或同步按钮
+
+### 快捷键参考
+
+| 快捷键 | 功能         |
+|--------|------------|
+| Space | 播放/暂停      |
+| ← / K | 后退0.5秒     |
+| → / L | 前进0.5秒     |
+| Shift + ← / Shift + K | 后退5秒       |
+| Shift + → / Shift + L | 前进5秒       |
+| Ctrl + ← / Ctrl + K | 后退0.1秒     |
+| Ctrl + → / Ctrl + L | 前进0.1秒     |
+| ↑ / K | 上一个字幕      |
+| ↓ / J | 下一个字幕      |
+| R | 重播当前片段     |
+| C | 为当前字幕行创建卡片 |
+| N | 显示/隐藏字幕区域  |
+| V | 视频独占模式开关   |
+| Shift + H | 显示/隐藏快捷键提示 |
+
+## 技术栈
+
+- **前端框架**: React 19
+- **UI库**: Tailwind CSS, Lucide React
+- **状态管理**: Zustand
+- **视频处理**: HTML5 Video API
+- **音频处理**: FFmpeg.wasm
+- **数据库**: IndexedDB
+- **打包工具**: Vite
+- **类型检查**: TypeScript
+
+## 项目结构
+
 ```
-
-### What is Tested?
-1.  **Core Logic**: 
-    *   Time formatting utilities (`MM:SS` conversion).
-    *   Subtitle parsing logic (handling SRT/VTT edge cases).
-2.  **AI Services**: 
-    *   Mocks the Google GenAI SDK to verify prompt construction and error handling without making real API calls.
-3.  **UI Components**: 
-    *   Verifies that cards render correctly.
-    *   Ensures buttons (Delete, Analyze) trigger the correct actions.
-
----
-
-## User Guide
-
-1.  **Load Media**:
-    *   Click **Select Video File** to choose a video from your computer.
-    *   Click **Select Subtitle** to upload a matching `.srt` or `.vtt` file.
-    
-2.  **Navigation**:
-    *   The subtitle list on the right will auto-scroll as the video plays.
-    *   **Click** any subtitle line to jump the video to that exact timestamp.
-
-3.  **Create Cards**:
-    *   Hover over a subtitle line and click the **(+)** button.
-    *   This pauses the video and captures a screenshot at the optimal moment.
-
-4.  **AI Analysis**:
-    *   In the "Your Deck" panel, click the **Magic Wand** icon on a card.
-    *   Gemini will fill in the Translation, Notes, and Keywords.
-
-5.  **Export to Anki**:
-    *   Click the **Export** button at the top of the deck list.
-    *   This downloads a `.zip` file.
-    *   **In Anki**: Go to `File -> Import` and select the downloaded zip file.
+Subs2Anki-AI/
+├── core/           # 核心业务逻辑
+│   ├── db/         # 数据库相关
+│   ├── ffmpeg/     # FFmpeg处理
+│   ├── parser/     # 字幕解析
+│   ├── store/      # 状态管理
+│   └── types/      # 类型定义
+├── services/       # 服务层
+├── ui/             # 用户界面组件
+│   ├── components/ # UI组件
+│   ├── modals/     # 模态框组件
+│   └── hooks/      # 自定义Hook
+├── public/         # 静态资源
+└── src-tauri/      # Tauri相关（如果使用）
+```
