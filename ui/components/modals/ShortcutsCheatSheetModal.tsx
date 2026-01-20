@@ -47,7 +47,7 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
       onClick={onClose}
     >
       <div
-        className="bg-slate-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-slate-700"
+        className="bg-slate-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-slate-700"
         onClick={(e) => e.stopPropagation()} // 防止点击内容区域关闭模态框
       >
         <div className="p-6">
@@ -67,7 +67,7 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
           <div className="space-y-3">
             {shortcuts.map((item, index) => (
               <div key={index} className="flex items-start">
-                <div className="flex items-center mr-6 min-w-[120px]">
+                <div className="flex items-center mr-6 min-w-[200px]">
                   {item.keys.map((key, keyIndex) => (
                     <React.Fragment key={keyIndex}>
                       <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-200 border border-gray-300 rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
