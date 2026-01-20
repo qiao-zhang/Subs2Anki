@@ -48,7 +48,7 @@ const App: React.FC = () => {
   // noinspection JSUnusedLocalSymbols
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
   const [regionsHidden, setRegionsHidden] = useState<boolean>(false);
-  const [isFullscreenMode, setIsFullscreenMode] = useState<boolean>(false); // 全屏模式状态
+  const [isVideoOnly, setIsVideoOnlyMode] = useState<boolean>(false);
 
   // Modals
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
@@ -356,7 +356,7 @@ const App: React.FC = () => {
       audioRef: null,
       audioStatus: 'pending',
       timestampStr: formatTime(sub.startTime),
-      isSynced: false, // New cards are not synced by default
+      syncStatus: 'unsynced', // New cards are not synced by default
     };
 
     addCard(newCard);
@@ -528,7 +528,7 @@ const App: React.FC = () => {
           }
           break;
         case 'ArrowRight':
-        case 'keyL':
+        case 'KeyL':
           e.preventDefault();
           if (videoPlayerRef.current) {
             let d = 0.5;
@@ -565,21 +565,20 @@ const App: React.FC = () => {
           break;
         case 'KeyN':
           e.preventDefault();
-          console.log("h", regionsHidden);
           setActiveSubtitleLineId(null);
           setTempSubtitleLine(null);
-          setRegionsHidden(!regionsHidden);
+          setRegionsHidden(prev => !prev);
           break;
         case 'KeyV':
           e.preventDefault();
-          setIsFullscreenMode(prev => !prev); // 切换全屏模式
+          setIsVideoOnlyMode(prev => !prev); // 切换全屏模式
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSubtitleLineId, subtitleLines, regionsHidden, jumpToSubtitle, isFullscreenMode]);
+  }, [activeSubtitleLineId, subtitleLines, regionsHidden, jumpToSubtitle, isVideoOnly]);
 
 
   return (
@@ -610,7 +609,7 @@ const App: React.FC = () => {
 
       {/* Top Part: 3 Columns */}
       <div className="flex flex-1 min-h-0 w-full">
-        {!isFullscreenMode && (
+        {!isVideoOnly && (
           <DeckColumn
             cards={ankiCards}
             onDelete={handleDeleteCard}
@@ -640,7 +639,7 @@ const App: React.FC = () => {
         </main>
 
         {/* COL 3: SUBTITLE LINES (Right) */}
-        {!isFullscreenMode && (
+        {!isVideoOnly && (
           <SubtitleColumn
             subtitleLines={subtitleLines}
             activeSubtitleLineId={activeSubtitleLineId}
@@ -661,7 +660,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Control Bar - Full Width with Auto Height for Editor */}
-      {!isFullscreenMode && (
+      {!isVideoOnly && (
         <div
           className="min-h-20 h-auto py-2 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
           <AppControlBar
@@ -681,7 +680,7 @@ const App: React.FC = () => {
       )}
 
       {/* Bottom Part: Full-width Waveform */}
-      {!isFullscreenMode && (
+      {!isVideoOnly && (
         <div className="h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative">
           <WaveformDisplay
             videoElement={videoPlayerRef.current?.getVideoElement() || null}
