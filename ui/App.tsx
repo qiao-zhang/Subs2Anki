@@ -58,7 +58,7 @@ const App: React.FC = () => {
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{ start: number, end: number } | null>(null);
 
   // Refs
-  const videoRef = useRef<VideoPlayerHandle>(null);
+  const videoPlayerRef = useRef<VideoPlayerHandle>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   // Reset video ready state when src changes
@@ -173,10 +173,10 @@ const App: React.FC = () => {
   }
 
   const playTimeSpan = (start: number, end: number) => {
-    if (videoRef.current === null) return;
+    if (videoPlayerRef.current === null) return;
     setPauseAtTime(end);
-    videoRef.current?.seekTo(start);
-    videoRef.current?.play();
+    videoPlayerRef.current?.seekTo(start);
+    videoPlayerRef.current?.play();
   }
 
   const handleTempSubtitleLineClicked = () => {
@@ -187,7 +187,7 @@ const App: React.FC = () => {
   const extractAudioSync = async (start: number, end: number): Promise<Blob | null> => {
     if (!videoFile) return null;
     try {
-      videoRef.current?.pause();
+      videoPlayerRef.current?.pause();
       return await ffmpegService.extractAudioClip(videoFile, start, end);
     } catch (e) {
       console.error("Audio extraction failed", e);
@@ -263,8 +263,8 @@ const App: React.FC = () => {
 
     // Manual pause override (from Waveform selection or subtitle click)
     if (pauseAtTime !== null && time >= pauseAtTime) {
-      videoRef.current?.pause();
-      videoRef.current?.seekTo(pauseAtTime);
+      videoPlayerRef.current?.pause();
+      videoPlayerRef.current?.seekTo(pauseAtTime);
       setPauseAtTime(null);
       return;
     }
@@ -284,7 +284,7 @@ const App: React.FC = () => {
 
   const handleSeek = (time: number) => {
     setPauseAtTime(null);
-    videoRef.current?.seekTo(time);
+    videoPlayerRef.current?.seekTo(time);
   };
 
   const handlePlay = () => {
@@ -294,12 +294,14 @@ const App: React.FC = () => {
     }
     if (tempSubtitleLine !== null) {
       playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
+      return;
     }
+    videoPlayerRef.current?.playPause();
   }
 
   const handleSubtitleLineClicked = (id: number) => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
-    if (sub && videoRef.current) {
+    if (sub && videoPlayerRef.current) {
       setTempSubtitleLine(null);
       setActiveSubtitleLineId(id);
       playTimeSpan(sub.startTime, sub.endTime);
@@ -307,10 +309,10 @@ const App: React.FC = () => {
   };
 
   const handleCreateCard = async (sub: SubtitleLine) => {
-    if (!videoRef.current) return;
+    if (!videoPlayerRef.current) return;
 
     // Capture Screenshot immediately
-    const screenshot = await videoRef.current.captureFrameAt(sub.startTime);
+    const screenshot = await videoPlayerRef.current.captureFrameAt(sub.startTime);
     setPauseAtTime(null);
 
     let screenshotRef = null;
@@ -370,13 +372,13 @@ const App: React.FC = () => {
   };
 
   const handleCaptureFrame = () => {
-    if (!videoRef.current) return;
-    const dataUrl = videoRef.current.captureFrame();
+    if (!videoPlayerRef.current) return;
+    const dataUrl = videoPlayerRef.current.captureFrame();
     if (dataUrl) {
       fetch(dataUrl)
         .then(res => res.blob())
         .then(blob => {
-          const timeStr = formatTime(videoRef.current?.getCurrentTime() || 0).replace(/:/g, '-');
+          const timeStr = formatTime(videoPlayerRef.current?.getCurrentTime() || 0).replace(/:/g, '-');
           saveAs(blob, `${videoName.replace(/\.[^/.]+$/, "")}_snapshot_${timeStr}.jpg`);
         });
     }
@@ -436,11 +438,7 @@ const App: React.FC = () => {
       switch (e.code) {
         case 'Space':
           e.preventDefault();
-          if (videoRef.current?.getVideoElement()?.paused) {
-            videoRef.current?.play();
-          } else {
-            videoRef.current?.pause();
-          }
+          videoPlayerRef.current?.playPause();
           break;
         case 'KeyH':
           e.preventDefault();
@@ -448,36 +446,34 @@ const App: React.FC = () => {
             setIsShortcutsModalOpen(prev => !prev);
             break;
           }
-          /* fallthrough */
+        /* fallthrough */
         case 'ArrowLeft':
           e.preventDefault();
-          if (videoRef.current) {
+          if (videoPlayerRef.current) {
             let d = 0.5;
             if (e.shiftKey) {
               d = 5;
             }
-            if (e.ctrlKey)
-            {
+            if (e.ctrlKey) {
               d = 0.1;
             }
-            const t = videoRef.current.getCurrentTime();
-            videoRef.current.seekTo(Math.max(0, t - d));
+            const t = videoPlayerRef.current.getCurrentTime();
+            videoPlayerRef.current.seekTo(Math.max(0, t - d));
           }
           break;
         case 'ArrowRight':
         case 'keyL':
           e.preventDefault();
-          if (videoRef.current) {
+          if (videoPlayerRef.current) {
             let d = 0.5;
             if (e.shiftKey) {
               d = 5;
             }
-            if (e.ctrlKey)
-            {
+            if (e.ctrlKey) {
               d = 0.1;
             }
-            const t = videoRef.current.getCurrentTime();
-            videoRef.current.seekTo(t + d);
+            const t = videoPlayerRef.current.getCurrentTime();
+            videoPlayerRef.current.seekTo(t + d);
           }
           break;
         case 'ArrowUp':
@@ -562,7 +558,7 @@ const App: React.FC = () => {
           <div className="flex-1 flex flex-col items-center justify-center p-2 bg-black/20 min-h-0">
             <div className="w-full h-full max-w-5xl flex flex-col justify-center">
               <VideoPlayer
-                ref={videoRef}
+                ref={videoPlayerRef}
                 src={videoSrc}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={() => setIsVideoReady(true)}
@@ -612,7 +608,7 @@ const App: React.FC = () => {
       {/* Bottom Part: Full-width Waveform */}
       <div className="h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative">
         <WaveformDisplay
-          videoElement={videoRef.current?.getVideoElement() || null}
+          videoElement={videoPlayerRef.current?.getVideoElement() || null}
           videoSrc={videoSrc}
           currentTime={currentTime}
           onSeek={handleSeek}

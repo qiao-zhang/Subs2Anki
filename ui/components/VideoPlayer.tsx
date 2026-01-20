@@ -15,6 +15,7 @@ export interface VideoPlayerHandle {
   seekTo: (time: number) => void;
   play: () => Promise<void>;
   pause: () => void;
+  playPause: () => void;
   captureFrame: () => string | null;
   captureFrameAt: (time: number) => Promise<string | null>;
   getCurrentTime: () => number;
@@ -40,6 +41,13 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTim
     },
     play: () => videoRef.current?.play() || Promise.resolve(),
     pause: () => videoRef.current?.pause(),
+    playPause: () => {
+      if (videoRef.current?.paused) {
+        videoRef.current?.play();
+      } else {
+        videoRef.current?.pause();
+      }
+    },
     getCurrentTime: () => videoRef.current?.currentTime || 0,
     getVideoElement: () => videoRef.current,
 
