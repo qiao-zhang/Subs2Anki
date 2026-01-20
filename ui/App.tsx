@@ -39,6 +39,7 @@ const App: React.FC = () => {
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [activeSubtitleLineId, setActiveSubtitleLineId] = useState<number | null>(null);
+  const [currentSubtitleText, setCurrentSubtitleText] = useState<string>(''); // 当前字幕文本
 
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -273,8 +274,13 @@ const App: React.FC = () => {
 
     if (active && active.id !== activeSubtitleLineId) {
       setActiveSubtitleLineId(active.id);
+      setCurrentSubtitleText(active.text); // 更新当前字幕文本
     } else if (!active) {
       setActiveSubtitleLineId(null);
+      setCurrentSubtitleText(''); // 清空当前字幕文本
+    } else if (active && active.id === activeSubtitleLineId) {
+      // 如果当前活跃字幕没有变化，但仍需确保字幕文本正确
+      setCurrentSubtitleText(active.text);
     }
   };
 
@@ -375,6 +381,7 @@ const App: React.FC = () => {
         .then(res => res.blob())
         .then(blob => {
           const timeStr = formatTime(videoPlayerRef.current?.getCurrentTime() || 0).replace(/:/g, '-');
+          // TODO add save picker version
           saveAs(blob, `${videoName.replace(/\.[^/.]+$/, "")}_snapshot_${timeStr}.jpg`);
         });
     }
@@ -558,6 +565,7 @@ const App: React.FC = () => {
                 src={videoSrc}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={() => setIsVideoReady(true)}
+                currentSubtitle={currentSubtitleText}
               />
             </div>
           </div>

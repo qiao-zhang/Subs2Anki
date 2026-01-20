@@ -5,7 +5,7 @@ import {SubtitleLine, AnkiCard, AnkiNoteType, ProcessingState} from './types';
 const DEFAULT_NOTE_TYPE: AnkiNoteType = {
   id: 123456789,
   name: "Subs2Anki",
-  css: `.card { font-family:Arial; font-size:36px; text-align: center; color:black; background-color:white; } .before{ font-size: 18px; text-align: left; color: grey; } .after { font-size: 18px; text-align: left; color: grey; } .tags { font-size:15px; text-align: left; color:grey; } .notes { font-size:21px; text-align: left; color:grey; }`,
+  css: `.card { font-family:Arial; font-size:36px; text-align: center; color:black; background-color:white; } .before{ font-size: 18px; text-align: left; color: grey; } .after { font-size: 18px; text-align: left; color: grey; } .tags { font-size:15px; text-align: left; color:grey; } .notes { font-size:21px; text-align: left; color:grey; } .media > img { max-height: 270px; }`,
   fields: [
     {name: "Sequence", source: 'Sequence'},
     {name: "Before"},

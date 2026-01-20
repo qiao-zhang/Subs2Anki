@@ -5,6 +5,7 @@ interface VideoPlayerProps {
   src: string;
   onTimeUpdate: (time: number) => void;
   onLoadedMetadata?: () => void;
+  currentSubtitle?: string;
 }
 
 /**
@@ -29,8 +30,9 @@ export interface VideoPlayerHandle {
  * - Exposes imperative handle for control (seek, play, pause).
  * - Implements frame capture logic using an internal Canvas.
  * - Supports capturing frames at specific timestamps regardless of visibility.
+ * - Displays current subtitle text overlaid on the video.
  */
-const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTimeUpdate, onLoadedMetadata}, ref) => {
+const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTimeUpdate, onLoadedMetadata, currentSubtitle}, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -117,6 +119,15 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTim
       ) : (
         <div className="w-full h-full flex items-center justify-center text-slate-500">
           <p>No video loaded</p>
+        </div>
+      )}
+
+      {/* subtitle layer */}
+      {currentSubtitle && currentSubtitle.trim() !== '' && (
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none">
+          <div className="bg-black/70 text-white px-4 py-2 rounded-lg text-lg font-medium max-w-3xl text-center break-words">
+            {currentSubtitle}
+          </div>
         </div>
       )}
     </div>
