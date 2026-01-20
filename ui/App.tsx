@@ -83,12 +83,30 @@ const App: React.FC = () => {
         return;
       }
 
+      // Filter out cards that are already synced
+      const unsyncedCards = ankiCards.filter(card => card.syncStatus === 'unsynced');
+
+      if (unsyncedCards.length === 0) {
+        alert('All cards have already been synced to Anki!');
+        return;
+      }
+
+      // Update sync status for all
+      unsyncedCards.forEach(card => {
+        updateCard(card.id, { syncStatus: 'syncing' });
+      });
+
       const deckName = videoName ? `Sub2Anki::${videoName}` : 'Sub2Anki Export';
-      await syncToAnki(ankiConnectUrl, deckName, ankiConfig, ankiCards, (cur, tot) => {
+      await syncToAnki(ankiConnectUrl, deckName, ankiConfig, unsyncedCards, (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
       });
 
-      alert(`Successfully synced ${ankiCards.length} cards to Anki!`);
+      // Update sync status for all successfully synced cards
+      unsyncedCards.forEach(card => {
+        updateCard(card.id, { syncStatus: 'synced' });
+      });
+
+      alert(`Successfully synced ${unsyncedCards.length} cards to Anki!`);
     } catch (e) {
       console.error(e);
       alert(`Sync failed: ${(e as Error).message}`);
@@ -338,6 +356,7 @@ const App: React.FC = () => {
       audioRef: null,
       audioStatus: 'pending',
       timestampStr: formatTime(sub.startTime),
+      syncStatus: 'unsynced', // New cards are not synced by default
     };
 
     addCard(newCard);
@@ -358,6 +377,49 @@ const App: React.FC = () => {
         console.error("Failed to delete media from DB", e);
       }
       deleteCard(id);
+    }
+  };
+
+  const handleSyncCard = async (id: string) => {
+    const card = ankiCards.find(c => c.id === id);
+    if (!card) return;
+
+    // Check if card is already synced
+    if (card.syncStatus !== 'unsynced') {
+      alert('This card already has been synced or is syncing to Anki.');
+      return;
+    }
+
+    // Check if media is ready
+    if (card.audioStatus !== 'done') {
+      alert('Media files are not ready yet. Please wait for audio processing to complete.');
+      return;
+    }
+
+    try {
+      // Check connection to Anki
+      const connected = await checkConnection(ankiConnectUrl);
+      if (!connected) {
+        alert('Could not connect to Anki. Please check your AnkiConnect settings and ensure Anki is running.');
+        setIsAnkiSettingsOpen(true);
+        return;
+      }
+
+      const deckName = videoName ? `Sub2Anki::${videoName}` : 'Sub2Anki Export';
+
+      // Sync only this card
+      updateCard(id, { syncStatus: 'syncing' });
+      await syncToAnki(ankiConnectUrl, deckName, ankiConfig, [card], (cur, tot) => {
+        setSyncProgress({current: cur, total: tot});
+      });
+
+      // Update card's sync status
+      updateCard(id, { syncStatus: 'synced' });
+
+      // alert(`Successfully synced card to Anki!`);
+    } catch (e) {
+      console.error(e);
+      alert(`Sync failed: ${(e as Error).message}`);
     }
   };
 
@@ -553,6 +615,7 @@ const App: React.FC = () => {
             cards={ankiCards}
             onDelete={handleDeleteCard}
             onPreview={(c) => setPreviewCard(c)}
+            onSyncCard={handleSyncCard}
             onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
             onExport={() => handleActionClick('export')}
             onSyncAnki={() => handleActionClick('sync')}

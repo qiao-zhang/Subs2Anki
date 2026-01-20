@@ -1,12 +1,13 @@
 import React, {useEffect, useState} from 'react';
-import {Trash2, Image as ImageIcon, Loader2, Clock, AlertCircle} from 'lucide-react';
-import {AnkiCard} from '../../core/types';
-import {getMedia} from '../../core/db';
+import {Trash2, Image as ImageIcon, Loader2, Clock, AlertCircle, CloudUpload, CheckCircle, LoaderCircle} from 'lucide-react';
+import {AnkiCard} from '@/core/types.ts';
+import {getMedia} from '@/core/db.ts';
 
 interface CardItemProps {
   card: AnkiCard;
   onDelete: (id: string) => void;
   onPreview: (card: AnkiCard) => void;
+  onSyncCard: (id: string) => void;
 }
 
 /**
@@ -19,7 +20,7 @@ interface CardItemProps {
  * - Action buttons (Delete, Analyze).
  * - Audio processing status.
  */
-const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview}) => {
+const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview, onSyncCard}) => {
   const [thumbnailSrc, setThumbnailSrc] = useState<string | null>(null);
 
   // Async load thumbnail from IDB
@@ -106,6 +107,23 @@ const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview}) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
+              onSyncCard(card.id);
+            }}
+            disabled={card.syncStatus !== 'unsynced' || card.audioStatus !== 'done'}
+            className={`p-2 rounded transition-colors ${
+              card.syncStatus === 'unsynced' && card.audioStatus === 'done'
+                ? 'text-indigo-400 hover:text-indigo-300 hover:bg-slate-700/50'
+                : 'text-slate-600'
+            }`}
+            title={card.syncStatus === 'synced' ? 'Already synced' : card.syncStatus === 'syncing' ? 'Syncing...' : card.audioStatus !== 'done' ? 'Media not ready' : 'Sync to Anki'}
+          >
+            {card.syncStatus === 'unsynced' && <CloudUpload size={18}/>}
+            {card.syncStatus === 'synced' && <CheckCircle size={18}/>}
+            {card.syncStatus === 'syncing' && <LoaderCircle size={18}/>}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
               onDelete(card.id);
             }}
             className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700/50 rounded transition-colors"
@@ -113,7 +131,6 @@ const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview}) => {
           >
             <Trash2 size={18}/>
           </button>
-
         </div>
       </div>
     </div>

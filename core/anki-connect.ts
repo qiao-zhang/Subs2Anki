@@ -169,7 +169,7 @@ export const syncToAnki = async (
 
     // 4. Add Note
     try {
-      await invoke('addNote', {
+      const result = await invoke('addNote', {
         note: {
           deckName: deckName,
           modelName: noteType.name,
@@ -181,6 +181,9 @@ export const syncToAnki = async (
           }
         }
       }, url);
+
+      // TODO: If the note was added successfully (result is the note ID), we could potentially use this info
+      // but for now we just proceed with the sync
     } catch (e) {
       console.error(`Failed to add note for card ${card.id}`, e);
       // Continue to next card

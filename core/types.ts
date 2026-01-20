@@ -26,6 +26,9 @@ export interface AnkiCard {
 
   timestampStr: string;     // Formatted timestamp string for display (e.g., "01:23")
   audioStatus?: 'pending' | 'processing' | 'done' | 'error'; // Tracking background audio extraction
+
+  // Sync status
+  syncStatus?: 'unsynced' | 'syncing' | 'synced';       // Whether the card has been synced to Anki
 }
 
 /**
