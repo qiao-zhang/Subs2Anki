@@ -356,7 +356,7 @@ const App: React.FC = () => {
       audioRef: null,
       audioStatus: 'pending',
       timestampStr: formatTime(sub.startTime),
-      syncStatus: 'unsynced', // New cards are not synced by default
+      isSynced: false, // New cards are not synced by default
     };
 
     addCard(newCard);
@@ -436,9 +436,9 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCaptureFrame = () => {
+  const handleCaptureFrame = async () => {
     if (!videoPlayerRef.current) return;
-    const dataUrl = videoPlayerRef.current.captureFrame();
+    const dataUrl = await videoPlayerRef.current.captureFrame();
     if (dataUrl) {
       fetch(dataUrl)
         .then(res => res.blob())

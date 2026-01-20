@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
 import React, {useRef, forwardRef, useImperativeHandle} from 'react';
+import { compressImage } from '../utils/imageUtils';
 
 interface VideoPlayerProps {
   src: string;
@@ -17,7 +18,7 @@ export interface VideoPlayerHandle {
   play: () => Promise<void>;
   pause: () => void;
   playPause: () => void;
-  captureFrame: () => string | null;
+  captureFrame: () => Promise<string | null>;
   captureFrameAt: (time: number) => Promise<string | null>;
   getCurrentTime: () => number;
   getVideoElement: () => HTMLVideoElement | null;
@@ -56,9 +57,11 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTim
     /**
      * Captures the current frame of the video as a base64 JPEG image.
      */
-    captureFrame: () => {
+    captureFrame: async () => {
       if (!videoRef.current) return null;
-      return captureImageFromVideo(videoRef.current);
+      const dataUrl = captureImageFromVideo(videoRef.current);
+      if (!dataUrl) return null;
+      return await compressImage(dataUrl);
     },
 
     /**
@@ -72,11 +75,16 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTim
       // Ensure paused to prevent race conditions during seek
       video.pause();
 
-      return new Promise((resolve) => {
-        const onSeeked = () => {
+      return new Promise(async (resolve) => {
+        const onSeeked = async () => {
           video.removeEventListener('seeked', onSeeked);
           const dataUrl = captureImageFromVideo(video);
-          resolve(dataUrl);
+          if (!dataUrl) {
+            resolve(null);
+            return;
+          }
+          const compressedDataUrl = await compressImage(dataUrl);
+          resolve(compressedDataUrl);
         };
 
         // Attach event listener before triggering seek
