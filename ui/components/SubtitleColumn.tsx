@@ -1,16 +1,15 @@
 /// <reference lib="dom" />
-import React, {useRef} from 'react';
+import React, {useEffect, useRef} from 'react';
 import {Virtuoso, VirtuosoHandle} from 'react-virtuoso';
 import {FileText, FolderOpen, Save, Download, AlertCircle, Lock, Unlock, PlusCircle} from 'lucide-react';
-import {parseSubtitles} from '../../core/parser';
-import {SubtitleLine} from '../../core/types';
-import {formatTime} from '../../core/time';
+import {parseSubtitles} from '@/core/parser.ts';
+import {SubtitleLine} from '@/core/types.ts';
+import {formatTime} from '@/core/time.ts';
 
 interface SubtitleColumnProps {
   subtitleLines: SubtitleLine[];
-  activeSubtitleId: number | null;
+  activeSubtitleLineId: number | null;
   subtitleFileName: string;
-  virtuosoRef: React.RefObject<VirtuosoHandle>;
   canSave: boolean;
   onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: any) => void;
   onUpdateText: (id: number, text: string) => void;
@@ -23,9 +22,8 @@ interface SubtitleColumnProps {
 
 const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          subtitleLines,
-                                                         activeSubtitleId,
+                                                         activeSubtitleLineId,
                                                          subtitleFileName,
-                                                         virtuosoRef,
                                                          canSave,
                                                          onSetSubtitles,
                                                          onUpdateText,
@@ -36,6 +34,18 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          onDownload
                                                        }) => {
   const subtitleInputRef = useRef<HTMLInputElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+
+  useEffect(() => {
+    if (activeSubtitleLineId)
+    {
+      const i = subtitleLines.findIndex(line => line.id === activeSubtitleLineId);
+      if (i !== -1)
+      {
+        virtuosoRef.current?.scrollToIndex({index: i, align: 'center', behavior: 'smooth'});
+      }
+    }
+  }, [activeSubtitleLineId]);
 
   const handleOpenSubtitle = async () => {
     try {
@@ -73,7 +83,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
 
   const renderSubtitleRow = (index: number) => {
     const sub = subtitleLines[index];
-    const isActive = sub.id === activeSubtitleId;
+    const isActive = sub.id === activeSubtitleLineId;
 
     return (
       <div

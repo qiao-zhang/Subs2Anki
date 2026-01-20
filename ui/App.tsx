@@ -10,7 +10,6 @@ import {storeMedia, deleteMedia} from '../core/db';
 import {furiganaService} from '../core/furigana';
 import {syncToAnki, checkConnection} from '../core/anki-connect';
 import saveAs from 'file-saver';
-import {VirtuosoHandle} from 'react-virtuoso';
 import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
 import WaveformDisplay from './components/WaveformDisplay';
 import DeckColumn from './components/DeckColumn';
@@ -59,7 +58,6 @@ const App: React.FC = () => {
 
   // Refs
   const videoPlayerRef = useRef<VideoPlayerHandle>(null);
-  const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   // Reset video ready state when src changes
   useEffect(() => {
@@ -275,8 +273,6 @@ const App: React.FC = () => {
 
     if (active && active.id !== activeSubtitleLineId) {
       setActiveSubtitleLineId(active.id);
-      // Virtual Scroll to index
-      virtuosoRef.current?.scrollToIndex({index: activeIndex, align: 'center', behavior: 'smooth'});
     } else if (!active) {
       setActiveSubtitleLineId(null);
     }
@@ -570,9 +566,8 @@ const App: React.FC = () => {
         {/* COL 3: SUBTITLES (Right) */}
         <SubtitleColumn
           subtitleLines={subtitleLines}
-          activeSubtitleId={activeSubtitleLineId}
+          activeSubtitleLineId={activeSubtitleLineId}
           subtitleFileName={subtitleFileName}
-          virtuosoRef={virtuosoRef}
           canSave={fileHandle !== null}
           onSetSubtitles={setSubtitles}
           onUpdateText={updateSubtitleText}
