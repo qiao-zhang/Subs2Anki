@@ -15,13 +15,13 @@ import WaveformDisplay from './components/WaveformDisplay';
 import DeckColumn from './components/DeckColumn';
 import SubtitleColumn from './components/SubtitleColumn';
 import AppControlBar from './components/AppControlBar';
-import TemplateEditorModal from './components/TemplateEditorModal';
-import CardPreviewModal from './components/CardPreviewModal';
-import AnkiConnectSettingsModal from './components/AnkiConnectSettingsModal';
+import TemplateEditorModal from './components/modals/TemplateEditorModal.tsx';
+import CardPreviewModal from './components/modals/CardPreviewModal.tsx';
+import AnkiConnectSettingsModal from './components/modals/AnkiConnectSettingsModal.tsx';
 import {useAppStore} from '../core/store';
 import {useMediaProcessing} from './hooks/useMediaProcessing';
 import {Loader2} from 'lucide-react';
-import ShortcutsCheatSheetModal from './components/ShortcutsCheatSheetModal';
+import ShortcutsCheatSheetModal from './components/modals/ShortcutsCheatSheetModal.tsx';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
@@ -48,6 +48,7 @@ const App: React.FC = () => {
   // noinspection JSUnusedLocalSymbols
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
   const [regionsHidden, setRegionsHidden] = useState<boolean>(false);
+  const [isFullscreenMode, setIsFullscreenMode] = useState<boolean>(false); // 全屏模式状态
 
   // Modals
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
@@ -507,12 +508,16 @@ const App: React.FC = () => {
           setTempSubtitleLine(null);
           setRegionsHidden(!regionsHidden);
           break;
+        case 'KeyV':
+          e.preventDefault();
+          setIsFullscreenMode(prev => !prev); // 切换全屏模式
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSubtitleLineId, subtitleLines, regionsHidden, jumpToSubtitle]);
+  }, [activeSubtitleLineId, subtitleLines, regionsHidden, jumpToSubtitle, isFullscreenMode]);
 
 
   return (
@@ -543,17 +548,17 @@ const App: React.FC = () => {
 
       {/* Top Part: 3 Columns */}
       <div className="flex flex-1 min-h-0 w-full">
-
-        {/* COL 1: DECK (Left) */}
-        <DeckColumn
-          cards={ankiCards}
-          onDelete={handleDeleteCard}
-          onPreview={(c) => setPreviewCard(c)}
-          onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
-          onExport={() => handleActionClick('export')}
-          onSyncAnki={() => handleActionClick('sync')}
-          onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
-        />
+        {!isFullscreenMode && (
+          <DeckColumn
+            cards={ankiCards}
+            onDelete={handleDeleteCard}
+            onPreview={(c) => setPreviewCard(c)}
+            onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
+            onExport={() => handleActionClick('export')}
+            onSyncAnki={() => handleActionClick('sync')}
+            onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
+          />
+        )}
 
         {/* COL 2: VIDEO (Center) */}
         <main className="flex-1 flex flex-col bg-slate-950 relative min-w-0">
@@ -571,64 +576,70 @@ const App: React.FC = () => {
           </div>
         </main>
 
-        {/* COL 3: SUBTITLES (Right) */}
-        <SubtitleColumn
-          subtitleLines={subtitleLines}
-          activeSubtitleLineId={activeSubtitleLineId}
-          subtitleFileName={subtitleFileName}
-          canSave={fileHandle !== null}
-          onSetSubtitles={setSubtitles}
-          onUpdateText={updateSubtitleText}
-          onPlaySubtitle={handleSubtitleLineClicked}
-          onToggleLock={toggleSubtitleLock}
-          onCreateCard={(sub) => {
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
-            if (s) handleCreateCard(s).then();
-          }}
-          onSave={handleSaveSubtitles}
-          onDownload={handleDownloadSubtitles}
-        />
+        {/* COL 3: SUBTITLE LINES (Right) */}
+        {!isFullscreenMode && (
+          <SubtitleColumn
+            subtitleLines={subtitleLines}
+            activeSubtitleLineId={activeSubtitleLineId}
+            subtitleFileName={subtitleFileName}
+            canSave={fileHandle !== null}
+            onSetSubtitles={setSubtitles}
+            onUpdateText={updateSubtitleText}
+            onPlaySubtitle={handleSubtitleLineClicked}
+            onToggleLock={toggleSubtitleLock}
+            onCreateCard={(sub) => {
+              const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
+              if (s) handleCreateCard(s).then();
+            }}
+            onSave={handleSaveSubtitles}
+            onDownload={handleDownloadSubtitles}
+          />
+        )}
       </div>
 
       {/* Control Bar - Full Width with Auto Height for Editor */}
-      <div
-        className="min-h-20 h-auto py-2 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
-        <AppControlBar
-          tempSubtitleLine={tempSubtitleLine}
-          activeSubtitleLineId={activeSubtitleLineId}
-          videoName={videoName}
-          currentTime={currentTime}
-          onTempCommit={handleCommitTempSubtitleLine}
-          onVideoUpload={handleVideoUpload}
-          onPlay={handlePlay}
-          onShiftSubtitles={shiftSubtitles}
-          onCaptureFrame={handleCaptureFrame}
-          onDownloadAudio={handleDownloadAudio}
-          onUpdateSubtitleText={updateSubtitleText}
-        />
-      </div>
+      {!isFullscreenMode && (
+        <div
+          className="min-h-20 h-auto py-2 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
+          <AppControlBar
+            tempSubtitleLine={tempSubtitleLine}
+            activeSubtitleLineId={activeSubtitleLineId}
+            videoName={videoName}
+            currentTime={currentTime}
+            onTempCommit={handleCommitTempSubtitleLine}
+            onVideoUpload={handleVideoUpload}
+            onPlay={handlePlay}
+            onShiftSubtitles={shiftSubtitles}
+            onCaptureFrame={handleCaptureFrame}
+            onDownloadAudio={handleDownloadAudio}
+            onUpdateSubtitleText={updateSubtitleText}
+          />
+        </div>
+      )}
 
       {/* Bottom Part: Full-width Waveform */}
-      <div className="h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative">
-        <WaveformDisplay
-          videoElement={videoPlayerRef.current?.getVideoElement() || null}
-          videoSrc={videoSrc}
-          currentTime={currentTime}
-          onSeek={handleSeek}
-          regionsHidden={regionsHidden}
-          onTempSubtitleLineCreated={handleTempSubtitleLineCreated}
-          onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
-          onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
-          onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
-          onSubtitleLineClicked={handleSubtitleLineClicked}
-          onSubtitleLineDoubleClicked={toggleSubtitleLock}
-          onSubtitleLineRemoved={removeSubtitle}
-          onCreateCard={(id) => {
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
-            if (s) handleCreateCard(s).then();
-          }}
-        />
-      </div>
+      {!isFullscreenMode && (
+        <div className="h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative">
+          <WaveformDisplay
+            videoElement={videoPlayerRef.current?.getVideoElement() || null}
+            videoSrc={videoSrc}
+            currentTime={currentTime}
+            onSeek={handleSeek}
+            regionsHidden={regionsHidden}
+            onTempSubtitleLineCreated={handleTempSubtitleLineCreated}
+            onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
+            onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
+            onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
+            onSubtitleLineClicked={handleSubtitleLineClicked}
+            onSubtitleLineDoubleClicked={toggleSubtitleLock}
+            onSubtitleLineRemoved={removeSubtitle}
+            onCreateCard={(id) => {
+              const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
+              if (s) handleCreateCard(s).then();
+            }}
+          />
+        </div>
+      )}
 
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)}

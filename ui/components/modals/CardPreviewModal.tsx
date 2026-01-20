@@ -1,9 +1,9 @@
 /// <reference lib="dom" />
 import React, {useEffect, useState} from 'react';
 import {X, Loader2} from 'lucide-react';
-import {AnkiCard, AnkiNoteType} from '../../core/types';
-import {useAppStore} from '../../core/store';
-import {getMedia} from '../../core/db';
+import {AnkiCard, AnkiNoteType} from '@/core/types.ts';
+import {useAppStore} from '@/core/store.ts';
+import {getMedia} from '@/core/db.ts';
 
 interface CardPreviewModalProps {
   isOpen: boolean;

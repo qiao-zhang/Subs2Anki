@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import React, {useState, useEffect, useRef} from 'react';
 import {X, Save, Clock} from 'lucide-react';
-import {formatTime} from '../../core/time';
+import {formatTime} from '@/core/time.ts';
 
 interface EditSubtitleLineModalProps {
   isOpen: boolean;

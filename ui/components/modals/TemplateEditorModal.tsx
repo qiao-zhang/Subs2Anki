@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import React, {useState, useEffect} from 'react';
-import {AnkiNoteType, AnkiFieldSource, AnkiCardTemplate} from '../../core/types';
+import {AnkiNoteType, AnkiFieldSource, AnkiCardTemplate} from '../../../core/types.ts';
 import {
   X,
   Plus,

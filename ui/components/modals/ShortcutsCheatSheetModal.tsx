@@ -8,14 +8,18 @@ interface ShortcutsCheatSheetModalProps {
 const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOpen, onClose}) => {
   const shortcuts = [
     {keys: ['Space'], description: 'Play/Pause'},
-    {keys: ['←/K', '→/L'], description: 'Skip forward/back 0.5 seconds'},
-    {keys: ['Shift + ←/K', 'Shift + →/L'], description: 'Skip forward/back 5 seconds'},
-    {keys: ['Ctrl + ←/K', 'Ctrl + →/L'], description: 'Skip forward/back 0.1 seconds'},
+    {keys: ['←', 'K'], description: 'Skip back 0.5 seconds'},
+    {keys: ['→', 'L'], description: 'Skip forward 0.5 seconds'},
+    {keys: ['Shift + ←', 'Shift + K'], description: 'Skip back 5 seconds'},
+    {keys: ['Shift + →', 'Shift + L'], description: 'Skip forward 5 seconds'},
+    {keys: ['Ctrl + ←', 'Ctrl + K'], description: 'Skip back 0.1 seconds'},
+    {keys: ['Ctrl + →', 'Ctrl + L'], description: 'Skip forward 0.1 seconds'},
     {keys: ['↑', 'K'], description: 'Previous subtitle line'},
     {keys: ['↓', 'J'], description: 'Next subtitle line'},
     {keys: ['R'], description: 'Replay the current region'},
     {keys: ['C'], description: 'Create Anki card for current subtitle line'},
     {keys: ['N'], description: 'Hide/Unhide the subtitle regions'},
+    {keys: ['V'], description: 'Turn on/off the video-only mode'},
     {keys: ['Shift + H'], description: 'Show/Hide this cheatsheet'},
   ];
 
@@ -70,7 +74,7 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
                         {key}
                       </kbd>
                       {keyIndex < item.keys.length - 1 && (
-                        <span className="mx-1 text-gray-500 dark:text-gray-400">+</span>
+                        <span className="mx-1 text-gray-500 dark:text-gray-400">or</span>
                       )}
                     </React.Fragment>
                   ))}
