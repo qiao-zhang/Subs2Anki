@@ -444,33 +444,56 @@ const App: React.FC = () => {
       fetch(dataUrl)
         .then(res => res.blob())
         .then(blob => {
-          const timeStr = formatTime(videoPlayerRef.current?.getCurrentTime() || 0).replace(/:/g, '-');
+          const currentTime = videoPlayerRef.current?.getCurrentTime() || 0;
+
+          // 查找当前时间对应的字幕行
+          const currentSubtitle = subtitleLines.find(sub =>
+            currentTime >= sub.startTime && currentTime <= sub.endTime
+          );
+
           // TODO add save picker version
-          saveAs(blob, `${videoName.replace(/\.[^/.]+$/, "")}_snapshot_${timeStr}.jpg`);
+          saveAs(blob, makeMediaFileName(
+              '.jpg',
+              formatTime(currentTime).replace(/:/g, '-'),
+              currentSubtitle ? currentSubtitle.text : '',
+            )
+          );
         });
     }
   };
+
+  const makeMediaFileName = (suffix: '.jpg' | '.wav', timeStr: string = '', text: string = '') => {
+    let name = `${videoName.replace(/\.[^/.]+$/, "")}`;
+    if (timeStr !== '') {
+      name += `_${timeStr}`;
+    }
+    if (text !== '') {
+      name += `_${text.replace(/[<>:"/\\|?*]/g, '_').substring(0, 50)}`;
+    }
+    name += suffix;
+    return name;
+  }
 
   const handleDownloadAudio = async () => {
     if (!videoFile) return;
     if (tempSubtitleLine === null && activeSubtitleLineId === null) return;
     let start: number, end: number;
+    let currentSub: SubtitleLine | undefined;
+
     if (tempSubtitleLine !== null) {
       start = tempSubtitleLine.start;
       end = tempSubtitleLine.end;
     } else {
-      const currentSub = subtitleLines.find(s => s.id === activeSubtitleLineId);
+      currentSub = subtitleLines.find(s => s.id === activeSubtitleLineId);
       if (currentSub == null) return;
       start = currentSub.startTime;
       end = currentSub.endTime;
     }
-    console.log('before extracting...');
-    const blob = await extractAudioSync(start, end);
-    console.log('after extracting...');
 
+    const blob = await extractAudioSync(start, end);
     const startStr = formatTime(start).replace(/:/g, '-');
     const endStr = formatTime(end).replace(/:/g, '-');
-    const filename = `${videoName.replace(/\.[^/.]+$/, "")}_audio_${startStr}_${endStr}.wav`;
+    const filename = makeMediaFileName('.wav', `${startStr}_${endStr}`, currentSub ? currentSub.text : '');
 
     try {
       // @ts-ignore
