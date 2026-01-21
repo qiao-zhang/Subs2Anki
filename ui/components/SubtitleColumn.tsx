@@ -13,7 +13,7 @@ interface SubtitleColumnProps {
   canSave: boolean;
   onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: any) => void;
   onUpdateText: (id: number, text: string) => void;
-  onPlaySubtitle: (id: number) => void;
+  onSubtitleLineClicked: (id: number) => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (sub: SubtitleLine) => void;
   onSave: () => void;
@@ -27,7 +27,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          canSave,
                                                          onSetSubtitles,
                                                          onUpdateText,
-                                                         onPlaySubtitle,
+                                                         onSubtitleLineClicked,
                                                          onToggleLock,
                                                          onCreateCard,
                                                          onSave,
@@ -163,7 +163,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       <div
         key={sub.id}
         id={`sub-${sub.id}`}
-        onClick={() => onPlaySubtitle(sub.id)}
+        onClick={() => onSubtitleLineClicked(sub.id)}
         className={`group flex items-start gap-2 p-2 mx-2 mb-1 rounded transition-all cursor-pointer border ${
           isActive
             ? 'bg-slate-800 border-indigo-500/50 shadow-md'

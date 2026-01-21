@@ -45,6 +45,7 @@ const App: React.FC = () => {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncProgress, setSyncProgress] = useState({current: 0, total: 0});
+  const [notification, setNotification] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' });
 
   // noinspection JSUnusedLocalSymbols
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
@@ -321,8 +322,27 @@ const App: React.FC = () => {
     videoPlayerRef.current?.playPause();
   }
 
-  const handleSubtitleLineClicked = (id: number) => {
+  // 显示复制通知
+  const showCopyNotification = (text: string) => {
+    setNotification({ visible: true, text });
+    setTimeout(() => {
+      setNotification({ visible: false, text: '' });
+    }, 2000); // 2秒后自动隐藏
+  };
+
+  const handleSubtitleLineClicked = (id: number, copyText: boolean = true) => {
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
+
+    if (sub && copyText) {
+      // 复制字幕文本到剪贴板
+      navigator.clipboard.writeText(sub.text).then(() => {
+        // 显示复制成功的提示
+        showCopyNotification(sub.text);
+      }).catch(err => {
+        console.error('Cannot copy text:', err);
+      });
+    }
+
     if (sub && videoPlayerRef.current) {
       setTempSubtitleLine(null);
       setActiveSubtitleLineId(id);
@@ -568,7 +588,7 @@ const App: React.FC = () => {
             canSave={fileHandle !== null}
             onSetSubtitles={setSubtitles}
             onUpdateText={updateSubtitleText}
-            onPlaySubtitle={handleSubtitleLineClicked}
+            onSubtitleLineClicked={handleSubtitleLineClicked}
             onToggleLock={toggleSubtitleLock}
             onCreateCard={(sub) => {
               const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
@@ -613,7 +633,7 @@ const App: React.FC = () => {
             onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
             onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
             onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
-            onSubtitleLineClicked={handleSubtitleLineClicked}
+            onSubtitleLineClicked={(id) => handleSubtitleLineClicked(id, true)}
             onSubtitleLineDoubleClicked={toggleSubtitleLock}
             onSubtitleLineRemoved={removeSubtitle}
             onCreateCard={(id) => {
@@ -634,7 +654,7 @@ const App: React.FC = () => {
         setTempSubtitleLine={setTempSubtitleLine}
         toggleRegionsHidden={() => setRegionsHidden(prev => !prev)}
         setIsVideoOnlyMode={setIsVideoOnlyMode}
-        handleSubtitleLineClicked={handleSubtitleLineClicked}
+        onReplayPressed={(id: number) => handleSubtitleLineClicked(id, false)}
         onCreateCard={() => {
           if (activeSubtitleLineId === null) return;
           const s = subtitleLines.find(x => x.id === activeSubtitleLineId);
@@ -657,6 +677,13 @@ const App: React.FC = () => {
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
       />
+
+      {/* 全局复制通知 */}
+      {notification.visible && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-slate-700/90 text-slate-200 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 border border-slate-600">
+          "{notification.text.substring(0, 30)}{notification.text.length > 30 ? '...' : ''}" copied!
+        </div>
+      )}
     </div>
   );
 };

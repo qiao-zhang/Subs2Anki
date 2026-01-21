@@ -10,7 +10,7 @@ interface KeyboardShortcutsHandlerProps {
   setTempSubtitleLine: (line: { start: number, end: number } | null) => void;
   toggleRegionsHidden: () => void;
   setIsVideoOnlyMode: (mode: boolean) => void;
-  handleSubtitleLineClicked: (id: number) => void;
+  onReplayPressed: (id: number) => void;
   onCreateCard: () => void;
   jumpToSubtitle: (direction: 'next' | 'prev') => void;
 }
@@ -24,7 +24,7 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
   setTempSubtitleLine,
   toggleRegionsHidden,
   setIsVideoOnlyMode,
-  handleSubtitleLineClicked,
+  onReplayPressed,
   onCreateCard,
   jumpToSubtitle
 }) => {
@@ -99,7 +99,7 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
           break;
         case 'KeyR':
           e.preventDefault();
-          if (activeSubtitleLineId) handleSubtitleLineClicked(activeSubtitleLineId);
+          if (activeSubtitleLineId) onReplayPressed(activeSubtitleLineId);
           break;
         case 'KeyC':
           e.preventDefault();
@@ -129,7 +129,7 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
     setTempSubtitleLine, 
     toggleRegionsHidden,
     setIsVideoOnlyMode, 
-    handleSubtitleLineClicked, 
+    onReplayPressed,
     onCreateCard,
     jumpToSubtitle,
     subtitleLines
