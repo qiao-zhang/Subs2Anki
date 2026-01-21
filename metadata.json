@@ -1,5 +1,5 @@
 {
-  "name": "Subs2Anki AI",
+  "name": "Subs2Anki",
   "description": "A powerful video-to-flashcard tool using Gemini to analyze subtitles, capture screenshots, and generate comprehensive Anki cards from your local video files.",
   "requestFramePermissions": [
     "microphone"

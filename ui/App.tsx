@@ -20,7 +20,8 @@ import CardPreviewModal from './components/modals/CardPreviewModal.tsx';
 import AnkiConnectSettingsModal from './components/modals/AnkiConnectSettingsModal.tsx';
 import {useAppStore} from '../core/store';
 import {useMediaProcessing} from './hooks/useMediaProcessing';
-import {Loader2} from 'lucide-react';
+import ProcessingOverlay from './components/ProcessingOverlay';
+import KeyboardShortcutsHandler from './components/KeyboardShortcutsHandler';
 import ShortcutsCheatSheetModal from './components/modals/ShortcutsCheatSheetModal.tsx';
 
 const App: React.FC = () => {
@@ -495,117 +496,14 @@ const App: React.FC = () => {
     }
   };
 
-  // --- Keyboard Shortcuts ---
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore inputs
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
-
-      switch (e.code) {
-        case 'Space':
-          e.preventDefault();
-          videoPlayerRef.current?.playPause();
-          break;
-        case 'KeyH':
-          e.preventDefault();
-          if (e.shiftKey) {
-            setIsShortcutsModalOpen(prev => !prev);
-            break;
-          }
-        /* fallthrough */
-        case 'ArrowLeft':
-          e.preventDefault();
-          if (videoPlayerRef.current) {
-            let d = 0.5;
-            if (e.shiftKey) {
-              d = 5;
-            }
-            if (e.ctrlKey) {
-              d = 0.1;
-            }
-            const t = videoPlayerRef.current.getCurrentTime();
-            videoPlayerRef.current.seekTo(Math.max(0, t - d));
-          }
-          break;
-        case 'ArrowRight':
-        case 'KeyL':
-          e.preventDefault();
-          if (videoPlayerRef.current) {
-            let d = 0.5;
-            if (e.shiftKey) {
-              d = 5;
-            }
-            if (e.ctrlKey) {
-              d = 0.1;
-            }
-            const t = videoPlayerRef.current.getCurrentTime();
-            videoPlayerRef.current.seekTo(t + d);
-          }
-          break;
-        case 'ArrowUp':
-        case 'KeyK':
-          e.preventDefault();
-          jumpToSubtitle('prev');
-          break;
-        case 'ArrowDown':
-        case 'KeyJ':
-          e.preventDefault();
-          jumpToSubtitle('next');
-          break;
-        case 'KeyR':
-          e.preventDefault();
-          if (activeSubtitleLineId) handleSubtitleLineClicked(activeSubtitleLineId);
-          break;
-        case 'KeyC':
-          e.preventDefault();
-          if (activeSubtitleLineId) {
-            const s = subtitleLines.find(x => x.id === activeSubtitleLineId);
-            if (s) handleCreateCard(s).then();
-          }
-          break;
-        case 'KeyN':
-          e.preventDefault();
-          setActiveSubtitleLineId(null);
-          setTempSubtitleLine(null);
-          setRegionsHidden(prev => !prev);
-          break;
-        case 'KeyV':
-          e.preventDefault();
-          setIsVideoOnlyMode(prev => !prev); // 切换全屏模式
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSubtitleLineId, subtitleLines, regionsHidden, jumpToSubtitle, isVideoOnly]);
-
-
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
-
-      {/* Processing/Export/Sync Overlay */}
-      {(isExporting || isSyncing) && (
-        <div
-          className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center select-none animate-in fade-in duration-300">
-          <Loader2 size={48} className="text-indigo-500 animate-spin mb-4"/>
-          <div className="text-xl font-bold text-white">
-            {isSyncing ? `Syncing to Anki...` : "Preparing Export..."}
-          </div>
-          <div className="text-sm text-slate-400 mt-2">
-            {isSyncing ? `Card ${syncProgress.current} of ${syncProgress.total}` :
-              `Processing media ({ankiCards.filter(c => c.audioStatus !== 'done').length} remaining)`}
-          </div>
-          {!isSyncing && (
-            <button
-              onClick={() => setIsExporting(false)}
-              className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:bg-slate-800 transition"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      )}
+      <ProcessingOverlay
+        isExporting={isExporting}
+        isSyncing={isSyncing}
+        syncProgress={syncProgress}
+        setIsExporting={setIsExporting}
+      />
 
       {/* Top Part: 3 Columns */}
       <div className="flex flex-1 min-h-0 w-full">
@@ -702,6 +600,25 @@ const App: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Keyboard Shortcuts Handler */}
+      <KeyboardShortcutsHandler
+        activeSubtitleLineId={activeSubtitleLineId}
+        tempSubtitleLine={tempSubtitleLine}
+        regionsHidden={regionsHidden}
+        isVideoOnly={isVideoOnly}
+        setActiveSubtitleLineId={setActiveSubtitleLineId}
+        setTempSubtitleLine={setTempSubtitleLine}
+        toggleRegionsHidden={() => setRegionsHidden(prev => !prev)}
+        setIsVideoOnlyMode={setIsVideoOnlyMode}
+        handleSubtitleLineClicked={handleSubtitleLineClicked}
+        onCreateCard={() => {
+          if (activeSubtitleLineId === null) return;
+          const s = subtitleLines.find(x => x.id === activeSubtitleLineId);
+          if (s) handleCreateCard(s).then();
+        }}
+        jumpToSubtitle={jumpToSubtitle}
+      />
 
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)}
