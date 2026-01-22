@@ -51,22 +51,59 @@ class FuriganaService {
   }
 
   /**
-   * Converts text to Furigana (HTML Ruby tags).
+   * Converts text to Furigana with bracket notation.
    * @param text The Japanese text to convert.
-   * @returns HTML string with ruby annotations (e.g. <ruby>私<rt>わたし</rt></ruby>)
+   * @param mode return furigana in ruby tags if mode is 'tags', or in brackets if 'brackets'
+   * @returns String with furigana
    */
-  async convert(text: string): Promise<string> {
+  async convert(text: string, mode: 'tags' | 'brackets' = 'brackets'): Promise<string> {
     if (!text) return "";
     try {
       await this.init();
       if (!this.isInitialized) return text; // Fallback to original text if init failed
 
-      // Convert to hiragana with ruby markup
-      return await this.kuroshiro.convert(text, { to: 'hiragana', mode: 'furigana' });
+      // First convert to HTML ruby tags
+      const htmlResult = await this.kuroshiro.convert(text, { to: 'hiragana', mode: 'furigana' });
+
+      // Then convert HTML ruby tags to bracket notation
+      if (mode === 'brackets') {
+        return this.convertHtmlToBrackets(htmlResult);
+      }
+      return htmlResult;
     } catch (e) {
       console.error("Furigana conversion error:", e);
       return text;
     }
+  }
+
+  /**
+   * Converts HTML ruby tags to bracket notation.
+   * @param html The HTML string with ruby tags to convert.
+   * @returns String with furigana in bracket notation (e.g. 私[わたし])
+   */
+  private convertHtmlToBrackets(html: string): string {
+    // Regular expression to match ruby tags
+    // Matches: <ruby>kanji/fixed text<rp>(</rp><rt>reading</rt><rp>)</rp></ruby>
+    // or: <ruby>kanji/fixed text<rt>reading</rt></ruby>
+    // We'll preserve spaces and other text around the ruby tags
+    const rubyTagRegex = /<ruby>\s*([^<>]*?)\s*(?:<rp>\s*\(\s*<\/?rp\s*>[^<]*<rt>\s*([^<]*)\s*<\/rt>[^<]*<rp>\s*\)\s*<\/?rp\s*>)?\s*<\/ruby>/gi;
+
+    // First, replace ruby tags with bracket notation
+    let result = html.replace(rubyTagRegex, (match, kanji, reading) => {
+      // If there's a reading, wrap it in brackets after the kanji
+      if (reading && reading.trim()) {
+        return ` ${kanji}[${reading}]`;
+      } else {
+        // If no reading, just return the kanji
+        return kanji || '';
+      }
+    });
+
+    // Clean up extra whitespace that might have been introduced
+    // Replace multiple spaces with single space and trim
+    result = result.trimStart().replace(/\s+/g, ' ').trim();
+
+    return result;
   }
 }
 
