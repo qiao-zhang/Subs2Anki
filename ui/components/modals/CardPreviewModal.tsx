@@ -181,7 +181,7 @@ const generatePreviewHtml = (
           value = card.timestampStr;
           break;
         case 'Sequence':
-          value = card.timestampStr;
+          value = audioUrl ? audioUrl.split('/').pop() || '' : '';
           break;
         default:
           value = '';

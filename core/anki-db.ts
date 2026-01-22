@@ -267,7 +267,7 @@ export const createAnkiDatabase = async (
           case 'Audio':
             return audioTag;
           case 'Sequence':
-            return `${safeAudioFilename}_${card.timestampStr}`.trim();
+            return safeAudioFilename;
           default:
             return '';
         }

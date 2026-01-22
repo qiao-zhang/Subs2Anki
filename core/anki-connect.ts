@@ -134,7 +134,7 @@ export const syncToAnki = async (
             value = card.timestampStr;
             break;
           case 'Sequence':
-            value = `${card.id}`;
+            value = card.audioRef ? `sub2anki_audio_${card.id}_${timestamp}.wav` : '';
             break;
           case 'Image':
             // Handle Image
