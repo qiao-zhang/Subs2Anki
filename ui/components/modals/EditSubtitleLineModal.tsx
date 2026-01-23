@@ -1,7 +1,8 @@
 /// <reference lib="dom" />
 import React, {useState, useEffect, useRef} from 'react';
-import {X, Save, Clock} from 'lucide-react';
+import {X, Save, Clock, Mic, MicOff} from 'lucide-react';
 import {formatTime} from '@/core/time.ts';
+import {useTranscriber} from '@/ui/hooks/useTranscriber.ts';
 
 interface EditSubtitleLineModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ const EditSubtitleLineModal: React.FC<EditSubtitleLineModalProps> = (
   }) => {
   const [text, setText] = useState(initialText);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const transcriber = useTranscriber();
 
   useEffect(() => {
     if (isOpen) {
@@ -39,6 +41,13 @@ const EditSubtitleLineModal: React.FC<EditSubtitleLineModalProps> = (
       }, 100);
     }
   }, [isOpen, initialText]);
+
+  // Handle transcription result
+  useEffect(() => {
+    if (transcriber.output && transcriber.output.text) {
+      setText(transcriber.output.text);
+    }
+  }, [transcriber.output]);
 
   if (!isOpen) return null;
 
@@ -62,6 +71,29 @@ const EditSubtitleLineModal: React.FC<EditSubtitleLineModalProps> = (
       handleSubmit(e as any);
     } else if (e.key === 'Escape') {
       onClose();
+    }
+  };
+
+  const handleTranscribeAudio = async () => {
+    extractdd
+    if (!audioBlob) {
+      alert('No audio available for this subtitle line');
+      return;
+    }
+
+    try {
+      // Convert blob to audio buffer
+      const arrayBuffer = await audioBlob.arrayBuffer();
+
+      // Create audio context to decode the audio
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      // Start transcription
+      transcriber.start(audioBuffer);
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      alert('Failed to transcribe audio. Please try again.');
     }
   };
 
@@ -109,8 +141,38 @@ const EditSubtitleLineModal: React.FC<EditSubtitleLineModalProps> = (
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
               placeholder="Enter text..."
               rows={3}
+              disabled={transcriber.isBusy}
             />
             <p className="text-[10px] text-slate-500 text-right">Press Enter to save, Shift+Enter for new line</p>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={handleTranscribeAudio}
+              disabled={transcriber.isBusy}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                !audioBlob || transcriber.isBusy
+                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-500'
+              } transition`}
+            >
+              {transcriber.isBusy ? (
+                <>
+                  <MicOff size={16} /> Transcribing...
+                </>
+              ) : (
+                <>
+                  <Mic size={16} /> Transcribe Audio
+                </>
+              )}
+            </button>
+
+            {transcriber.isModelLoading && (
+              <div className="text-xs text-slate-400">
+                Loading model...
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
@@ -130,7 +192,7 @@ const EditSubtitleLineModal: React.FC<EditSubtitleLineModalProps> = (
             </button>
             <button
               type="submit"
-              disabled={!text.trim()}
+              disabled={!text.trim() || transcriber.isBusy}
               className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save size={16}/> Save
