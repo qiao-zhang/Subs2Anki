@@ -23,6 +23,7 @@ import {useMediaProcessing} from './hooks/useMediaProcessing';
 import ProcessingOverlay from './components/ProcessingOverlay';
 import KeyboardShortcutsHandler from './components/KeyboardShortcutsHandler';
 import ShortcutsCheatSheetModal from './components/modals/ShortcutsCheatSheetModal.tsx';
+import {createProjectRecord, saveProjectRecord, loadProjectRecord} from '../core/projectRecord';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
@@ -494,6 +495,44 @@ const App: React.FC = () => {
     return name;
   }
 
+  const handleSaveProject = async () => {
+    try {
+      const appState = {
+        videoName,
+        subtitleLines,
+        subtitleFileName,
+        ankiConfig,
+        ankiConnectUrl
+      };
+
+      const record = createProjectRecord(appState);
+      await saveProjectRecord(record);
+      showCopyNotification("Project saved successfully!");
+    } catch (error) {
+      console.error("Failed to save project:", error);
+      alert("Failed to save project: " + (error as Error).message);
+    }
+  };
+
+  const handleLoadProject = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const record = await loadProjectRecord(file);
+
+      // 更新应用状态（视频文件需要用户重新上传，但我们保留文件名）
+      setSubtitles(record.subtitleLines, record.subtitleFileName);
+      setAnkiConfig(record.ankiConfig);
+      setAnkiConnectUrl(record.ankiConnectUrl);
+
+      showCopyNotification("Project loaded successfully!");
+    } catch (error) {
+      console.error("Failed to load project:", error);
+      alert("Failed to load project: " + (error as Error).message);
+    }
+  };
+
   const handleDownloadAudio = async () => {
     if (!videoFile) return;
     if (tempSubtitleLine === null && activeSubtitleLineId === null) return;
@@ -560,6 +599,8 @@ const App: React.FC = () => {
             onExport={() => handleActionClick('export')}
             onSyncAnki={() => handleActionClick('sync')}
             onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
+            onSaveProject={handleSaveProject}
+            onLoadProject={handleLoadProject}
           />
         )}
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import {Layers, Settings, Download, CloudUpload, Wifi} from 'lucide-react';
 import CardItem from './CardItem';
+import ProjectControls from './ProjectControls';
 import {AnkiCard} from '@/core/types.ts';
 
 interface DeckColumnProps {
@@ -12,6 +13,8 @@ interface DeckColumnProps {
   onExport: () => void;
   onSyncAnki: () => void;
   onOpenAnkiSettings: () => void;
+  onSaveProject: () => void;
+  onLoadProject: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 const DeckColumn: React.FC<DeckColumnProps> = ({
@@ -22,7 +25,9 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  onOpenTemplateSettings,
                                                  onExport,
                                                  onSyncAnki,
-                                                 onOpenAnkiSettings
+                                                 onOpenAnkiSettings,
+  onSaveProject,
+  onLoadProject,
                                                }) => {
   return (
     <aside className="w-80 flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900/50 z-20">
@@ -33,6 +38,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
           <Layers size={20} className="text-indigo-500"/>
           <span className="text-lg font-bold tracking-tight text-slate-200">Subs2Anki</span>
         </div>
+        <ProjectControls onSaveProject={onSaveProject} onLoadProject={onLoadProject} />
       </div>
 
       {/* Deck Header */}
