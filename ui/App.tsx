@@ -74,7 +74,7 @@ const App: React.FC = () => {
   // --- Background Media Processing ---
   const finalizeExport = async () => {
     setIsExporting(false);
-    await generateAnkiDeck(ankiCards, videoName, ankiConfig);
+    await generateAnkiDeck(ankiCards, projectName, ankiConfig);
   };
 
   const finalizeSync = async () => {
@@ -326,7 +326,7 @@ const App: React.FC = () => {
   }
 
   // 显示复制通知
-  const showCopyNotification = (text: string) => {
+  const showNotification = (text: string) => {
     setNotification({ visible: true, text });
     setTimeout(() => {
       setNotification({ visible: false, text: '' });
@@ -340,7 +340,7 @@ const App: React.FC = () => {
       // 复制字幕文本到剪贴板
       navigator.clipboard.writeText(sub.text).then(() => {
         // 显示复制成功的提示
-        showCopyNotification(sub.text);
+        showNotification(sub.text);
       }).catch(err => {
         console.error('Cannot copy text:', err);
       });
@@ -500,16 +500,17 @@ const App: React.FC = () => {
   const handleSaveProject = async () => {
     try {
       const appState = {
+        projectName,
         videoName,
-        subtitleLines,
         subtitleFileName,
+        subtitleLines,
         ankiConfig,
         ankiConnectUrl
       };
 
       const record = createProjectRecord(appState);
       await saveProjectRecord(record);
-      showCopyNotification("Project saved successfully!");
+      showNotification("Project saved successfully!");
     } catch (error) {
       console.error("Failed to save project:", error);
       alert("Failed to save project: " + (error as Error).message);
@@ -524,11 +525,12 @@ const App: React.FC = () => {
       const record = await loadProjectRecord(file);
 
       // 更新应用状态（视频文件需要用户重新上传，但我们保留文件名）
+      setProjectName(record.projectName);
       setSubtitles(record.subtitleLines, record.subtitleFileName);
       setAnkiConfig(record.ankiConfig);
       setAnkiConnectUrl(record.ankiConnectUrl);
 
-      showCopyNotification("Project loaded successfully!");
+      showNotification("Project loaded successfully!");
     } catch (error) {
       console.error("Failed to load project:", error);
       alert("Failed to load project: " + (error as Error).message);

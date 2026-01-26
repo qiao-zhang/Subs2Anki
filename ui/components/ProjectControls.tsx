@@ -16,7 +16,7 @@ const ProjectControls: React.FC<ProjectControlsProps> = ({
         type="file"
         id="load-project-input"
         className="hidden"
-        accept=".json"
+        accept=".json,.subs2anki"
         onChange={onLoadProject}
       />
       <label

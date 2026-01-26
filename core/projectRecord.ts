@@ -21,18 +21,19 @@ const PROJECT_RECORD_VERSION = "1.0.0";
  * @returns 项目记录对象
  */
 export const createProjectRecord = (appState: {
+  projectName: string;
   videoName: string;
-  subtitleLines: SubtitleLine[];
   subtitleFileName: string;
+  subtitleLines: SubtitleLine[];
   ankiConfig: AnkiNoteType;
   ankiConnectUrl: string;
 }): ProjectRecord => {
   return {
     version: PROJECT_RECORD_VERSION,
-    projectName: appState.videoName.replace(/\.[^/.]+$/, ""), // 移除扩展名作为项目名
+    projectName: appState.projectName,
     videoName: appState.videoName,
-    subtitleLines: appState.subtitleLines,
     subtitleFileName: appState.subtitleFileName,
+    subtitleLines: appState.subtitleLines,
     ankiConfig: appState.ankiConfig,
     ankiConnectUrl: appState.ankiConnectUrl,
     timestamp: new Date().toISOString()
@@ -46,7 +47,7 @@ export const createProjectRecord = (appState: {
  * @returns Promise<void>
  */
 export const saveProjectRecord = async (record: ProjectRecord, fileName?: string): Promise<void> => {
-  const suggestedFileName = fileName || `${record.projectName}.subs2anki`;
+  const suggestedFileName = fileName || `${record.projectName.replace(/[\p{P}\s]/gu, '_')}.subs2anki`;
   
   try {
     // 转换为JSON字符串
@@ -131,10 +132,9 @@ const isValidProjectRecord = (record: any): record is ProjectRecord => {
     typeof record === 'object' &&
     typeof record.version === 'string' &&
     typeof record.projectName === 'string' &&
-    typeof record.videoSrc === 'string' &&
     typeof record.videoName === 'string' &&
-    Array.isArray(record.subtitleLines) &&
     typeof record.subtitleFileName === 'string' &&
+    Array.isArray(record.subtitleLines) &&
     typeof record.ankiConfig === 'object' &&
     typeof record.ankiConnectUrl === 'string' &&
     typeof record.timestamp === 'string'

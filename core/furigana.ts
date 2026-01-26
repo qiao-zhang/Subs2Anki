@@ -32,11 +32,14 @@ class FuriganaService {
       try {
         // Check if path module is available in global scope if needed (debug)
         // Initialize analyzer
-        const analyzer = new KuromojiAnalyzer({
+        const analyzer = new KuromojiAnalyzer(
+          {
           // Use a reliable public CDN for the dictionary files.
           // Important: Ensure it ends with a slash if the library expects to join filenames.
-          dictPath: "https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict/"
-        });
+          // dictPath: "https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict/"
+          dictPath: '/kuromoji/dict/',
+        }
+        );
 
         await this.kuroshiro.init(analyzer);
         this.isInitialized = true;
@@ -57,16 +60,22 @@ class FuriganaService {
    * @returns String with furigana
    */
   async convert(text: string, mode: 'tags' | 'brackets' = 'brackets'): Promise<string> {
+    console.log(text);
     if (!text) return "";
     try {
+      console.log('1', this.isInitialized);
       await this.init();
+      console.log(this.isInitialized);
       if (!this.isInitialized) return text; // Fallback to original text if init failed
 
       // First convert to HTML ruby tags
       const htmlResult = await this.kuroshiro.convert(text, { to: 'hiragana', mode: 'furigana' });
+      console.log(mode);
 
       // Then convert HTML ruby tags to bracket notation
       if (mode === 'brackets') {
+        console.log('before brackets', htmlResult);
+        console.log(this.convertHtmlToBrackets(htmlResult));
         return this.convertHtmlToBrackets(htmlResult);
       }
       return htmlResult;
