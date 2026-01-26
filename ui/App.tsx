@@ -101,8 +101,8 @@ const App: React.FC = () => {
         updateCard(card.id, { syncStatus: 'syncing' });
       });
 
-      const deckName = videoName ? `Sub2Anki::${videoName}` : 'Sub2Anki Export';
-      await syncToAnki(ankiConnectUrl, deckName, ankiConfig, unsyncedCards, (cur, tot) => {
+      const deckName = projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
+      await syncToAnki(ankiConnectUrl, deckName, projectName, ankiConfig, unsyncedCards, (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
       });
 
@@ -355,10 +355,11 @@ const App: React.FC = () => {
 
   const handleCreateCard = async (sub: SubtitleLine) => {
     if (!videoPlayerRef.current) return;
+    // setPauseAtTime(null);
+    const furigana = furiganaService.convert(sub.text);
 
     // Capture Screenshot immediately
     const screenshot = await videoPlayerRef.current.captureFrameAt(sub.startTime);
-    setPauseAtTime(null);
 
     let screenshotRef = null;
     if (screenshot) {
@@ -366,7 +367,8 @@ const App: React.FC = () => {
       await storeMedia(screenshotRef, screenshot);
     }
 
-    const cardId = crypto.randomUUID();
+    const timestampStr = formatTime(sub.startTime);
+    const cardId = `${projectName.replace(/[\p{P}\s]/gu, '_')}_${timestampStr}_${sub.text.replace(/[\p{P}\s]/gu, '_')}`;
 
     // Add card with pending audio status
     const newCard: AnkiCard = {
@@ -375,20 +377,21 @@ const App: React.FC = () => {
       text: sub.text,
       translation: '',
       notes: '',
-      furigana: '', // Will be populated shortly
+      furigana: await furigana,
       screenshotRef: screenshotRef,
       audioRef: null,
       audioStatus: 'pending',
-      timestampStr: formatTime(sub.startTime),
+      timestampStr: timestampStr,
       syncStatus: 'unsynced', // New cards are not synced by default
     };
 
     addCard(newCard);
 
-    // Trigger Furigana Generation (async)
-    furiganaService.convert(sub.text).then(f => {
+    /*
+    furigana.then(f => {
       updateCard(cardId, {furigana: f});
     });
+     */
   };
 
   const handleDeleteCard = async (id: string) => {
@@ -433,7 +436,7 @@ const App: React.FC = () => {
 
       // Sync only this card
       updateCard(id, { syncStatus: 'syncing' });
-      await syncToAnki(ankiConnectUrl, deckName, ankiConfig, [card], (cur, tot) => {
+      await syncToAnki(ankiConnectUrl, deckName, projectName, ankiConfig, [card], (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
       });
 

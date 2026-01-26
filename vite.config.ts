@@ -34,6 +34,7 @@ const copyWasmPlugin = {
   apply: 'build', // Only run during build
   configResolved() {
     // Copy files when config is resolved
+    /*
     copyWasmFiles(
       path.resolve(__dirname, 'node_modules/sql.js/dist'),
       path.resolve(__dirname, 'dist/assets/sql.js'),
@@ -42,6 +43,7 @@ const copyWasmPlugin = {
       'sql-asm.js',
       'sql-wasm.js',
     ]);
+     */
     copyWasmFiles(
       path.resolve(__dirname, 'node_modules/@ffmpeg/core/dist/esm'),
       path.resolve(__dirname, 'dist/assets/ffmpeg'),

@@ -81,6 +81,7 @@ export const checkConnection = async (url: string): Promise<boolean> => {
 export const syncToAnki = async (
   url: string,
   deckName: string,
+  projectName: string,
   noteType: AnkiNoteType,
   cards: AnkiCard[],
   onProgress: (current: number, total: number) => void
@@ -90,7 +91,6 @@ export const syncToAnki = async (
 
   // 2. Create a new empty deck. Will not overwrite a deck that exists with the same name
   const modelNames = await invoke<string[]>('modelNames', {}, url);
-  console.log(modelNames);
   if (modelNames.find(n => n === noteType.name) === undefined) {
     await invoke('createModel', {
       modelName: noteType.name,
@@ -134,14 +134,15 @@ export const syncToAnki = async (
             value = card.timestampStr;
             break;
           case 'Sequence':
-            value = card.audioRef ? `sub2anki_audio_${card.id}_${timestamp}.wav` : '';
+            value = card.id;
             break;
           case 'Image':
             // Handle Image
             if (card.screenshotRef) {
               const data = await getMedia(card.screenshotRef);
+              console.log(data);
               if (data && typeof data === 'string') {
-                const filename = `sub2anki_${card.id}_${timestamp}.jpg`;
+                const filename = `${card.id}.jpg`;
                 const base64 = stringToBase64(data);
 
                 // We upload manually via storeMediaFile instead of addNote params for better control
@@ -154,7 +155,7 @@ export const syncToAnki = async (
             if (card.audioRef) {
               const blob = await getMedia(card.audioRef);
               if (blob && blob instanceof Blob) {
-                const filename = `sub2anki_audio_${card.id}_${timestamp}.wav`;
+                const filename = `${card.id}.wav`;
                 const base64 = await blobToBase64(blob);
 
                 await invoke('storeMediaFile', {filename, data: base64}, url);
@@ -174,7 +175,7 @@ export const syncToAnki = async (
           deckName: deckName,
           modelName: noteType.name,
           fields: fields,
-          tags: ['Sub2AnkiAI'],
+          tags: ['Subs2Anki', projectName],
           options: {
             allowDuplicate: false,
             duplicateScope: 'deck'

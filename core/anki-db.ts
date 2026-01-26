@@ -25,7 +25,7 @@ export const createAnkiDatabase = async (
         return `/sql.js/${file}`;
       } else {
         // Web environment - use CDN
-        return `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/${file}`;
+        return `/sql.js/${file}`;
       }
     }
   });
@@ -239,13 +239,12 @@ export const createAnkiDatabase = async (
   cards.forEach((card, index) => {
     // Generate filenames for media
     // Note: We check if refs exist, not raw data
-    const sequence = `${deckName}_${card.timestampStr}_${card.text.replace(/[\p{P}\s]/gu, '_')}`;
-    const usedImageFilename = card.screenshotRef ? `${sequence}.jpg` : '';
+    const usedImageFilename = card.screenshotRef ? `${card.id}.jpg` : '';
 
     // Force max height to 270px for images in the Media field
     const imageTag = usedImageFilename ? `<img src="${usedImageFilename}" style="max-height: 270px;" alt="${usedImageFilename}">` : '';
 
-    const safeAudioFilename = card.audioRef ? `${sequence}.wav` : '';
+    const safeAudioFilename = card.audioRef ? `${card.id}.wav` : '';
     const audioTag = safeAudioFilename ? `[sound:${safeAudioFilename}]` : '';
 
     // Prepare fields array based on the model definition and mappings
@@ -268,7 +267,7 @@ export const createAnkiDatabase = async (
           case 'Audio':
             return audioTag;
           case 'Sequence':
-            return sequence;
+            return card.id;
           default:
             return '';
         }
