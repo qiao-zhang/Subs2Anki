@@ -27,6 +27,10 @@ const DEFAULT_NOTE_TYPE: AnkiNoteType = {
 };
 
 interface AppState {
+  // Project Name
+  projectName: string; // 新增：项目名称
+  setProjectName: (name: string) => void; // 新增：设置项目名称
+
   // Video Data
   videoSrc: string;
   videoName: string;
@@ -62,13 +66,23 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
+  projectName: '', // 默认项目名称为空
+  setProjectName: (name) => set({ projectName: name }),
+
   // Video defaults
   videoSrc: '',
   videoName: '',
   videoFile: null,
   setVideo: (file) => {
     const src = URL.createObjectURL(file);
-    set({videoSrc: src, videoName: file.name, videoFile: file});
+    // 当设置视频时，如果项目名称为空，则使用视频文件名作为默认项目名称
+    const currentProjectName = get().projectName;
+    set({
+      videoSrc: src,
+      videoName: file.name,
+      projectName: currentProjectName || file.name.replace(/\.[^/.]+$/, ""), // 移除扩展名作为项目名
+      videoFile: file
+    });
   },
 
   // Subtitle defaults

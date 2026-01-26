@@ -1,5 +1,5 @@
 import React from 'react';
-import { Save, Upload } from 'lucide-react';
+import { Save, FolderOpen } from 'lucide-react';
 
 interface ProjectControlsProps {
   onSaveProject: () => void;
@@ -11,20 +11,24 @@ const ProjectControls: React.FC<ProjectControlsProps> = ({
   onLoadProject
 }) => {
   return (
-    <div className="flex items-center gap-1 ml-auto">
-      <label className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition cursor-pointer"
-             title="Load Project">
-        <input
-          type="file"
-          accept=".subs2anki,.json"
-          onChange={onLoadProject}
-          className="hidden"
-        />
-        <Upload size={16} />
+    <div className="flex gap-1 ml-auto">
+      <input
+        type="file"
+        id="load-project-input"
+        className="hidden"
+        accept=".json"
+        onChange={onLoadProject}
+      />
+      <label
+        htmlFor="load-project-input"
+        className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition cursor-pointer"
+        title="Load Project"
+      >
+        <FolderOpen size={14} />
       </label>
       <button
         onClick={onSaveProject}
-        className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition flex items-center gap-1"
+        className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition"
         title="Save Project"
       >
         <Save size={14} />

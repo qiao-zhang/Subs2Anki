@@ -15,6 +15,8 @@ import WaveformDisplay from './components/WaveformDisplay';
 import DeckColumn from './components/DeckColumn';
 import SubtitleColumn from './components/SubtitleColumn';
 import AppControlBar from './components/AppControlBar';
+import EditableProjectName from './components/EditableProjectName';
+import ProjectControls from './components/ProjectControls';
 import TemplateEditorModal from './components/modals/TemplateEditorModal.tsx';
 import CardPreviewModal from './components/modals/CardPreviewModal.tsx';
 import AnkiConnectSettingsModal from './components/modals/AnkiConnectSettingsModal.tsx';
@@ -28,7 +30,7 @@ import {createProjectRecord, saveProjectRecord, loadProjectRecord} from '../core
 const App: React.FC = () => {
   // --- Global State from Zustand ---
   const {
-    videoSrc, videoName, videoFile, setVideo,
+    videoSrc, videoName, projectName, videoFile, setVideo, setProjectName,
     subtitleLines, subtitleFileName, fileHandle, setSubtitles,
     updateSubtitleText, toggleSubtitleLock, addSubtitle, removeSubtitle,
     shiftSubtitles,
@@ -599,13 +601,24 @@ const App: React.FC = () => {
             onExport={() => handleActionClick('export')}
             onSyncAnki={() => handleActionClick('sync')}
             onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
-            onSaveProject={handleSaveProject}
-            onLoadProject={handleLoadProject}
           />
         )}
 
         {/* COL 2: VIDEO (Center) */}
         <main className="flex-1 flex flex-col bg-slate-950 relative min-w-0">
+          {/* Project Controls Above Video Player */}
+          <div className="p-4 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
+            <EditableProjectName
+              projectName={projectName}
+              onProjectNameChange={setProjectName}
+              className="text-lg font-semibold"
+            />
+            <ProjectControls
+              onSaveProject={handleSaveProject}
+              onLoadProject={handleLoadProject}
+            />
+          </div>
+
           {/* Video Player Area */}
           <div className="flex-1 flex flex-col items-center justify-center p-2 bg-black/20 min-h-0">
             <div className="w-full h-full max-w-5xl flex flex-col justify-center">
