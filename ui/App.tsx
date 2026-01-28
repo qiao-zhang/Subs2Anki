@@ -655,6 +655,7 @@ const App: React.FC = () => {
             }}
             onSave={handleSaveSubtitles}
             onDownload={handleDownloadSubtitles}
+            onShiftSubtitles={shiftSubtitles}
           />
         )}
       </div>
@@ -671,7 +672,6 @@ const App: React.FC = () => {
             onTempCommit={handleCommitTempSubtitleLine}
             onVideoUpload={handleVideoUpload}
             onPlay={handlePlay}
-            onShiftSubtitles={shiftSubtitles}
             onCaptureFrame={handleCaptureFrame}
             onDownloadAudio={handleDownloadAudio}
             onUpdateSubtitleText={updateSubtitleText}
