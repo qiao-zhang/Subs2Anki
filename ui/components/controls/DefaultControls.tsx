@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Video as VideoIcon, MoveHorizontal, Camera, Play} from 'lucide-react';
 import {formatTime} from '../../../core/time';
 
@@ -36,6 +36,10 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
     onShiftSubtitles(ms / 1000);
   };
 
+  useEffect(() => {
+
+  }, [videoName]);
+
   // Shared button styles
   const btnBase = "h-9 flex items-center justify-center gap-2 px-3 rounded-md border transition-all text-sm font-medium shadow-sm select-none";
   const btnSecondary = "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-slate-600";
@@ -55,8 +59,9 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
 
         <button
           onClick={onPlay}
-          className={`${btnBase} ${btnSecondary}`}
+          className={`${btnBase} ${btnSecondary} ${videoName === '' ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Play/Pause"
+          disabled={videoName === ''}
         >
           <Play size={16}/>
           <kbd className={kbdStyle}>Space</kbd>
@@ -76,8 +81,9 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
 
         <button
           onClick={onCaptureFrame}
-          className={`${btnBase} ${btnSecondary} px-2.5`}
+          className={`${btnBase} ${btnSecondary} px-2.5 ${videoName === '' ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Capture Snapshot"
+          disabled={videoName === ''}
         >
           <Camera size={16}/> Capture Frame
         </button>
