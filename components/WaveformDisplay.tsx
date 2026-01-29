@@ -3,6 +3,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Minimap from 'wavesurfer.js/dist/plugins/minimap.esm.js';
+import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
 import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
 import {useAppStore} from '@/services/store.ts';
 
@@ -23,7 +24,6 @@ interface WaveformDisplayProps {
   onCreateCard: (id: number) => void;
 }
 
-// TODO: add timeline
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            videoElement,
                                                            videoSrc,
@@ -66,6 +66,29 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     const regions = RegionsPlugin.create();
     wsRegions.current = regions;
 
+    // Create Timeline Plugin
+    // noinspection SpellCheckingInspection,JSUnusedGlobalSymbols
+    const timeline = TimelinePlugin.create({
+      // container: timelineContainerRef.current!, // 指定时间轴容器
+      insertPosition: 'beforebegin',
+      height: 20,
+      primaryLabelInterval: 5,
+      secondaryLabelInterval: 1,
+      formatTimeCallback: (seconds) => {
+        // 格式化时间为HH:MM:SS或MM:SS格式
+        const totalSeconds = Math.floor(seconds);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+
+        if (hours > 0) {
+          return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        } else {
+          return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+      }
+    });
+
     // Create Minimap Plugin
     const minimap = Minimap.create({
       height: 30,
@@ -93,12 +116,12 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       barWidth: 2,
       barGap: 1,
       barRadius: 2,
-      height: 140,
+      height: 120,
       minPxPerSec: zoom,
       fillParent: true,
       interact: true,
       autoScroll: true,
-      plugins: [regions, minimap],
+      plugins: [regions, minimap, timeline], // 添加时间轴插件
     });
 
     regions.enableDragSelection({
@@ -120,7 +143,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     });
 
     // --- Region Events ---
-
     regions.on('region-created', (region: Region) => {
       if (isSyncingSubtitles.current) return;
       videoElement.pause();
@@ -253,15 +275,13 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));
 
-  if (!videoElement) return null;
-
   return (
     <div className="h-full w-full flex flex-col relative group select-none bg-slate-900/50">
       {!isReady && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm text-slate-400 text-xs">
-          <Activity className="animate-pulse mr-2" size={16}/>
-          Loading Audio Track...
+          {videoElement && <Activity className="animate-pulse mr-2" size={16}/>}
+          {videoElement === null ? 'No Video Loaded' : 'Loading Audio Track...'}
         </div>
       )}
 
@@ -274,7 +294,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           size={14}/></button>
       </div>
 
-      <div ref={waveformContainerRef} className="w-full h-full"/>
+      {/* 波形容器 */}
+      <div ref={waveformContainerRef} className="w-full h-[160px]"/>
 
       <style>{`
         .wavesurfer-region {
