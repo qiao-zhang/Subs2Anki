@@ -270,67 +270,66 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
 
         {/* Save Controls - shown on a separate line when needed */}
         {subtitleLines.length > 0 && (
-          <div className="h-10 flex items-center justify-end pb-2">
-            <div className="flex items-center gap-1">
-              {/* Global Shift Button - placed to the left of Save button */}
-              <div className="relative">
+          <div className="flex flex-col">
+            <div className="h-10 flex items-center justify-end pb-2">
+              <div className="flex items-center gap-1">
+                {/* Global Shift Button - placed to the left of Save button */}
                 <button
                   onClick={() => setIsShiftMenuOpen(!isShiftMenuOpen)}
-                  className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded"
+                  className={`w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded ${isShiftMenuOpen ? 'bg-slate-700' : ''}`}
                   title="Global Time Shift"
                 >
                   <MoveHorizontal size={16}/> Global Shift
                 </button>
 
-                {isShiftMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsShiftMenuOpen(false)}></div>
-                    <div
-                      className="absolute top-full mt-2 right-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[600] p-3 min-w-[200px] animate-in fade-in zoom-in-95 duration-100">
-                      <h4 className="text-[10px] font-bold text-slate-500 mb-2 uppercase text-center tracking-wider">Global
-                        Offset</h4>
-                      <div className="flex gap-2 items-center">
-                        <button onClick={() => handleQuickShift(-shiftAmount)}
-                                className="h-8 flex-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs text-slate-300 font-mono transition-colors">-{shiftAmount}ms
-                        </button>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            value={shiftAmount}
-                            onChange={(e) => handleShiftAmountChanged(e.target.value)}
-                            step={MIN_SHIFT_MS}
-                            min={MIN_SHIFT_MS}
-                            className="w-16 h-8 bg-slate-900 border border-slate-600 rounded px-1 text-sm text-white focus:border-indigo-500 outline-none text-center font-mono"
-                          />
-                        </div>
-                        <button onClick={() => handleQuickShift(shiftAmount)}
-                                className="h-8 flex-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs text-slate-300 font-mono transition-colors">+{shiftAmount}ms
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
+                <div className="relative">
+                  {canSave && <button onClick={onSave}
+                                      className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded">
+                    <Save size={16}/> Save
+                  </button>}
+                  {canSave || <button onClick={onDownload}
+                                      className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded">
+                    <Download size={16}/> Download
+                  </button>}
+                </div>
               </div>
+              <div className="flex items-center gap-1">
+                <button onClick={handleOpenSubtitle} className="p-2 hover:bg-slate-700 rounded text-indigo-400 transition"
+                        title="Load Subtitles">
+                  <FolderOpen size={16}/>
+                </button>
+                <input ref={subtitleInputRef} type="file" accept=".srt,.vtt" onChange={handleSubtitleInputChange}
+                       className="hidden"/>
+              </div>
+            </div>
 
-              <div className="relative">
-                {canSave && <button onClick={onSave}
-                                    className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded">
-                  <Save size={16}/> Save
-                </button>}
-                {canSave || <button onClick={onDownload}
-                                    className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded">
-                  <Download size={16}/> Download
-                </button>}
+            {/* Global Shift Controls - shown below the buttons when open */}
+            {isShiftMenuOpen && (
+              <div className="px-4 pb-2">
+                <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+                  <h4 className="text-[10px] font-bold text-slate-500 mb-2 uppercase text-center tracking-wider">Global
+                    Offset</h4>
+                  <div className="flex gap-2 items-center">
+                    <button onClick={() => handleQuickShift(-shiftAmount)}
+                            className="h-8 flex-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs text-slate-300 font-mono transition-colors">-{shiftAmount}ms
+                    </button>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={shiftAmount}
+                        onChange={(e) => handleShiftAmountChanged(e.target.value)}
+                        step={MIN_SHIFT_MS}
+                        min={MIN_SHIFT_MS}
+                        className="w-16 h-8 bg-slate-900 border border-slate-600 rounded px-1 text-sm text-white focus:border-indigo-500 outline-none text-center font-mono"
+                      />
+                    </div>
+                    <button onClick={() => handleQuickShift(shiftAmount)}
+                            className="h-8 flex-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded text-xs text-slate-300 font-mono transition-colors">+{shiftAmount}ms
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button onClick={handleOpenSubtitle} className="p-2 hover:bg-slate-700 rounded text-indigo-400 transition"
-                      title="Load Subtitles">
-                <FolderOpen size={16}/>
-              </button>
-              <input ref={subtitleInputRef} type="file" accept=".srt,.vtt" onChange={handleSubtitleInputChange}
-                     className="hidden"/>
-            </div>
+            )}
           </div>
         )}
       </div>
