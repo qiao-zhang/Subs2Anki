@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { analyzeSubtitle } from '../../core/gemini';
+import { analyzeSubtitle } from '../../services/gemini.ts';
 
 /**
  * Test Suite for Gemini AI Service.

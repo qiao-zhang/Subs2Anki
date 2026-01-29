@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Trash2, Image as ImageIcon, Loader2, Clock, AlertCircle, CloudUpload, CheckCircle, LoaderCircle} from 'lucide-react';
-import {AnkiCard} from '@/core/types.ts';
-import {getMedia} from '@/core/db.ts';
+import {AnkiCard} from '@/services/types.ts';
+import {getMedia} from '@/services/db.ts';
 
 interface CardItemProps {
   card: AnkiCard;

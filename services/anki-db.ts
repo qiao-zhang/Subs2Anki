@@ -1,5 +1,5 @@
 import initSqlJs from 'sql.js';
-import {AnkiCard, AnkiNoteType} from './types';
+import {AnkiCard, AnkiNoteType} from './types.ts';
 
 // Constants for Anki Database
 const ANKI_SEP = '\x1f'; // Unit separator for fields

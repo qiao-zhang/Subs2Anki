@@ -4,7 +4,7 @@ import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Minimap from 'wavesurfer.js/dist/plugins/minimap.esm.js';
 import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
-import {useAppStore} from '../../core/store';
+import {useAppStore} from '@/services/store.ts';
 
 interface WaveformDisplayProps {
   // Removed audioSrc as we use the videoElement directly
@@ -99,12 +99,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       interact: true,
       autoScroll: true,
       plugins: [regions, minimap],
-      // Important: By not providing a URL, we prevent fetching/decoding.
-      // However, to see a waveform, WaveSurfer normally needs to decode.
-      // Using 'media' binds the playhead.
-      // NOTE: Without pre-decoded peaks, WaveSurfer might try to fetch the src of the video element.
-      // This is unavoidable for visualization unless we use peaks. 
-      // But for local files (blob:), standard fetch is often optimized or handled by browser cache better than decodeAudioData.
     });
 
     regions.enableDragSelection({

@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {Check, Clock, Download} from 'lucide-react';
-import {formatTime} from '../../../core/time';
+import {formatTime} from '@/services/time.ts';
 
 interface TempSubtitleLineControlsProps {
   start: number;

@@ -1,25 +1,60 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const getClient = () => {
-  const apiKey = process.env.API_KEY;
+export interface LLMSettings {
+  provider: 'gemini' | 'openai-compatible' | 'chrome-ai';
+  apiKey: string;
+  model: string;
+  autoAnalyze: boolean;
+  baseUrl?: string;
+}
+
+/**
+ * Initializes the Google GenAI client using the environment variable API key.
+ */
+const getClient = (apiKeyOverride?: string) => {
+  const apiKey = apiKeyOverride || process.env.API_KEY;
   if (!apiKey) throw new Error("API Key not found");
   return new GoogleGenAI({ apiKey });
 };
 
+/**
+ * Structure of the response expected from the AI model.
+ */
 export interface AnalysisResult {
   translation: string;
   notes: string;
   keyWords: string[];
 }
 
+/**
+ * Sends a subtitle text to the Gemini model for analysis.
+ * 
+ * It asks for:
+ * 1. A translation.
+ * 2. Grammatical/cultural notes.
+ * 3. Key vocabulary.
+ * 
+ * It uses Structured Output (JSON schema) to ensure a consistent return format.
+ * 
+ * @param text - The target subtitle text
+ * @param contextPrev - The preceding line for context
+ * @param contextNext - The following line for context
+ * @param settings - Optional settings for the LLM configuration
+ * @returns Parsed AnalysisResult
+ */
 export const analyzeSubtitle = async (
   text: string, 
   contextPrev: string = "", 
-  contextNext: string = ""
+  contextNext: string = "",
+  settings?: LLMSettings
 ): Promise<AnalysisResult> => {
   try {
-    const ai = getClient();
+    const apiKey = settings?.provider === 'gemini' && settings.apiKey ? settings.apiKey : undefined;
+    const ai = getClient(apiKey);
     
+    // Use model from settings or default to gemini-3-flash-preview as per guidelines for basic text tasks
+    const modelName = settings?.model || "gemini-3-flash-preview";
+
     const prompt = `
       Analyze the following subtitle line from a video. 
       Target Line: "${text}"
@@ -33,7 +68,7 @@ export const analyzeSubtitle = async (
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: modelName,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -59,6 +94,7 @@ export const analyzeSubtitle = async (
 
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
+    // Return a fallback error object so the UI doesn't crash
     return {
       translation: "Error generating translation.",
       notes: "Could not analyze.",

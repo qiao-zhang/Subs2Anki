@@ -2,9 +2,9 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Virtuoso, VirtuosoHandle} from 'react-virtuoso';
 import {FileText, FolderOpen, Save, Download, AlertCircle, Lock, Unlock, PlusCircle, Search, X, MoveHorizontal} from 'lucide-react';
-import {parseSubtitles} from '@/core/parser.ts';
-import {SubtitleLine} from '@/core/types.ts';
-import {formatTime} from '@/core/time.ts';
+import {parseSubtitles} from '@/services/parser.ts';
+import {SubtitleLine} from '@/services/types.ts';
+import {formatTime} from '@/services/time.ts';
 
 interface SubtitleColumnProps {
   subtitleLines: SubtitleLine[];

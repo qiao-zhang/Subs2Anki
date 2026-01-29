@@ -1,6 +1,6 @@
 import React from 'react';
 import {Video as VideoIcon, Camera, Play} from 'lucide-react';
-import {formatTime} from '@/core/time.ts';
+import {formatTime} from '@/services/time.ts';
 
 interface DefaultControlsProps {
   videoName: string;

@@ -1,4 +1,4 @@
-import {SubtitleLine, AnkiNoteType} from './types';
+import {SubtitleLine, AnkiNoteType} from './types.ts';
 
 // 定义项目记录的数据结构
 export interface ProjectRecord {

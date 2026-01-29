@@ -1,5 +1,5 @@
 import React from 'react';
-import {useAppStore} from '@/core/store.ts';
+import {useAppStore} from '@/services/store.ts';
 import {Loader2} from 'lucide-react';
 
 interface ProcessingOverlayProps {

@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import React, {useRef, forwardRef, useImperativeHandle} from 'react';
-import { compressImage } from '../utils/imageUtils';
+import { compressImage } from '@/services/image-compression.ts';
 
 interface VideoPlayerProps {
   src: string;

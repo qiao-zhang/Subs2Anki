@@ -1,7 +1,7 @@
 import React from 'react';
 import {Layers, Settings, Download, CloudUpload, Wifi} from 'lucide-react';
-import CardItem from './CardItem';
-import {AnkiCard} from '@/core/types.ts';
+import CardItem from '@/components/CardItem';
+import {AnkiCard} from '@/services/types.ts';
 
 interface DeckColumnProps {
   cards: AnkiCard[];

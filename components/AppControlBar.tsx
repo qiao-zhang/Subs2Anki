@@ -1,7 +1,7 @@
 import React from 'react';
-import TempSubtitleLineControls from './controls/TempSubtitleLineControls';
-import ActiveSubtitleLineControls from './controls/ActiveSubtitleLineControls';
-import DefaultControls from './controls/DefaultControls';
+import TempSubtitleLineControls from '@/components/controls/TempSubtitleLineControls';
+import ActiveSubtitleLineControls from '@/components/controls/ActiveSubtitleLineControls';
+import DefaultControls from '@/components/controls/DefaultControls';
 
 interface AppControlBarProps {
   tempSubtitleLine: { start: number, end: number } | null;

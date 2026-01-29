@@ -1,5 +1,5 @@
-import {AnkiCard, AnkiNoteType} from './types';
-import {getMedia} from './db';
+import {AnkiCard, AnkiNoteType} from './types.ts';
+import {getMedia} from './db.ts';
 
 /**
  * Communicates with Anki via the AnkiConnect plugin.

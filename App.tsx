@@ -1,31 +1,31 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 import React, {useState, useRef, useEffect, useCallback} from 'react';
-import {SubtitleLine, AnkiCard} from '../core/types';
-import {serializeSubtitles} from '../core/parser';
-import {formatTime} from '../core/time';
-import {generateAnkiDeck} from '../core/export';
-import {ffmpegService} from '../core/ffmpeg';
-import {storeMedia, deleteMedia} from '../core/db';
-import {furiganaService} from '../core/furigana';
-import {syncToAnki, checkConnection} from '../core/anki-connect';
+import {SubtitleLine, AnkiCard} from './services/types.ts';
+import {serializeSubtitles} from './services/parser.ts';
+import {formatTime} from './services/time.ts';
+import {generateAnkiDeck} from './services/export.ts';
+import {ffmpegService} from './services/ffmpeg.ts';
+import {storeMedia, deleteMedia} from './services/db.ts';
+import {furiganaService} from './services/furigana.ts';
+import {syncToAnki, checkConnection} from './services/anki-connect.ts';
 import saveAs from 'file-saver';
-import VideoPlayer, {VideoPlayerHandle} from './components/VideoPlayer';
-import WaveformDisplay from './components/WaveformDisplay';
-import DeckColumn from './components/DeckColumn';
-import SubtitleColumn from './components/SubtitleColumn';
-import AppControlBar from './components/AppControlBar';
-import EditableProjectName from './components/EditableProjectName';
-import ProjectControls from './components/ProjectControls';
-import TemplateEditorModal from './components/modals/TemplateEditorModal.tsx';
-import CardPreviewModal from './components/modals/CardPreviewModal.tsx';
-import AnkiConnectSettingsModal from './components/modals/AnkiConnectSettingsModal.tsx';
-import {useAppStore} from '../core/store';
-import {useMediaProcessing} from './hooks/useMediaProcessing';
-import ProcessingOverlay from './components/ProcessingOverlay';
-import KeyboardShortcutsHandler from './components/KeyboardShortcutsHandler';
-import ShortcutsCheatSheetModal from './components/modals/ShortcutsCheatSheetModal.tsx';
-import {createProjectRecord, saveProjectRecord, loadProjectRecord} from '../core/projectRecord';
+import VideoPlayer, {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
+import WaveformDisplay from '@/components/WaveformDisplay.tsx';
+import DeckColumn from '@/components/DeckColumn.tsx';
+import SubtitleColumn from '@/components/SubtitleColumn.tsx';
+import AppControlBar from '@/components/AppControlBar.tsx';
+import EditableProjectName from './components/EditableProjectName.tsx';
+import ProjectControls from '@/components/ProjectControls.tsx';
+import TemplateEditorModal from '@/components/modals/TemplateEditorModal.tsx';
+import CardPreviewModal from '@/components/modals/CardPreviewModal.tsx';
+import AnkiConnectSettingsModal from '@/components/modals/AnkiConnectSettingsModal.tsx';
+import {useAppStore} from '@/services/store.ts';
+import {useMediaProcessing} from '@/hooks/useMediaProcessing.ts';
+import ProcessingOverlay from '@/components/ProcessingOverlay.tsx';
+import KeyboardShortcutsHandler from '@/components/KeyboardShortcutsHandler.tsx';
+import ShortcutsCheatSheetModal from '@/components/modals/ShortcutsCheatSheetModal.tsx';
+import {createProjectRecord, saveProjectRecord, loadProjectRecord} from './services/project-record.ts';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---

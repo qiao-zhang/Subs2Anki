@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CardItem from '../../ui/components/CardItem';
-import { AnkiCard } from '../../core/types';
+import { AnkiCard } from '../../services/types.ts';
 
 // Mock getMedia from db to handle async image loading
 vi.mock('../../core/db', () => ({

@@ -2,9 +2,9 @@
 /// <reference lib="dom" />
 import JSZip from 'jszip';
 import saveAs from 'file-saver';
-import { AnkiCard, AnkiNoteType } from './types';
-import { createAnkiDatabase } from './anki-db';
-import { getMedia } from './db';
+import { AnkiCard, AnkiNoteType } from './types.ts';
+import { createAnkiDatabase } from './anki-db.ts';
+import { getMedia } from './db.ts';
 
 /**
  * Generates an Anki-compatible .apkg file.

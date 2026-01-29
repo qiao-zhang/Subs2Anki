@@ -1,9 +1,8 @@
-
-import { useState, useEffect } from 'react';
-import { useAppStore } from '../../core/store';
-import { ffmpegService } from '../../core/ffmpeg';
-import { storeMedia } from '../../core/db';
-import { AnkiCard } from '../../core/types';
+import {useState, useEffect} from 'react';
+import {useAppStore} from '@/services/store.ts';
+import {ffmpegService} from '@/services/ffmpeg.ts';
+import {storeMedia} from '@/services/db.ts';
+import {AnkiCard} from '@/services/types.ts';
 
 export const useMediaProcessing = (
   videoFile: File | null,
@@ -11,7 +10,7 @@ export const useMediaProcessing = (
   isExporting: boolean,
   onExportReady: () => void
 ) => {
-  const { ankiCards, updateCard } = useAppStore();
+  const {ankiCards, updateCard} = useAppStore();
   const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
 
   // --- Background Audio Extraction Queue ---
@@ -26,7 +25,7 @@ export const useMediaProcessing = (
     }
 
     if (nextCard && videoFile) {
-      processCardAudio(nextCard.id, nextCard.subtitleId);
+      processCardAudio(nextCard.id, nextCard.subtitleId).then();
     } else if (!nextCard && isExporting) {
       finalizeExportIfReady();
     }
@@ -37,12 +36,12 @@ export const useMediaProcessing = (
 
     const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
     if (!sub) {
-      updateCard(cardId, { audioStatus: 'error' });
+      updateCard(cardId, {audioStatus: 'error'});
       return;
     }
 
     setBackgroundProcessingId(cardId);
-    updateCard(cardId, { audioStatus: 'processing' });
+    updateCard(cardId, {audioStatus: 'processing'});
 
     try {
       const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime);
@@ -53,11 +52,11 @@ export const useMediaProcessing = (
 
       const currentCards = useAppStore.getState().ankiCards;
       if (currentCards.find(c => c.id === cardId)) {
-        updateCard(cardId, { audioStatus: 'done', audioRef: audioId });
+        updateCard(cardId, {audioStatus: 'done', audioRef: audioId});
       }
     } catch (e) {
       console.error("Audio extraction failed", e);
-      updateCard(cardId, { audioStatus: 'error' });
+      updateCard(cardId, {audioStatus: 'error'});
     } finally {
       setBackgroundProcessingId(null);
     }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSubtitles } from '../../core/parser';
+import { parseSubtitles } from '../../services/parser.ts';
 
 /**
  * Test Suite for Subtitle Parsing.

@@ -1,5 +1,5 @@
-import { SubtitleLine } from './types';
-import { parseVTTTime, formatTimestamp } from './time';
+import { SubtitleLine } from './types.ts';
+import { parseVTTTime, formatTimestamp } from './time.ts';
 
 /**
  * Parses raw subtitle file content (SRT or VTT) into structured objects.

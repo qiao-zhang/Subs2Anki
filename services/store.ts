@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import {SubtitleLine, AnkiCard, AnkiNoteType, ProcessingState} from './types';
+import {SubtitleLine, AnkiCard, AnkiNoteType, ProcessingState} from './types.ts';
 
 // Default constants
 const DEFAULT_NOTE_TYPE: AnkiNoteType = {

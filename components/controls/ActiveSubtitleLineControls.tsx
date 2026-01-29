@@ -1,9 +1,9 @@
 import React, {useEffect, useState} from 'react';
 import {Download, Clock} from 'lucide-react';
-import AutoResizeEditableTextArea from "@/ui/components/AutoResizeEditableTextArea.tsx";
-import {useAppStore} from "@/core/store.ts";
-import {formatTime} from '../../../core/time';
-import {SubtitleLine} from '../../../core/types';
+import AutoResizeEditableTextArea from "@/components/AutoResizeEditableTextArea.tsx";
+import {useAppStore} from "@/services/store.ts";
+import {formatTime} from '@/services/time.ts';
+import {SubtitleLine} from '@/services/types.ts';
 
 interface ActiveSubtitleLineControlsProps {
   subtitleLineId: number,
