@@ -369,6 +369,7 @@ const App: React.FC = () => {
 
     const timestampStr = formatTime(sub.startTime);
     const cardId = `${projectName.replace(/[\p{P}\s]/gu, '_')}_${timestampStr}_${sub.text.replace(/[\p{P}\s]/gu, '_')}`;
+    // const cardId = `${projectName.replace(/[\p{P}\s]/gu, '_')}_${timestampStr}`;
 
     // Add card with pending audio status
     const newCard: AnkiCard = {

@@ -1,4 +1,3 @@
-
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL, fetchFile } from '@ffmpeg/util';
 
@@ -20,7 +19,7 @@ class FFmpegService {
 
     this.loadPromise = (async () => {
       const ffmpeg = new FFmpeg();
-      const baseURL = './ffmpeg';
+      const baseURL = '/ffmpeg';
       
       try {
         await ffmpeg.load({

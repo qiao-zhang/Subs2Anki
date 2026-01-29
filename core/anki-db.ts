@@ -15,18 +15,7 @@ export const createAnkiDatabase = async (
 ): Promise<Uint8Array> => {
   const SQL = await initSqlJs({
     locateFile: (file) => {
-      // Check if we're in a Tauri environment
-      // @ts-ignore
-      const isTauri = typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__);
-
-      if (isTauri) {
-        // Tauri environment - use assets from public directory
-        // This assumes WASM files are copied to public/sql.js/ during build
         return `/sql.js/${file}`;
-      } else {
-        // Web environment - use CDN
-        return `/sql.js/${file}`;
-      }
     }
   });
 

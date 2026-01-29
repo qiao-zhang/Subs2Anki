@@ -110,7 +110,6 @@ export const syncToAnki = async (
     const card = cards[i];
     onProgress(i + 1, total);
 
-    const timestamp = Date.now();
     const fields: Record<string, string> = {};
 
     // Prepare Fields and Media
@@ -170,7 +169,7 @@ export const syncToAnki = async (
 
     // 4. Add Note
     try {
-      const result = await invoke('addNote', {
+      await invoke('addNote', {
         note: {
           deckName: deckName,
           modelName: noteType.name,

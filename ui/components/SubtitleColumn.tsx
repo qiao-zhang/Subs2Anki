@@ -53,8 +53,6 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   };
 
   // Shared button styles
-  const btnBase = "h-9 flex items-center justify-center gap-2 px-3 rounded-md border transition-all text-sm font-medium shadow-sm select-none";
-  const btnSecondary = "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-slate-600";
   const subtitleInputRef = useRef<HTMLInputElement>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
