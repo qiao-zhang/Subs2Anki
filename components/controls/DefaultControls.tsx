@@ -1,6 +1,7 @@
 import React from 'react';
 import {Video as VideoIcon, Camera, Play} from 'lucide-react';
 import {formatTime} from '@/services/time.ts';
+import {BTN_BASE, BTN_SECONDARY, KBD_STYLE} from '@/services/shared-styles.ts';
 
 interface DefaultControlsProps {
   videoName: string;
@@ -18,17 +19,12 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
                                                            onCaptureFrame
                                                          }) => {
 
-  // Shared button styles
-  const btnBase = "h-9 flex items-center justify-center gap-2 px-3 rounded-md border transition-all text-sm font-medium shadow-sm select-none";
-  const btnSecondary = "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-slate-600";
-  const kbdStyle = "hidden sm:inline-flex items-center ml-2 px-1.5 h-5 text-[10px] font-mono bg-black/20 border border-white/10 rounded text-current opacity-70 leading-none";
-
   return (
     <div className="flex items-center justify-between w-full relative h-[42px]">
 
       {/* Left: Video Selector */}
       <div className="flex items-center gap-2 z-10">
-        <label className={`${btnBase} ${btnSecondary} cursor-pointer max-w-[240px]`}>
+        <label className={`${BTN_BASE} h-9 ${BTN_SECONDARY} cursor-pointer max-w-[240px]`}>
           <VideoIcon size={16} className="shrink-0"/>
           <span className="truncate">{videoName || "Select Video"}</span>
           <input type="file" accept="video/*" onChange={onVideoUpload} className="hidden"/>
@@ -37,12 +33,12 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
 
         <button
           onClick={onPlay}
-          className={`${btnBase} ${btnSecondary} ${videoName === '' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`${BTN_BASE} h-9 ${BTN_SECONDARY} ${videoName === '' ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Play/Pause"
           disabled={videoName === ''}
         >
           <Play size={16}/>
-          <kbd className={kbdStyle}>Space</kbd>
+          <kbd className={KBD_STYLE}>Space</kbd>
         </button>
       </div>
 
@@ -59,7 +55,7 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
 
         <button
           onClick={onCaptureFrame}
-          className={`${btnBase} ${btnSecondary} px-2.5 ${videoName === '' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`${BTN_BASE} h-9 ${BTN_SECONDARY} px-2.5 ${videoName === '' ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Capture Snapshot"
           disabled={videoName === ''}
         >

@@ -10,6 +10,7 @@ import {storeMedia, deleteMedia} from './services/db.ts';
 import {furiganaService} from './services/furigana.ts';
 import {syncToAnki, checkConnection} from './services/anki-connect.ts';
 import saveAs from 'file-saver';
+import {makeMediaFileName, formatTimeForFilename} from '@/services/filename-utils.ts';
 import VideoPlayer, {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
 import WaveformDisplay from '@/components/WaveformDisplay.tsx';
 import DeckColumn from '@/components/DeckColumn.tsx';
@@ -478,28 +479,15 @@ const App: React.FC = () => {
             currentTime >= sub.startTime && currentTime <= sub.endTime
           );
 
+          // 使用共享的工具函数生成文件名
+          const timeStr = formatTimeForFilename(currentTime);
+          const fileName = makeMediaFileName(videoName, '.jpg', timeStr, currentSubtitle ? currentSubtitle.text : '');
+
           // TODO add save picker version
-          saveAs(blob, makeMediaFileName(
-              '.jpg',
-              formatTime(currentTime).replace(/:/g, '-'),
-              currentSubtitle ? currentSubtitle.text : '',
-            )
-          );
+          saveAs(blob, fileName);
         });
     }
   };
-
-  const makeMediaFileName = (suffix: '.jpg' | '.wav', timeStr: string = '', text: string = '') => {
-    let name = `${videoName.replace(/\.[^/.]+$/, "")}`;
-    if (timeStr !== '') {
-      name += `_${timeStr}`;
-    }
-    if (text !== '') {
-      name += `_${text.replace(/[<>:"/\\|?*]/g, '_').substring(0, 50)}`;
-    }
-    name += suffix;
-    return name;
-  }
 
   const handleSaveProject = async () => {
     try {
@@ -558,9 +546,9 @@ const App: React.FC = () => {
     }
 
     const blob = await extractAudioSync(start, end);
-    const startStr = formatTime(start).replace(/:/g, '-');
-    const endStr = formatTime(end).replace(/:/g, '-');
-    const filename = makeMediaFileName('.wav', `${startStr}_${endStr}`, currentSub ? currentSub.text : '');
+    const startStr = formatTimeForFilename(start);
+    const endStr = formatTimeForFilename(end);
+    const filename = makeMediaFileName(videoName, '.wav', `${startStr}_${endStr}`, currentSub ? currentSub.text : '');
 
     try {
       // @ts-ignore

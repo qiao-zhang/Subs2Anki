@@ -39,6 +39,16 @@ export const formatTimestamp = (seconds: number, useComma: boolean = false): str
 };
 
 /**
+ * 计算时间差并格式化为字符串
+ * @param start 开始时间（秒）
+ * @param end 结束时间（秒）
+ * @returns 格式化的时间差字符串
+ */
+export const formatTimeDifference = (start: number, end: number): string => {
+  return (end - start).toFixed(2) + 's';
+};
+
+/**
  * Parses a VTT/SRT timestamp string into seconds.
  * Supports formats like "00:00:10.500" or "01:30.000".
  * 

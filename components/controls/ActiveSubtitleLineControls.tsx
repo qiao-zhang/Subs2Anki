@@ -4,6 +4,8 @@ import AutoResizeEditableTextArea from "@/components/AutoResizeEditableTextArea.
 import {useAppStore} from "@/services/store.ts";
 import {formatTime} from '@/services/time.ts';
 import {SubtitleLine} from '@/services/types.ts';
+import {formatTimeDifference} from '@/services/time.ts';
+import {BTN_BASE, BTN_SECONDARY, TIMESTAMP_WRAPPER, TIMESTAMP_TEXT} from '@/services/shared-styles.ts';
 
 interface ActiveSubtitleLineControlsProps {
   subtitleLineId: number,
@@ -34,10 +36,6 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
     onTextChange(subtitleLineId, text);
   };
 
-  // Shared button styles
-  const btnBase = "h-9 flex items-center justify-center gap-2 px-3 rounded-md border transition-all text-sm font-medium shadow-sm select-none";
-  const btnSecondary = "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-slate-600";
-
   if (subtitleLine === null) {
     return null;
   }
@@ -47,15 +45,14 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
 
       <div className="flex items-center gap-3 bg-slate-800/50 p-1.5 rounded-lg border border-slate-800">
         {/* Timestamp Info */}
-        <div
-          className="flex flex-col px-3 py-1 bg-slate-900 rounded border border-slate-700 min-w-[140px] text-center shrink-0 h-9 justify-center">
+        <div className={TIMESTAMP_WRAPPER}>
           <div className="flex items-center justify-center gap-2">
             <Clock size={12} className="text-slate-600"/>
-            <span className="font-mono text-xs text-emerald-400">
+            <span className={TIMESTAMP_TEXT}>
               {formatTime(subtitleLine.startTime)} - {formatTime(subtitleLine.endTime)}
             </span>
             <span className="text-[10px] text-slate-600 ml-1 border-l border-slate-700 pl-2">
-              {(subtitleLine.endTime - subtitleLine.startTime).toFixed(2)}s
+              {formatTimeDifference(subtitleLine.startTime, subtitleLine.endTime)}
             </span>
             {/*DEV*/}
             <span className="text-[10px] text-slate-600 ml-1 border-l border-slate-700 pl-2">
@@ -74,7 +71,7 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
         />
         <button
           onClick={onDownloadAudio}
-          className={`${btnBase} ${btnSecondary}`}
+          className={`${BTN_BASE} h-9 ${BTN_SECONDARY}`}
           title="Download Audio Clip"
         >
           <Download size={18}/> Clip Audio
