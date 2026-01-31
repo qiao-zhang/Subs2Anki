@@ -13,7 +13,7 @@ interface SubtitleColumnProps {
   canSave: boolean;
   onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: any) => void;
   onUpdateText: (id: number, text: string) => void;
-  onSubtitleLineClicked: (id: number) => void;
+  onSubtitleLineClicked: (id: number, copyText?: boolean) => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (sub: SubtitleLine) => void;
   onSave: () => void;
@@ -183,7 +183,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       <div
         key={sub.id}
         id={`sub-${sub.id}`}
-        onClick={() => onSubtitleLineClicked(sub.id)}
+        onClick={() => onSubtitleLineClicked(sub.id, true)}
         className={`group flex items-start gap-2 p-2 mx-2 mb-1 rounded transition-all cursor-pointer border ${
           isActive
             ? 'bg-slate-800 border-indigo-500/50 shadow-md'
@@ -207,7 +207,6 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
             </span>
           </div>
           <div className="relative">
-            {searchTerm ? (
               <div
                 className={`w-full bg-transparent resize-none outline-none text-sm leading-snug ${
                   sub.locked
@@ -218,24 +217,8 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                 }`}
                 style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}
               >
-                {highlightText(sub.text, searchTerm, isCurrentSearchResult)}
+                {searchTerm ? highlightText(sub.text, searchTerm, isCurrentSearchResult) : sub.text}
               </div>
-            ) : (
-              <textarea
-                value={sub.text}
-                onChange={(e) => onUpdateText(sub.id, e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                rows={2}
-                readOnly={sub.locked}
-                className={`w-full bg-transparent resize-none outline-none text-sm leading-snug ${
-                  sub.locked
-                    ? 'text-slate-500'
-                    : isActive
-                      ? 'text-white'
-                      : 'text-slate-400 hover:text-slate-300'
-                }`}
-              />
-            )}
           </div>
         </div>
         <button onClick={(e) => {

@@ -681,7 +681,7 @@ const App: React.FC = () => {
             onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
             onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
             onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
-            onSubtitleLineClicked={(id) => handleSubtitleLineClicked(id, true)}
+            onSubtitleLineClicked={(id) => handleSubtitleLineClicked(id, false)}
             onSubtitleLineDoubleClicked={toggleSubtitleLock}
             onSubtitleLineRemoved={removeSubtitle}
             onCreateCard={(id) => {
