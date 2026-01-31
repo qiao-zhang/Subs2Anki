@@ -6,7 +6,7 @@ export interface SubtitleLine {
   startTime: number; // Start time in seconds
   endTime: number;   // End time in seconds
   text: string;      // The actual dialogue text
-  locked?: boolean;  // Whether the subtitle is locked for editing
+  status: 'normal' | 'locked' | 'ignored';  // Status of the subtitle line: normal, locked, or ignored
 }
 
 /**

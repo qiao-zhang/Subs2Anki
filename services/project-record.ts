@@ -13,7 +13,7 @@ export interface ProjectRecord {
 }
 
 // 默认版本号
-const PROJECT_RECORD_VERSION = "1.0.0";
+const PROJECT_RECORD_VERSION = "1.1.0";
 
 /**
  * 从当前应用状态创建项目记录
@@ -101,14 +101,20 @@ export const loadProjectRecord = (file: File): Promise<ProjectRecord> => {
       try {
         const content = e.target?.result as string;
         const record: ProjectRecord = JSON.parse(content);
-        
+
         // 验证记录格式
         if (!isValidProjectRecord(record)) {
           reject(new Error('无效的项目记录文件格式'));
           return;
         }
-        
-        resolve(record);
+
+        // 转换字幕行格式（如果需要）
+        const convertedRecord = {
+          ...record,
+          subtitleLines: convertSubtitleLinesFromLegacyFormat(record.subtitleLines)
+        };
+
+        resolve(convertedRecord);
       } catch (error) {
         reject(new Error('解析项目记录文件失败: ' + (error as Error).message));
       }
@@ -128,15 +134,57 @@ export const loadProjectRecord = (file: File): Promise<ProjectRecord> => {
  * @returns boolean
  */
 const isValidProjectRecord = (record: any): record is ProjectRecord => {
-  return (
-    typeof record === 'object' &&
-    typeof record.version === 'string' &&
-    typeof record.projectName === 'string' &&
-    typeof record.videoName === 'string' &&
-    typeof record.subtitleFileName === 'string' &&
-    Array.isArray(record.subtitleLines) &&
-    typeof record.ankiConfig === 'object' &&
-    typeof record.ankiConnectUrl === 'string' &&
-    typeof record.timestamp === 'string'
-  );
+  // 首先检查基本结构
+  if (
+    typeof record !== 'object' ||
+    typeof record.version !== 'string' ||
+    typeof record.projectName !== 'string' ||
+    typeof record.videoName !== 'string' ||
+    typeof record.subtitleFileName !== 'string' ||
+    !Array.isArray(record.subtitleLines) ||
+    typeof record.ankiConfig !== 'object' ||
+    typeof record.ankiConnectUrl !== 'string' ||
+    typeof record.timestamp !== 'string'
+  ) {
+    return false;
+  }
+
+  // 验证每个字幕行的结构
+  for (const sub of record.subtitleLines) {
+    if (
+      typeof sub !== 'object' ||
+      typeof sub.id !== 'number' ||
+      typeof sub.startTime !== 'number' ||
+      typeof sub.endTime !== 'number' ||
+      typeof sub.text !== 'string' ||
+      // 检查新格式 (status) 或旧格式 (locked)
+      (sub.status !== undefined && !['normal', 'locked', 'ignored'].includes(sub.status)) ||
+      (sub.locked !== undefined && typeof sub.locked !== 'boolean')
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+/**
+ * 将旧格式的字幕行转换为新格式
+ * @param subtitleLines 字幕行数组
+ * @returns 转换后的字幕行数组
+ */
+const convertSubtitleLinesFromLegacyFormat = (subtitleLines: any[]): SubtitleLine[] => {
+  return subtitleLines.map(sub => {
+    // 如果已经是新格式，直接返回
+    if (sub.status !== undefined) {
+      return sub as SubtitleLine;
+    }
+
+    // 如果是旧格式，转换为新格式
+    const { locked, ...rest } = sub;
+    return {
+      ...rest,
+      status: locked ? 'locked' : 'normal'
+    } as SubtitleLine;
+  });
 };

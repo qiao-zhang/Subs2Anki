@@ -226,7 +226,7 @@ const App: React.FC = () => {
       startTime: tempSubtitleLine.start,
       endTime: tempSubtitleLine.end,
       text,
-      locked: false
+      status: 'normal'
     };
     addSubtitle(newSub);
     setTempSubtitleLine(null);
@@ -367,7 +367,7 @@ const App: React.FC = () => {
     }
 
     const timestampStr = formatTimestamp(sub.startTime, 'dot', 1);
-    const cardId = `${projectName.replace(/[\p{P}\s]/gu, '_')}_${timestampStr.replace(':', '.')}_${sub.text.replace(/[\p{P}\s]/gu, '_')}`;
+    const cardId = `${projectName.replace(/[\p{P}\s]/gu, '_')}_${timestampStr.replace(/:/g, '.')}_${sub.text.replace(/[\p{P}\s]/gu, '_')}`;
     // const cardId = `${projectName.replace(/[\p{P}\s]/gu, '_')}_${timestampStr}`;
 
     // Add card with pending audio status

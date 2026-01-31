@@ -51,7 +51,7 @@ export const parseSubtitles = (content: string): SubtitleLine[] => {
         startTime,
         endTime,
         text,
-        locked: false // Default to unlocked
+        status: 'normal' // Default to normal
       });
     }
   });

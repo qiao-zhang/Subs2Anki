@@ -94,12 +94,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({subtitleLines: lines, subtitleFileName: fileName, fileHandle, hasUnsavedChanges: false}),
 
   updateSubtitleText: (id, text) => set((state) => ({
-    subtitleLines: state.subtitleLines.map(s => (s.id === id && !s.locked) ? {...s, text} : s),
+    subtitleLines: state.subtitleLines.map(s => (s.id === id && s.status !== 'locked' && s.status !== 'ignored') ? {...s, text} : s),
     hasUnsavedChanges: true
   })),
 
   updateSubtitleTime: (id, start, end) => set((state) => ({
-    subtitleLines: state.subtitleLines.map(s => (s.id === id && !s.locked) ? {
+    subtitleLines: state.subtitleLines.map(s => (s.id === id && s.status !== 'locked' && s.status !== 'ignored') ? {
       ...s,
       startTime: start,
       endTime: end
@@ -108,7 +108,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
 
   toggleSubtitleLock: (id) => set((state) => ({
-    subtitleLines: state.subtitleLines.map(s => s.id === id ? {...s, locked: !s.locked} : s)
+    subtitleLines: state.subtitleLines.map(s => s.id === id ? {
+      ...s,
+      status: s.status === 'normal' ? 'locked' :
+              s.status === 'locked' ? 'ignored' :
+              'normal'
+    } : s)
   })),
 
   addSubtitle: (sub) => set((state) => ({

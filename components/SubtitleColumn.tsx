@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import React, {useEffect, useRef, useState} from 'react';
 import {Virtuoso, VirtuosoHandle} from 'react-virtuoso';
-import {FileText, FolderOpen, Save, Download, AlertCircle, Lock, Unlock, PlusCircle, Search, X, MoveHorizontal} from 'lucide-react';
+import {FileText, FolderOpen, Save, Download, AlertCircle, Lock, Unlock, PlusCircle, Search, X, MoveHorizontal, EyeOff} from 'lucide-react';
 import {parseSubtitles} from '@/services/parser.ts';
 import {SubtitleLine} from '@/services/types.ts';
 import {formatTimestamp} from '@/services/time.ts';
@@ -193,8 +193,9 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         <button onClick={(e) => {
           e.stopPropagation();
           onToggleLock(sub.id);
-        }} className={`mt-1 ${sub.locked ? 'text-red-400' : 'text-slate-700 group-hover:text-slate-500'}`}>{sub.locked ?
-          <Lock size={12}/> : <Unlock size={12}/>}</button>
+        }} className={`mt-1 ${sub.status === 'locked' ? 'text-red-400' : sub.status === 'ignored' ? 'text-green-400' : 'text-slate-700 group-hover:text-slate-500'}`}>
+          {sub.status === 'locked' ? <Lock size={12}/> : sub.status === 'ignored' ? <EyeOff size={12}/> : <Unlock size={12}/>}
+        </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center mb-1">
             <span
@@ -209,7 +210,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
           <div className="relative">
               <div
                 className={`w-full bg-transparent resize-none outline-none text-sm leading-snug ${
-                  sub.locked
+                  (sub.status === 'locked' || sub.status === 'ignored')
                     ? 'text-slate-500'
                     : isActive
                       ? 'text-white'

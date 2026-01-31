@@ -235,7 +235,9 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       processedIds.add(idStr);
 
       const r = existingRegions.get(idStr);
-      const color = sub.locked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.2)';
+      const color = sub.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
+                   sub.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
+                   'rgba(99, 102, 241, 0.2)'; // Blue for normal
       const content = sub.text;
 
       if (r) {
@@ -244,8 +246,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         r.setOptions({
           start: sub.startTime,
           end: sub.endTime,
-          drag: !sub.locked,
-          resize: !sub.locked,
+          drag: !(sub.status === 'locked' || sub.status === 'ignored'),
+          resize: !(sub.status === 'locked' || sub.status === 'ignored'),
           color,
           content
         });
@@ -256,8 +258,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           end: sub.endTime,
           content,
           color,
-          drag: !sub.locked,
-          resize: !sub.locked,
+          drag: !(sub.status === 'locked' || sub.status === 'ignored'),
+          resize: !(sub.status === 'locked' || sub.status === 'ignored'),
         });
       }
     });
