@@ -1,5 +1,5 @@
 import { SubtitleLine } from './types.ts';
-import { parseVTTTime, formatTimestamp } from './time.ts';
+import { parseTimestamp, formatTimestamp } from './time.ts';
 
 /**
  * Parses raw subtitle file content (SRT or VTT) into structured objects.
@@ -35,8 +35,8 @@ export const parseSubtitles = (content: string): SubtitleLine[] => {
     if (!timeLine || !timeLine.includes('-->')) return;
 
     const [startStr, endStr] = timeLine.split('-->').map(s => s.trim());
-    const startTime = parseVTTTime(startStr);
-    const endTime = parseVTTTime(endStr);
+    const startTime = parseTimestamp(startStr);
+    const endTime = parseTimestamp(endStr);
 
     // Everything after the timeline is considered the dialogue text.
     // We join multi-line text into a single string and strip HTML tags (like <i> or <b>).
@@ -72,14 +72,14 @@ export const serializeSubtitles = (subtitles: SubtitleLine[], format: 'srt' | 'v
   if (format === 'vtt') {
     output += 'WEBVTT\n\n';
     subtitles.forEach(sub => {
-       output += `${formatTimestamp(sub.startTime, false)} --> ${formatTimestamp(sub.endTime, false)}\n`;
+       output += `${formatTimestamp(sub.startTime)} --> ${formatTimestamp(sub.endTime)}\n`;
        output += `${sub.text}\n\n`;
     });
   } else {
     // SRT
     subtitles.forEach((sub, index) => {
       output += `${index + 1}\n`;
-      output += `${formatTimestamp(sub.startTime, true)} --> ${formatTimestamp(sub.endTime, true)}\n`;
+      output += `${formatTimestamp(sub.startTime, 'comma')} --> ${formatTimestamp(sub.endTime, 'comma')}\n`;
       output += `${sub.text}\n\n`;
     });
   }

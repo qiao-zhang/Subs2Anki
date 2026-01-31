@@ -174,7 +174,7 @@ export const syncToAnki = async (
           deckName: deckName,
           modelName: noteType.name,
           fields: fields,
-          tags: ['Subs2Anki', projectName],
+          tags: ['Subs2Anki', projectName.replace(/[\p{P}\s]/gu, '_')],
           options: {
             allowDuplicate: false,
             duplicateScope: 'deck'

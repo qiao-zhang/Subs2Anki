@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Download, Clock} from 'lucide-react';
 import AutoResizeEditableTextArea from "@/components/AutoResizeEditableTextArea.tsx";
 import {useAppStore} from "@/services/store.ts";
-import {formatTime} from '@/services/time.ts';
+import {formatTimestamp} from '@/services/time.ts';
 import {SubtitleLine} from '@/services/types.ts';
 import {formatTimeDifference} from '@/services/time.ts';
 import {BTN_BASE, BTN_SECONDARY, TIMESTAMP_WRAPPER, TIMESTAMP_TEXT} from '@/services/shared-styles.ts';
@@ -49,7 +49,7 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
           <div className="flex items-center justify-center gap-2">
             <Clock size={12} className="text-slate-600"/>
             <span className={TIMESTAMP_TEXT}>
-              {formatTime(subtitleLine.startTime)} - {formatTime(subtitleLine.endTime)}
+              {formatTimestamp(subtitleLine.startTime)} - {formatTimestamp(subtitleLine.endTime)}
             </span>
             <span className="text-[10px] text-slate-600 ml-1 border-l border-slate-700 pl-2">
               {formatTimeDifference(subtitleLine.startTime, subtitleLine.endTime)}

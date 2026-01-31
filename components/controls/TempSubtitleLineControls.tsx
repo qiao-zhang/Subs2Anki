@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {Check, Clock, Download} from 'lucide-react';
-import {formatTime, formatTimeDifference} from '@/services/time.ts';
+import {formatTimestamp, formatTimeDifference} from '@/services/time.ts';
 import {BTN_BASE, BTN_PRIMARY, BTN_SECONDARY, KBD_STYLE, TIMESTAMP_WRAPPER, TIMESTAMP_TEXT} from '@/services/shared-styles.ts';
 
 interface TempSubtitleLineControlsProps {
@@ -28,7 +28,7 @@ const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
           <div className="flex items-center justify-center gap-2">
             <Clock size={12} className="text-slate-600"/>
             <span className={TIMESTAMP_TEXT}>
-              {formatTime(start)} - {formatTime(end)}
+              {formatTimestamp(start)} - {formatTimestamp(end)}
             </span>
             <span className="text-[10px] text-slate-600 ml-1 border-l border-slate-700 pl-2">
               {formatTimeDifference(start, end)}

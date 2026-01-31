@@ -3,7 +3,7 @@
 import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {SubtitleLine, AnkiCard} from './services/types.ts';
 import {serializeSubtitles} from './services/parser.ts';
-import {formatTime} from './services/time.ts';
+import {formatTimestamp} from './services/time.ts';
 import {generateAnkiDeck} from './services/export.ts';
 import {ffmpegService} from './services/ffmpeg.ts';
 import {storeMedia, deleteMedia} from './services/db.ts';
@@ -368,8 +368,8 @@ const App: React.FC = () => {
       await storeMedia(screenshotRef, screenshot);
     }
 
-    const timestampStr = formatTime(sub.startTime);
-    const cardId = `${projectName.replace(/[\p{P}\s]/gu, '_')}_${timestampStr}_${sub.text.replace(/[\p{P}\s]/gu, '_')}`;
+    const timestampStr = formatTimestamp(sub.startTime, 'dot', 1);
+    const cardId = `${projectName.replace(/[\p{P}\s]/gu, '_')}_${timestampStr.replace(':', '.')}_${sub.text.replace(/[\p{P}\s]/gu, '_')}`;
     // const cardId = `${projectName.replace(/[\p{P}\s]/gu, '_')}_${timestampStr}`;
 
     // Add card with pending audio status

@@ -1,6 +1,6 @@
 import React from 'react';
 import {Video as VideoIcon, Camera, Play} from 'lucide-react';
-import {formatTime} from '@/services/time.ts';
+import {formatTimestamp} from '@/services/time.ts';
 import {BTN_BASE, BTN_SECONDARY, KBD_STYLE} from '@/services/shared-styles.ts';
 
 interface DefaultControlsProps {
@@ -46,7 +46,7 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
       <div
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center select-none pointer-events-none">
         <div className="font-mono text-xl text-indigo-400 font-bold tracking-widest">
-          {formatTime(currentTime)}
+          {formatTimestamp(currentTime, 'trim')}
         </div>
       </div>
 

@@ -3,7 +3,7 @@
  * 包含时间格式化、解析和媒体文件名生成等工具
  */
 
-import {formatTime} from '@/services/time.ts';
+import {formatTimestamp} from '@/services/time.ts';
 
 /**
  * 生成媒体文件名
@@ -32,10 +32,10 @@ export const makeMediaFileName = (
 };
 
 /**
- * 将时间（秒）转换为文件名友好的格式（替换冒号为连字符）
+ * 将时间（秒）转换为文件名友好的格式（替换冒号为下划线）
  * @param seconds 时间（秒）
  * @returns 文件名友好的时间字符串
  */
 export const formatTimeForFilename = (seconds: number): string => {
-  return formatTime(seconds).replace(/:/g, '-');
+  return formatTimestamp(seconds).replace(/:/g, '_');
 };

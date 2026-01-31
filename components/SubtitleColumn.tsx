@@ -4,7 +4,7 @@ import {Virtuoso, VirtuosoHandle} from 'react-virtuoso';
 import {FileText, FolderOpen, Save, Download, AlertCircle, Lock, Unlock, PlusCircle, Search, X, MoveHorizontal} from 'lucide-react';
 import {parseSubtitles} from '@/services/parser.ts';
 import {SubtitleLine} from '@/services/types.ts';
-import {formatTime} from '@/services/time.ts';
+import {formatTimestamp} from '@/services/time.ts';
 
 interface SubtitleColumnProps {
   subtitleLines: SubtitleLine[];
@@ -203,7 +203,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                   ? 'text-indigo-400'
                   : 'text-slate-600'
               }`}>
-              {formatTime(sub.startTime)} - {formatTime(sub.endTime)}
+              {formatTimestamp(sub.startTime)} - {formatTimestamp(sub.endTime)}
             </span>
           </div>
           <div className="relative">
