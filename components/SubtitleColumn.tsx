@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState, useMemo} from 'react';
 import {Virtuoso, VirtuosoHandle} from 'react-virtuoso';
 import {FileText, FolderOpen, Save, Download, AlertCircle, Lock, Unlock, PlusCircle, Search, X, MoveHorizontal, EyeOff} from 'lucide-react';
 import {parseSubtitles} from '@/services/parser.ts';
@@ -19,6 +19,8 @@ interface SubtitleColumnProps {
   onSave: () => void;
   onDownload: () => void;
   onShiftSubtitles: (offset: number) => void;
+  // 新增状态过滤属性
+  visibleStatuses?: ('normal' | 'locked' | 'ignored')[];
 }
 
 const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
@@ -33,11 +35,19 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          onCreateCard,
                                                          onSave,
                                                          onDownload,
-                                                         onShiftSubtitles
+                                                         onShiftSubtitles,
+                                                         visibleStatuses = ['normal', 'locked', 'ignored'] // 默认显示所有状态
                                                        }) => {
   const MIN_SHIFT_MS = 10;
   const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
   const [shiftAmount, setShiftAmount] = useState(MIN_SHIFT_MS);
+
+  // 状态过滤
+  const [statusFilters, setStatusFilters] = useState<Record<'normal' | 'locked' | 'ignored', boolean>>({
+    normal: true,
+    locked: true,
+    ignored: true
+  });
 
   const handleShiftAmountChanged = (shiftAmountString: string) => {
     const val = parseFloat(shiftAmountString);
@@ -47,6 +57,13 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       setShiftAmount(MIN_SHIFT_MS);
     }
   }
+
+  const handleStatusFilterChange = (status: 'normal' | 'locked' | 'ignored') => {
+    setStatusFilters(prev => ({
+      ...prev,
+      [status]: !prev[status]
+    }));
+  };
 
   const handleQuickShift = (ms: number) => {
     onShiftSubtitles(ms / 1000);
@@ -154,8 +171,34 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     event.target.value = '';
   };
 
+  // 过滤字幕行
+  const filteredSubtitleLines = useMemo(() =>
+    subtitleLines.filter(sub =>
+      statusFilters[sub.status || 'normal']
+    ), [subtitleLines, statusFilters]
+  );
+
+  // 更新过滤索引以匹配过滤后的数组
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredIndices([]);
+      setCurrentSearchIndex(0);
+      return;
+    }
+
+    const indices = filteredSubtitleLines
+      .map((line, index) => ({line, index}))
+      .filter(({line}) =>
+        line.text.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .map(({index}) => index);
+
+    setFilteredIndices(indices);
+    setCurrentSearchIndex(0);
+  }, [searchTerm, filteredSubtitleLines]);
+
   const renderSubtitleRow = (index: number) => {
-    const sub = subtitleLines[index];
+    const sub = filteredSubtitleLines[index];
     const isActive = sub.id === activeSubtitleLineId;
     const isCurrentSearchResult = searchTerm && filteredIndices.length > 0 &&
       filteredIndices[currentSearchIndex] === index;
@@ -368,15 +411,49 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         </div>
       </div>
 
+      {/* Status Filters */}
+      <div className="h-8 flex items-center px-4 bg-slate-900/40 border-b border-slate-800 text-xs">
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={statusFilters.normal}
+              onChange={() => handleStatusFilterChange('normal')}
+              className="rounded text-indigo-600 focus:ring-indigo-500"
+            />
+            <span className="text-slate-400">Normal</span>
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={statusFilters.locked}
+              onChange={() => handleStatusFilterChange('locked')}
+              className="rounded text-indigo-600 focus:ring-indigo-500"
+            />
+            <span className="text-red-400">Locked</span>
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={statusFilters.ignored}
+              onChange={() => handleStatusFilterChange('ignored')}
+              className="rounded text-indigo-600 focus:ring-indigo-500"
+            />
+            <span className="text-green-400">Ignored</span>
+          </label>
+        </div>
+      </div>
+
       <div className="flex-1 min-h-0 bg-slate-900 pt-2">
-        {subtitleLines.length === 0 ? (
+        {filteredSubtitleLines.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs">
-            <AlertCircle size={24} className="mb-2 opacity-50"/>No content
+            <AlertCircle size={24} className="mb-2 opacity-50"/>
+            {subtitleLines.length === 0 ? 'No content' : 'No visible subtitles'}
           </div>
         ) : (
           <Virtuoso
             ref={virtuosoRef}
-            totalCount={subtitleLines.length}
+            totalCount={filteredSubtitleLines.length}
             className="custom-scrollbar"
             itemContent={renderSubtitleRow}
           />
