@@ -1,5 +1,3 @@
-/// <reference lib="dom" />
-/// <reference lib="dom.iterable" />
 import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {SubtitleLine, AnkiCard} from './services/types.ts';
 import {serializeSubtitles} from './services/parser.ts';
@@ -726,9 +724,9 @@ const App: React.FC = () => {
         onClose={() => setIsShortcutsModalOpen(false)}
       />
 
-      {/* 全局复制通知 */}
+      {/* 全局通知 */}
       {notification.visible && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-slate-700/90 text-slate-200 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 border border-slate-600">
+        <div className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-50 bg-slate-700/80 text-slate-200 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 border border-slate-600">
           "{notification.text.substring(0, 30)}{notification.text.length > 30 ? '...' : ''}" copied!
         </div>
       )}
