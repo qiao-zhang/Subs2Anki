@@ -8,7 +8,7 @@ interface MediaDB extends DBSchema {
   };
 }
 
-const DB_NAME = 'sub2anki-media-db';
+const DB_NAME = 'subs2anki-media-db';
 const STORE_NAME = 'media';
 
 export const initDB = async () => {

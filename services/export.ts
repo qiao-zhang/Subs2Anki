@@ -56,7 +56,7 @@ export const generateAnkiDeck = async (
       const data = await getMedia(card.screenshotRef);
       if (data && typeof data === 'string') {
           const extension = "jpg";
-          const filename = `sub2anki_${index}_${creationTime}.${extension}`;
+          const filename = `subs2anki_${index}_${creationTime}.${extension}`;
           
           const zipName = mediaIndex.toString();
           const base64Data = data.split(',')[1];
@@ -72,7 +72,7 @@ export const generateAnkiDeck = async (
       const blob = await getMedia(card.audioRef);
       if (blob && blob instanceof Blob) {
           const extension = "wav";
-          const filename = `sub2anki_audio_${index}_${creationTime}.${extension}`;
+          const filename = `subs2anki_audio_${index}_${creationTime}.${extension}`;
 
           const zipName = mediaIndex.toString();
           zip.file(zipName, blob);
@@ -88,5 +88,5 @@ export const generateAnkiDeck = async (
 
   // 4. Generate and Download
   const content = await zip.generateAsync({ type: "blob" });
-  saveAs(content, `${deckName || 'Sub2Anki_Export'}.apkg`);
+  saveAs(content, `${deckName || 'Subs2Anki_Export'}.apkg`);
 };

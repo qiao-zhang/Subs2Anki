@@ -450,7 +450,7 @@ const App: React.FC = () => {
         return;
       }
 
-      const deckName = videoName ? `Sub2Anki::${videoName}` : 'Sub2Anki Export';
+      const deckName = projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
 
       // Sync only this card
       updateCard(id, { syncStatus: 'syncing' });

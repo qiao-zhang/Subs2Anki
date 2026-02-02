@@ -274,7 +274,7 @@ export const createAnkiDatabase = async (
       ':mid': noteType.id,
       ':mod': Math.floor(creationTime / 1000),
       ':usn': -1,
-      ':tags': "Sub2AnkiAI",
+      ':tags': "Subs2Anki",
       ':flds': fldsStr,
       ':sfld': card.text, // Sort field (usually first field)
       ':csum': 0, // checksum

@@ -268,9 +268,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAnkiConfig: (config) => set({ankiConfig: config}),
 
   // Anki Connect
-  ankiConnectUrl: localStorage.getItem('sub2anki_anki_url') || 'http://127.0.0.1:8765',
+  ankiConnectUrl: localStorage.getItem('subs2anki_anki_url') || 'http://127.0.0.1:8765',
   setAnkiConnectUrl: (url) => {
-    localStorage.setItem('sub2anki_anki_url', url);
+    localStorage.setItem('subs2anki_anki_url', url);
     set({ankiConnectUrl: url});
   }
 }));
