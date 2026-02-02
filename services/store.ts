@@ -46,7 +46,8 @@ interface AppState {
   setSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: any) => void;
   updateSubtitleText: (id: number, text: string) => void;
   updateSubtitleTime: (id: number, start: number, end: number) => void;
-  toggleSubtitleLock: (id: number) => void;
+  toggleSubtitleLineStatus: (id: number) => void;
+  setSubtitleLineStatus: (id: number, status: 'normal' | 'locked' | 'ignored') => void;
   addSubtitle: (sub: SubtitleLine) => void;
   removeSubtitle: (id: number) => void;
   shiftSubtitles: (offset: number) => void;
@@ -149,12 +150,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  toggleSubtitleLock: (id) => set((state) => ({
+  toggleSubtitleLineStatus: (id) => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => s.id === id ? {
       ...s,
       status: s.status === 'normal' ? 'locked' :
               s.status === 'locked' ? 'ignored' :
               'normal'
+    } : s)
+  })),
+
+  setSubtitleLineStatus: (id: number, status: 'normal' | 'locked' | 'ignored') => set((state) => ({
+    subtitleLines: state.subtitleLines.map(s => s.id === id ? {
+      ...s,
+      status,
     } : s)
   })),
 

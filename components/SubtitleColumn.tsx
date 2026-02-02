@@ -166,6 +166,14 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     event.target.value = '';
   };
 
+  // 计算每种状态类型的字幕行数量
+  const subtitleCounts = useMemo(() => {
+    return subtitleLines.reduce((counts, sub) => {
+      counts[sub.status]++;
+      return counts;
+    }, { normal: 0, locked: 0, ignored: 0 } as Record<'normal' | 'locked' | 'ignored', number>);
+  }, [subtitleLines]);
+
   // 过滤字幕行
   const filteredSubtitleLines = useMemo(() =>
     subtitleLines.filter(sub =>
@@ -416,7 +424,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               onChange={() => handleStatusFilterChange('normal')}
               className="rounded text-indigo-600 focus:ring-indigo-500"
             />
-            <span className="text-slate-400">Normal</span>
+            <span className="text-slate-400">Normal ({subtitleCounts.normal})</span>
           </label>
           <label className="flex items-center gap-1">
             <input
@@ -425,7 +433,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               onChange={() => handleStatusFilterChange('locked')}
               className="rounded text-indigo-600 focus:ring-indigo-500"
             />
-            <span className="text-red-400">Locked</span>
+            <span className="text-red-400">Locked ({subtitleCounts.locked})</span>
           </label>
           <label className="flex items-center gap-1">
             <input
@@ -434,7 +442,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               onChange={() => handleStatusFilterChange('ignored')}
               className="rounded text-indigo-600 focus:ring-indigo-500"
             />
-            <span className="text-green-400">Ignored</span>
+            <span className="text-green-400">Ignored ({subtitleCounts.ignored})</span>
           </label>
         </div>
       </div>

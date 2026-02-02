@@ -31,7 +31,8 @@ const App: React.FC = () => {
   const {
     videoSrc, videoName, projectName, videoFile, setVideo, setProjectName,
     subtitleLines, subtitleFileName, fileHandle, setSubtitles,
-    updateSubtitleText, toggleSubtitleLock, addSubtitle, removeSubtitle,
+    updateSubtitleText, toggleSubtitleLineStatus, setSubtitleLineStatus,
+    addSubtitle, removeSubtitle,
     shiftSubtitles,
     undo, redo, canUndo, canRedo,
     ankiCards, addCard, updateCard, deleteCard,
@@ -402,8 +403,7 @@ const App: React.FC = () => {
     addCard(newCard);
 
     // Automatically lock the subtitle line after creating a card from it
-    while (sub.status !== 'locked')
-      toggleSubtitleLock(sub.id);
+    setSubtitleLineStatus(sub.id, 'locked');
 
     /*
     furigana.then(f => {
@@ -652,7 +652,7 @@ const App: React.FC = () => {
             canSave={fileHandle !== null}
             onSetSubtitles={setSubtitles}
             onSubtitleLineClicked={handleSubtitleLineClicked}
-            onToggleLock={toggleSubtitleLock}
+            onToggleLock={toggleSubtitleLineStatus}
             onCreateCard={(sub) => {
               const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
               if (s) handleCreateCard(s).then();
@@ -701,7 +701,7 @@ const App: React.FC = () => {
             onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
             onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
             onSubtitleLineClicked={(id) => handleSubtitleLineClicked(id, false)}
-            onSubtitleLineDoubleClicked={toggleSubtitleLock}
+            onSubtitleLineDoubleClicked={toggleSubtitleLineStatus}
             onSubtitleLineRemoved={removeSubtitle}
             onCreateCard={(id) => {
               const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
