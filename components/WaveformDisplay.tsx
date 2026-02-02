@@ -206,10 +206,10 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   // Handle Zoom
   useEffect(() => {
-    if (wavesurfer.current) {
+    if (wavesurfer.current && isReady) {
       wavesurfer.current.zoom(zoom);
     }
-  }, [zoom]);
+  }, [zoom, isReady]);
 
   // Sync Regions with Store Data
   useEffect(() => {
