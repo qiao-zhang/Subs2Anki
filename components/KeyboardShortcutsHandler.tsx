@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useAppStore } from '@/services/store.ts';
 
 interface KeyboardShortcutsHandlerProps {
@@ -12,7 +12,15 @@ interface KeyboardShortcutsHandlerProps {
   setIsVideoOnlyMode: (mode: boolean) => void;
   onReplayPressed: (id: number) => void;
   onCreateCard: () => void;
-  jumpToSubtitle: (direction: 'next' | 'prev') => void;
+  onJumpNext: () => void;
+  onJumpPrev: () => void;
+  onJumpNextCard: () => void;
+  onJumpPrevCard: () => void;
+  // onToggleLock: () => void;
+  // onShiftSubtitles: (offset: number) => void;
+  onOpenOrCloseShortcutsModal: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
 }
 
 const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
@@ -26,7 +34,13 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
   setIsVideoOnlyMode,
   onReplayPressed,
   onCreateCard,
-  jumpToSubtitle
+  onJumpNext,
+  onJumpPrev,
+  onJumpNextCard,
+  onJumpPrevCard,
+  onOpenOrCloseShortcutsModal,
+  onUndo,
+  onRedo
 }) => {
   const { subtitleLines } = useAppStore();
 
@@ -35,13 +49,33 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
       // Ignore inputs
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
 
+      // 处理 Ctrl+Z (Undo) 和 Ctrl+Y/Shift+Ctrl+Z (Redo)
+      if (e.ctrlKey && !e.altKey) {
+        if (e.key === 'z' || e.key === 'Z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            // Ctrl+Shift+Z 或 Ctrl+Y 用于 Redo
+            onRedo();
+          } else {
+            // Ctrl+Z 用于 Undo
+            onUndo();
+          }
+          return;
+        } else if (e.key === 'y' || e.key === 'Y') {
+          e.preventDefault();
+          // Ctrl+Y 用于 Redo
+          onRedo();
+          return;
+        }
+      }
+
       switch (e.code) {
         case 'Space':
           e.preventDefault();
           const videoPlayer = document.querySelector('#video-player') as HTMLVideoElement;
           if (videoPlayer) {
             if (videoPlayer.paused) {
-              videoPlayer.play();
+              videoPlayer.play().then();
             } else {
               videoPlayer.pause();
             }
@@ -50,7 +84,7 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
         case 'KeyH':
           e.preventDefault();
           if (e.shiftKey) {
-            // Toggle shortcuts modal - would need to be passed as prop
+            onOpenOrCloseShortcutsModal();
             break;
           }
         /* fallthrough */
@@ -90,12 +124,12 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
         case 'ArrowUp':
         case 'KeyK':
           e.preventDefault();
-          jumpToSubtitle('prev');
+          onJumpPrev();
           break;
         case 'ArrowDown':
         case 'KeyJ':
           e.preventDefault();
-          jumpToSubtitle('next');
+          onJumpNext();
           break;
         case 'KeyR':
           e.preventDefault();
@@ -115,23 +149,47 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
           e.preventDefault();
           setIsVideoOnlyMode(!isVideoOnly); // 切换全屏模式
           break;
+          /*
+        case 'KeyT':
+          e.preventDefault();
+          onToggleLock();
+          break;
+        case 'KeyU':
+          e.preventDefault();
+          // Shift+U 用于快速向前移动字幕 100ms
+          if (e.shiftKey) {
+            onShiftSubtitles(0.1);
+          } else {
+            // U 键用于快速向后移动字幕 100ms
+            onShiftSubtitles(-0.1);
+          }
+          break;
+           */
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
-    activeSubtitleLineId, 
-    tempSubtitleLine, 
-    regionsHidden, 
-    isVideoOnly, 
-    setActiveSubtitleLineId, 
-    setTempSubtitleLine, 
+    activeSubtitleLineId,
+    tempSubtitleLine,
+    regionsHidden,
+    isVideoOnly,
+    setActiveSubtitleLineId,
+    setTempSubtitleLine,
     toggleRegionsHidden,
-    setIsVideoOnlyMode, 
+    setIsVideoOnlyMode,
     onReplayPressed,
     onCreateCard,
-    jumpToSubtitle,
+    onJumpNext,
+    onJumpPrev,
+    onJumpNextCard,
+    onJumpPrevCard,
+    // onToggleLock,
+    // onShiftSubtitles,
+    onOpenOrCloseShortcutsModal,
+    onUndo,
+    onRedo,
     subtitleLines
   ]);
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import {Video as VideoIcon, Camera, Play} from 'lucide-react';
+import {Video as VideoIcon, Camera, Play, RotateCcw, Redo} from 'lucide-react';
 import {formatTimestamp} from '@/services/time.ts';
 import {BTN_BASE, BTN_SECONDARY, KBD_STYLE} from '@/services/shared-styles.ts';
 
@@ -9,6 +9,10 @@ interface DefaultControlsProps {
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onPlay: () => void;
   onCaptureFrame: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
 const DefaultControls: React.FC<DefaultControlsProps> = ({
@@ -16,7 +20,11 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
                                                            currentTime,
                                                            onVideoUpload,
                                                            onPlay,
-                                                           onCaptureFrame
+                                                           onCaptureFrame,
+                                                           onUndo,
+                                                           onRedo,
+                                                           canUndo = false,
+                                                           canRedo = false
                                                          }) => {
 
   return (
@@ -40,6 +48,29 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
           <Play size={16}/>
           <kbd className={KBD_STYLE}>Space</kbd>
         </button>
+
+        {/* Undo/Redo Buttons */}
+        <div className="flex gap-1">
+          <button
+            onClick={onUndo}
+            className={`${BTN_BASE} h-9 ${BTN_SECONDARY} px-2.5 ${!canUndo ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title="Undo (Ctrl+Z)"
+            disabled={!canUndo}
+          >
+            <RotateCcw size={16}/>
+            <kbd className={KBD_STYLE}>Ctrl+Z</kbd>
+          </button>
+
+          <button
+            onClick={onRedo}
+            className={`${BTN_BASE} h-9 ${BTN_SECONDARY} px-2.5 ${!canRedo ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title="Redo (Ctrl+Y or Ctrl+Shift+Z)"
+            disabled={!canRedo}
+          >
+            <Redo size={16}/>
+            <kbd className={KBD_STYLE}>Ctrl+Y</kbd>
+          </button>
+        </div>
       </div>
 
       {/* Center: Time Display */}

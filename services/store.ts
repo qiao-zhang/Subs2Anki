@@ -1,5 +1,6 @@
 import {create} from 'zustand';
 import {SubtitleLine, AnkiCard, AnkiNoteType, ProcessingState} from './types.ts';
+import {UndoRedoManager} from './undo-redo-service.ts';
 
 // Default constants
 const DEFAULT_NOTE_TYPE: AnkiNoteType = {
@@ -51,6 +52,12 @@ interface AppState {
   shiftSubtitles: (offset: number) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
 
+  // Undo/Redo
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+
   // Anki Cards
   ankiCards: AnkiCard[];
   ankiConfig: AnkiNoteType;
@@ -64,6 +71,9 @@ interface AppState {
   ankiConnectUrl: string;
   setAnkiConnectUrl: (url: string) => void;
 }
+
+// 创建全局的 undo/redo 管理器实例
+const globalUndoRedoManager = new UndoRedoManager();
 
 export const useAppStore = create<AppState>((set, get) => ({
   projectName: '', // 默认项目名称为空
@@ -93,19 +103,51 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSubtitles: (lines, fileName, fileHandle = null) =>
     set({subtitleLines: lines, subtitleFileName: fileName, fileHandle, hasUnsavedChanges: false}),
 
-  updateSubtitleText: (id, text) => set((state) => ({
-    subtitleLines: state.subtitleLines.map(s => (s.id === id && s.status !== 'locked' && s.status !== 'ignored') ? {...s, text} : s),
-    hasUnsavedChanges: true
-  })),
+  updateSubtitleText: (id, text) => {
+    const currentState = get().subtitleLines;
+    const beforeState = [...currentState];
+    const afterState = currentState.map(s =>
+      (s.id === id && s.status !== 'locked' && s.status !== 'ignored')
+        ? {...s, text}
+        : s
+    );
 
-  updateSubtitleTime: (id, start, end) => set((state) => ({
-    subtitleLines: state.subtitleLines.map(s => (s.id === id && s.status !== 'locked' && s.status !== 'ignored') ? {
-      ...s,
-      startTime: start,
-      endTime: end
-    } : s),
-    hasUnsavedChanges: true
-  })),
+    // 记录操作到历史记录
+    globalUndoRedoManager.addOperation({
+      type: 'UPDATE_SUBTITLE_TEXT',
+      beforeState,
+      afterState,
+      params: { id, text }
+    });
+
+    set({
+      subtitleLines: afterState,
+      hasUnsavedChanges: true
+    });
+  },
+
+  updateSubtitleTime: (id, start, end) => {
+    const currentState = get().subtitleLines;
+    const beforeState = [...currentState];
+    const afterState = currentState.map(s =>
+      (s.id === id && s.status !== 'locked' && s.status !== 'ignored')
+        ? {...s, startTime: start, endTime: end}
+        : s
+    );
+
+    // 记录操作到历史记录
+    globalUndoRedoManager.addOperation({
+      type: 'UPDATE_SUBTITLE_TIME',
+      beforeState,
+      afterState,
+      params: { id, start, end }
+    });
+
+    set({
+      subtitleLines: afterState,
+      hasUnsavedChanges: true
+    });
+  },
 
   toggleSubtitleLock: (id) => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => s.id === id ? {
@@ -116,27 +158,95 @@ export const useAppStore = create<AppState>((set, get) => ({
     } : s)
   })),
 
-  addSubtitle: (sub) => set((state) => ({
-    subtitleLines: [...state.subtitleLines, sub].sort((a, b) => a.startTime - b.startTime),
-    hasUnsavedChanges: true
-  })),
+  addSubtitle: (sub) => {
+    const currentState = get().subtitleLines;
+    const beforeState = [...currentState];
+    const afterState = [...currentState, sub].sort((a, b) => a.startTime - b.startTime);
 
-  removeSubtitle: (id) => set((state) => ({
-    subtitleLines: state.subtitleLines.filter(s => s.id !== id),
-    hasUnsavedChanges: true
-  })),
+    // 记录操作到历史记录
+    globalUndoRedoManager.addOperation({
+      type: 'ADD_SUBTITLE',
+      beforeState,
+      afterState,
+      params: { sub }
+    });
+
+    set({
+      subtitleLines: afterState,
+      hasUnsavedChanges: true
+    });
+  },
+
+  removeSubtitle: (id) => {
+    const currentState = get().subtitleLines;
+    const beforeState = [...currentState];
+    const removedSubtitle = currentState.find(s => s.id === id);
+    const afterState = currentState.filter(s => s.id !== id);
+
+    // 记录操作到历史记录
+    globalUndoRedoManager.addOperation({
+      type: 'REMOVE_SUBTITLE',
+      beforeState,
+      afterState,
+      params: { id, removedSubtitle }
+    });
+
+    set({
+      subtitleLines: afterState,
+      hasUnsavedChanges: true
+    });
+  },
 
   // Shift all subtitles by offset. Applies to locked files too to maintain relative sync with video.
-  shiftSubtitles: (offset) => set((state) => ({
-    subtitleLines: state.subtitleLines.map(s => ({
+  shiftSubtitles: (offset) => {
+    const currentState = get().subtitleLines;
+    const beforeState = [...currentState];
+    const afterState = currentState.map(s => ({
       ...s,
       startTime: Math.max(0, s.startTime + offset),
       endTime: Math.max(0, s.endTime + offset)
-    })),
-    hasUnsavedChanges: true
-  })),
+    }));
+
+    // 记录操作到历史记录
+    globalUndoRedoManager.addOperation({
+      type: 'SHIFT_SUBTITLES',
+      beforeState,
+      afterState,
+      params: { offset }
+    });
+
+    set({
+      subtitleLines: afterState,
+      hasUnsavedChanges: true
+    });
+  },
 
   setHasUnsavedChanges: (val) => set({hasUnsavedChanges: val}),
+
+  // Undo/Redo 实现
+  undo: () => {
+    const operation = globalUndoRedoManager.undo();
+    if (operation) {
+      set({
+        subtitleLines: operation.beforeState,
+        hasUnsavedChanges: true
+      });
+    }
+  },
+
+  redo: () => {
+    const operation = globalUndoRedoManager.redo();
+    if (operation) {
+      set({
+        subtitleLines: operation.afterState,
+        hasUnsavedChanges: true
+      });
+    }
+  },
+
+  canUndo: () => globalUndoRedoManager.canUndo(),
+
+  canRedo: () => globalUndoRedoManager.canRedo(),
 
   // Anki defaults
   ankiCards: [],

@@ -20,6 +20,8 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
     {keys: ['C'], description: 'Create Anki card for current subtitle line'},
     {keys: ['N'], description: 'Hide/Unhide the subtitle regions'},
     {keys: ['V'], description: 'Turn on/off the video-only mode'},
+    {keys: ['Ctrl + Z'], description: 'Undo last action'},
+    {keys: ['Ctrl + Y', 'Ctrl + Shift + Z'], description: 'Redo last undone action'},
     {keys: ['Shift + H'], description: 'Show/Hide this cheatsheet'},
   ];
 

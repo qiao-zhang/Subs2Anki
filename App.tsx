@@ -33,6 +33,7 @@ const App: React.FC = () => {
     subtitleLines, subtitleFileName, fileHandle, setSubtitles,
     updateSubtitleText, toggleSubtitleLock, addSubtitle, removeSubtitle,
     shiftSubtitles,
+    undo, redo, canUndo, canRedo,
     ankiCards, addCard, updateCard, deleteCard,
     ankiConfig, setAnkiConfig,
     ankiConnectUrl, setAnkiConnectUrl,
@@ -323,6 +324,19 @@ const App: React.FC = () => {
     }
     videoPlayerRef.current?.playPause();
   }
+
+  // Undo/Redo handler
+  const handleUndo = () => {
+    if (canUndo()) {
+      undo();
+    }
+  };
+
+  const handleRedo = () => {
+    if (canRedo()) {
+      redo();
+    }
+  };
 
   // 显示复制通知
   const showNotification = (text: string) => {
@@ -661,6 +675,10 @@ const App: React.FC = () => {
             onCaptureFrame={handleCaptureFrame}
             onDownloadAudio={handleDownloadAudio}
             onUpdateSubtitleText={updateSubtitleText}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={canUndo()}
+            canRedo={canRedo()}
           />
         </div>
       )}
@@ -705,7 +723,42 @@ const App: React.FC = () => {
           const s = subtitleLines.find(x => x.id === activeSubtitleLineId);
           if (s) handleCreateCard(s).then();
         }}
-        jumpToSubtitle={jumpToSubtitle}
+        onJumpNext={() => jumpToSubtitle('next')}
+        onJumpPrev={() => jumpToSubtitle('prev')}
+        onJumpNextCard={() => {
+          if (ankiCards.length === 0) return;
+          const nextCard = ankiCards.find(c => c.subtitleId === activeSubtitleLineId)?.id;
+          if (nextCard) {
+            // Find next card in the list
+            const currentIndex = ankiCards.findIndex(c => c.id === nextCard);
+            const nextCardIndex = (currentIndex + 1) % ankiCards.length;
+            const nextCardItem = ankiCards[nextCardIndex];
+            const sub = subtitleLines.find(s => s.id === nextCardItem.subtitleId);
+            if (sub) handleSubtitleLineClicked(sub.id, false);
+          }
+        }}
+        onJumpPrevCard={() => {
+          if (ankiCards.length === 0) return;
+          const nextCard = ankiCards.find(c => c.subtitleId === activeSubtitleLineId)?.id;
+          if (nextCard) {
+            // Find previous card in the list
+            const currentIndex = ankiCards.findIndex(c => c.id === nextCard);
+            const prevCardIndex = (currentIndex - 1 + ankiCards.length) % ankiCards.length;
+            const prevCardItem = ankiCards[prevCardIndex];
+            const sub = subtitleLines.find(s => s.id === prevCardItem.subtitleId);
+            if (sub) handleSubtitleLineClicked(sub.id, false);
+          }
+        }}
+        /*
+        onToggleLock={() => {
+          if (activeSubtitleLineId === null) return;
+          toggleSubtitleLock(activeSubtitleLineId);
+        }}
+        onShiftSubtitles={(offset) => shiftSubtitles(offset)}
+         */
+        onOpenOrCloseShortcutsModal={() => setIsShortcutsModalOpen(prev => !prev)}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
       />
 
       {/* Modals */}
