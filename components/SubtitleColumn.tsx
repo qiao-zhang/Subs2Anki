@@ -12,15 +12,12 @@ interface SubtitleColumnProps {
   subtitleFileName: string;
   canSave: boolean;
   onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: any) => void;
-  onUpdateText: (id: number, text: string) => void;
   onSubtitleLineClicked: (id: number, copyText?: boolean) => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (sub: SubtitleLine) => void;
   onSave: () => void;
   onDownload: () => void;
   onShiftSubtitles: (offset: number) => void;
-  // 新增状态过滤属性
-  visibleStatuses?: ('normal' | 'locked' | 'ignored')[];
 }
 
 const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
@@ -29,14 +26,12 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          subtitleFileName,
                                                          canSave,
                                                          onSetSubtitles,
-                                                         onUpdateText,
                                                          onSubtitleLineClicked,
                                                          onToggleLock,
                                                          onCreateCard,
                                                          onSave,
                                                          onDownload,
                                                          onShiftSubtitles,
-                                                         visibleStatuses = ['normal', 'locked', 'ignored'] // 默认显示所有状态
                                                        }) => {
   const MIN_SHIFT_MS = 10;
   const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
@@ -174,7 +169,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   // 过滤字幕行
   const filteredSubtitleLines = useMemo(() =>
     subtitleLines.filter(sub =>
-      statusFilters[sub.status || 'normal']
+      statusFilters[sub.status]
     ), [subtitleLines, statusFilters]
   );
 

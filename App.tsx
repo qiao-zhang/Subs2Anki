@@ -633,7 +633,6 @@ const App: React.FC = () => {
             subtitleFileName={subtitleFileName}
             canSave={fileHandle !== null}
             onSetSubtitles={setSubtitles}
-            onUpdateText={updateSubtitleText}
             onSubtitleLineClicked={handleSubtitleLineClicked}
             onToggleLock={toggleSubtitleLock}
             onCreateCard={(sub) => {
