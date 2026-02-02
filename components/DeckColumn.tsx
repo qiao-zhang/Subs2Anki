@@ -12,6 +12,7 @@ interface DeckColumnProps {
   onExport: () => void;
   onSyncAnki: () => void;
   onOpenAnkiSettings: () => void;
+  onDeleteSynced: () => void;
 }
 
 const DeckColumn: React.FC<DeckColumnProps> = ({
@@ -23,6 +24,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  onExport,
                                                  onSyncAnki,
                                                  onOpenAnkiSettings,
+                                                 onDeleteSynced,
                                                }) => {
   return (
     <aside className="w-80 flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900/50 z-20">
@@ -61,6 +63,20 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
             title="Sync to Anki"
           >
             <CloudUpload size={16}/>
+          </button>
+          <button
+            onClick={onDeleteSynced}
+            disabled={cards.filter(card => card.syncStatus === 'synced').length === 0}
+            className="p-1.5 hover:bg-red-900/50 rounded text-red-400 hover:text-red-300 transition disabled:opacity-50 disabled:hover:bg-transparent disabled:text-slate-600"
+            title="Delete synced cards"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18"></path>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
           </button>
           <button
             onClick={onExport}

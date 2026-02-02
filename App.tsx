@@ -545,6 +545,24 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteSyncedCards = async () => {
+    const syncedCards = ankiCards.filter(card => card.syncStatus === 'synced');
+
+    if (syncedCards.length === 0) {
+      alert('No synced cards to delete.');
+      return;
+    }
+
+    const confirmDeletion = confirm(`Are you sure you want to delete ${syncedCards.length} synced card(s)?`);
+    if (!confirmDeletion) return;
+
+    for (const card of syncedCards) {
+      await handleDeleteCard(card.id);
+    }
+
+    showNotification(`Deleted ${syncedCards.length} synced card(s)`);
+  };
+
   const handleDownloadAudio = async () => {
     if (!videoFile) return;
     if (tempSubtitleLine === null && activeSubtitleLineId === null) return;
@@ -611,6 +629,7 @@ const App: React.FC = () => {
             onExport={() => handleActionClick('export')}
             onSyncAnki={() => handleActionClick('sync')}
             onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
+            onDeleteSynced={handleDeleteSyncedCards}
           />
         )}
 
