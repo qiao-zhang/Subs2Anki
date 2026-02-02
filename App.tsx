@@ -401,6 +401,10 @@ const App: React.FC = () => {
 
     addCard(newCard);
 
+    // Automatically lock the subtitle line after creating a card from it
+    while (sub.status !== 'locked')
+      toggleSubtitleLock(sub.id);
+
     /*
     furigana.then(f => {
       updateCard(cardId, {furigana: f});
