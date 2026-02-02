@@ -25,6 +25,7 @@ import ProcessingOverlay from '@/components/ProcessingOverlay.tsx';
 import KeyboardShortcutsHandler from '@/components/KeyboardShortcutsHandler.tsx';
 import ShortcutsCheatSheetModal from '@/components/modals/ShortcutsCheatSheetModal.tsx';
 import {createProjectRecord, saveProjectRecord, loadProjectRecord} from './services/project-record.ts';
+import {useAnkiConnect} from '@/hooks/useAnkiConnect.ts';
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
@@ -39,6 +40,18 @@ const App: React.FC = () => {
     ankiConfig, setAnkiConfig,
     ankiConnectUrl, setAnkiConnectUrl,
   } = useAppStore();
+
+  // --- AnkiConnect Status ---
+  const { isConnected, decks, isLoading, refreshDecks } = useAnkiConnect(ankiConnectUrl);
+
+  // --- Selected Deck State ---
+  const [selectedDeck, setSelectedDeck] = useState<string>(projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export');
+
+  // Update selected deck when project name changes
+  useEffect(() => {
+    const defaultDeckName = projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
+    setSelectedDeck(defaultDeckName);
+  }, [projectName]);
 
   // --- Local UI State (Transient) ---
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
@@ -78,7 +91,7 @@ const App: React.FC = () => {
     await generateAnkiDeck(ankiCards, projectName, ankiConfig);
   };
 
-  const finalizeSync = async () => {
+  const finalizeSync = async (targetDeckName: string) => {
     setIsSyncing(true);
     try {
       const connected = await checkConnection(ankiConnectUrl);
@@ -102,8 +115,7 @@ const App: React.FC = () => {
         updateCard(card.id, { syncStatus: 'syncing' });
       });
 
-      const deckName = projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
-      await syncToAnki(ankiConnectUrl, deckName, projectName, ankiConfig, unsyncedCards, (cur, tot) => {
+      await syncToAnki(ankiConnectUrl, targetDeckName, projectName, ankiConfig, unsyncedCards, (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
       });
 
@@ -112,7 +124,7 @@ const App: React.FC = () => {
         updateCard(card.id, { syncStatus: 'synced' });
       });
 
-      alert(`Successfully synced ${unsyncedCards.length} cards to Anki!`);
+      alert(`Successfully synced ${unsyncedCards.length} cards to Anki deck: ${targetDeckName}!`);
     } catch (e) {
       console.error(e);
       alert(`Sync failed: ${(e as Error).message}`);
@@ -130,7 +142,7 @@ const App: React.FC = () => {
     if (pendingActionRef.current === 'export') {
       finalizeExport().then();
     } else if (pendingActionRef.current === 'sync') {
-      finalizeSync().then();
+      finalizeSync(selectedDeck).then();
     }
     pendingActionRef.current = null;
   };
@@ -425,7 +437,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSyncCard = async (id: string) => {
+  const handleSyncCard = async (id: string, targetDeckName?: string) => {
     const card = ankiCards.find(c => c.id === id);
     if (!card) return;
 
@@ -450,7 +462,7 @@ const App: React.FC = () => {
         return;
       }
 
-      const deckName = projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
+      const deckName = targetDeckName || (projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export');
 
       // Sync only this card
       updateCard(id, { syncStatus: 'syncing' });
@@ -468,16 +480,25 @@ const App: React.FC = () => {
     }
   };
 
-  const handleActionClick = (action: 'export' | 'sync') => {
+  const handleActionClick = (action: 'export' | 'sync', targetDeckName?: string) => {
     pendingActionRef.current = action;
 
     const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
 
     if (pendingAudio) {
       if (action === 'export') setIsExporting(true);
-      setIsExporting(true); // Using generic loading overlay
+      if (action === 'sync' && targetDeckName) {
+        setIsSyncing(true);
+        finalizeSync(targetDeckName).then();
+      } else {
+        setIsExporting(true); // Using generic loading overlay
+      }
     } else {
-      onMediaReady();
+      if (action === 'sync' && targetDeckName) {
+        finalizeSync(targetDeckName).then();
+      } else {
+        onMediaReady();
+      }
     }
   };
 
@@ -624,12 +645,18 @@ const App: React.FC = () => {
             cards={ankiCards}
             onDelete={handleDeleteCard}
             onPreview={(c) => setPreviewCard(c)}
-            onSyncCard={handleSyncCard}
+            onSyncCard={(id) => handleSyncCard(id, selectedDeck)}
             onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
             onExport={() => handleActionClick('export')}
-            onSyncAnki={() => handleActionClick('sync')}
+            onSyncAnki={() => handleActionClick('sync', selectedDeck)}
             onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
             onDeleteSynced={handleDeleteSyncedCards}
+            isConnected={isConnected}
+            decks={decks}
+            ankiConnectUrl={ankiConnectUrl}
+            projectName={projectName}
+            selectedDeck={selectedDeck}
+            onDeckChange={setSelectedDeck}
           />
         )}
 

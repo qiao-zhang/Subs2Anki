@@ -71,6 +71,18 @@ export const checkConnection = async (url: string): Promise<boolean> => {
 };
 
 /**
+ * Gets the list of available decks from Anki.
+ */
+export const getDecks = async (url: string): Promise<string[]> => {
+  try {
+    return await invoke<string[]>('deckNames', {}, url);
+  } catch (e) {
+    console.error('Failed to get decks from Anki:', e);
+    throw e;
+  }
+};
+
+/**
  * Syncs a list of cards to Anki.
  *
  * 1. Creates/Verifies Deck.
