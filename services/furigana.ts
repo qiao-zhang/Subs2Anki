@@ -1,12 +1,11 @@
-import Kuroshiro from 'kuroshiro';
-import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
+import {Kuroshiro, KuroshiroAnalyzerKuromoji} from './kuroshiro-browser'
 
 /**
  * Singleton service for Furigana generation.
  * Wraps Kuroshiro and handles lazy initialization of the dictionary.
  */
 class FuriganaService {
-  private readonly kuroshiro: Kuroshiro;
+  private kuroshiro: Kuroshiro;
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
 
@@ -31,13 +30,13 @@ class FuriganaService {
       try {
         // Check if path module is available in global scope if needed (debug)
         // Initialize analyzer
-        const analyzer = new KuromojiAnalyzer(
-          {
+        const analyzer = new KuroshiroAnalyzerKuromoji(
+          // {
           // Use a reliable public CDN for the dictionary files.
           // Important: Ensure it ends with a slash if the library expects to join filenames.
           // dictPath: "https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict/"
-          dictPath: '/kuromoji/dict/',
-        }
+          // dictPath: '/dict/',
+        // }
         );
 
         await this.kuroshiro.init(analyzer);
