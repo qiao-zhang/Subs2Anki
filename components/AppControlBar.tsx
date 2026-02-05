@@ -10,14 +10,9 @@ interface AppControlBarProps {
   currentTime: number;
   onTempCommit: (text: string) => void;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onPlay: () => void;
   onCaptureFrame: () => void;
   onDownloadAudio: () => void;
   onUpdateSubtitleText: (id: number, text: string) => void;
-  onUndo?: () => void;
-  onRedo?: () => void;
-  canUndo?: boolean;
-  canRedo?: boolean;
 }
 
 const AppControlBar: React.FC<AppControlBarProps> = ({
@@ -27,14 +22,9 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        currentTime,
                                                        onTempCommit,
                                                        onVideoUpload,
-                                                       onPlay,
                                                        onCaptureFrame,
                                                        onDownloadAudio,
                                                        onUpdateSubtitleText,
-                                                       onUndo,
-                                                       onRedo,
-                                                       canUndo,
-                                                       canRedo
                                                      }) => {
   return (
     <div className="flex flex-col w-full max-w-5xl gap-2 animate-in fade-in duration-200">
@@ -42,12 +32,7 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
         videoName={videoName}
         currentTime={currentTime}
         onVideoUpload={onVideoUpload}
-        onPlay={onPlay}
         onCaptureFrame={onCaptureFrame}
-        onUndo={onUndo}
-        onRedo={onRedo}
-        canUndo={canUndo}
-        canRedo={canRedo}
       />
       {tempSubtitleLine && <TempSubtitleLineControls
         start={tempSubtitleLine.start}

@@ -42,7 +42,7 @@ const App: React.FC = () => {
   } = useAppStore();
 
   // --- AnkiConnect Status ---
-  const { isConnected, decks, isLoading, refreshDecks } = useAnkiConnect(ankiConnectUrl);
+  const { isConnected, decks} = useAnkiConnect(ankiConnectUrl);
 
   // --- Selected Deck State ---
   const [selectedDeck, setSelectedDeck] = useState<string>(projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export');
@@ -721,14 +721,9 @@ const App: React.FC = () => {
             currentTime={currentTime}
             onTempCommit={handleCommitTempSubtitleLine}
             onVideoUpload={handleVideoUpload}
-            onPlay={handlePlay}
             onCaptureFrame={handleCaptureFrame}
             onDownloadAudio={handleDownloadAudio}
             onUpdateSubtitleText={updateSubtitleText}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            canUndo={canUndo()}
-            canRedo={canRedo()}
           />
         </div>
       )}
