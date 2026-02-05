@@ -9,6 +9,7 @@ export interface ProjectRecord {
   subtitleFileName: string;           // 字幕文件名
   ankiConfig: AnkiNoteType;           // Anki配置
   ankiConnectUrl: string;             // Anki连接URL
+  selectedDeck?: string;              // 选定的deck名称
   timestamp: string;                  // 创建时间戳
 }
 
@@ -18,6 +19,7 @@ const PROJECT_RECORD_VERSION = "1.1.0";
 /**
  * 从当前应用状态创建项目记录
  * @param appState 应用状态
+ * @param selectedDeck 选定的deck名称
  * @returns 项目记录对象
  */
 export const createProjectRecord = (appState: {
@@ -27,7 +29,7 @@ export const createProjectRecord = (appState: {
   subtitleLines: SubtitleLine[];
   ankiConfig: AnkiNoteType;
   ankiConnectUrl: string;
-}): ProjectRecord => {
+}, selectedDeck?: string): ProjectRecord => {
   return {
     version: PROJECT_RECORD_VERSION,
     projectName: appState.projectName,
@@ -36,6 +38,7 @@ export const createProjectRecord = (appState: {
     subtitleLines: appState.subtitleLines,
     ankiConfig: appState.ankiConfig,
     ankiConnectUrl: appState.ankiConnectUrl,
+    selectedDeck,
     timestamp: new Date().toISOString()
   };
 };
@@ -146,6 +149,11 @@ const isValidProjectRecord = (record: any): record is ProjectRecord => {
     typeof record.ankiConnectUrl !== 'string' ||
     typeof record.timestamp !== 'string'
   ) {
+    return false;
+  }
+
+  // 验证 selectedDeck（如果存在）
+  if (record.selectedDeck !== undefined && typeof record.selectedDeck !== 'string') {
     return false;
   }
 

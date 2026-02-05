@@ -45,13 +45,16 @@ const App: React.FC = () => {
   const { isConnected, decks} = useAnkiConnect(ankiConnectUrl);
 
   // --- Selected Deck State ---
-  const [selectedDeck, setSelectedDeck] = useState<string>(projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export');
+  const [selectedDeck, setSelectedDeck] = useState<string>('');
 
-  // Update selected deck when project name changes
+  // Initialize selected deck when project name changes (but only if not already set)
   useEffect(() => {
-    const defaultDeckName = projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
-    setSelectedDeck(defaultDeckName);
-  }, [projectName]);
+    // Only set default if selectedDeck is empty (not loaded from a project file)
+    if (!selectedDeck) {
+      const defaultDeckName = projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
+      setSelectedDeck(defaultDeckName);
+    }
+  }, [projectName, selectedDeck]);
 
   // --- Local UI State (Transient) ---
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
@@ -537,7 +540,7 @@ const App: React.FC = () => {
         ankiConnectUrl
       };
 
-      const record = createProjectRecord(appState);
+      const record = createProjectRecord(appState, selectedDeck);
       await saveProjectRecord(record);
       showNotification("Project saved successfully!");
     } catch (error) {
@@ -558,6 +561,15 @@ const App: React.FC = () => {
       setSubtitles(record.subtitleLines, record.subtitleFileName);
       setAnkiConfig(record.ankiConfig);
       setAnkiConnectUrl(record.ankiConnectUrl);
+
+      // 如果记录中包含选定的deck名称，则恢复它
+      if (record.selectedDeck) {
+        setSelectedDeck(record.selectedDeck);
+      } else {
+        // 否则使用默认的deck名称
+        const defaultDeckName = record.projectName ? `Subs2Anki::${record.projectName}` : 'Subs2Anki Export';
+        setSelectedDeck(defaultDeckName);
+      }
 
       showNotification("Project loaded successfully!");
     } catch (error) {
