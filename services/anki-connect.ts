@@ -181,12 +181,15 @@ export const syncToAnki = async (
 
     // 4. Add Note
     try {
+      // Combine card tags with default tags
+      const cardTags = card.tags && Array.isArray(card.tags) && card.tags.length > 0 ? [...new Set(card.tags)] : [];
+
       await invoke('addNote', {
         note: {
           deckName: deckName,
           modelName: noteType.name,
           fields: fields,
-          tags: ['Subs2Anki', projectName.replace(/[\p{P}\s]/gu, '_')],
+          tags: cardTags,
           options: {
             allowDuplicate: false,
             duplicateScope: 'deck'

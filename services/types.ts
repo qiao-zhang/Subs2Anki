@@ -19,6 +19,7 @@ export interface AnkiCard {
   translation: string;      // AI-generated translation
   notes: string;            // AI-generated notes (grammar, culture, vocab)
   furigana?: string;        // Generated ruby text
+  tags?: string[];          // Tags associated with the card
 
   // Media References (UUIDs pointing to IndexedDB)
   screenshotRef: string | null;

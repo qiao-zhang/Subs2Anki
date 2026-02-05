@@ -268,13 +268,16 @@ export const createAnkiDatabase = async (
     const noteId = creationTime + index * 100; // Use creationTime for ID generation too
     const guid = generateGUID(noteId.toString());
 
+    const cardTags = card.tags && Array.isArray(card.tags) && card.tags.length > 0 ? [...new Set(card.tags)] : [];
+    const tagsStr = cardTags.join(' ');
+
     noteStmt.run({
       ':id': noteId,
       ':guid': guid,
       ':mid': noteType.id,
       ':mod': Math.floor(creationTime / 1000),
       ':usn': -1,
-      ':tags': "Subs2Anki",
+      ':tags': tagsStr,
       ':flds': fldsStr,
       ':sfld': card.text, // Sort field (usually first field)
       ':csum': 0, // checksum

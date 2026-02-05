@@ -47,6 +47,9 @@ const App: React.FC = () => {
   // --- Selected Deck State ---
   const [selectedDeck, setSelectedDeck] = useState<string>('');
 
+  // --- Global Tags State ---
+  const [globalTags, setGlobalTags] = useState<string[]>([]);
+
   // Initialize selected deck when project name changes (but only if not already set)
   useEffect(() => {
     // Only set default if selectedDeck is empty (not loaded from a project file)
@@ -408,6 +411,7 @@ const App: React.FC = () => {
       translation: '',
       notes: '',
       furigana: await furigana,
+      tags: [...globalTags], // Add global tags to the new card
       screenshotRef: screenshotRef,
       audioRef: null,
       audioStatus: 'pending',
@@ -540,7 +544,7 @@ const App: React.FC = () => {
         ankiConnectUrl
       };
 
-      const record = createProjectRecord(appState, selectedDeck);
+      const record = createProjectRecord(appState, selectedDeck, globalTags);
       await saveProjectRecord(record);
       showNotification("Project saved successfully!");
     } catch (error) {
@@ -569,6 +573,13 @@ const App: React.FC = () => {
         // 否则使用默认的deck名称
         const defaultDeckName = record.projectName ? `Subs2Anki::${record.projectName}` : 'Subs2Anki Export';
         setSelectedDeck(defaultDeckName);
+      }
+
+      // 如果记录中包含全局标签，则恢复它们
+      if (record.globalTags) {
+        setGlobalTags(record.globalTags);
+      } else {
+        setGlobalTags([]); // 默认为空数组
       }
 
       showNotification("Project loaded successfully!");
@@ -669,6 +680,8 @@ const App: React.FC = () => {
             projectName={projectName}
             selectedDeck={selectedDeck}
             onDeckChange={setSelectedDeck}
+            globalTags={globalTags}
+            onGlobalTagsChange={setGlobalTags}
           />
         )}
 

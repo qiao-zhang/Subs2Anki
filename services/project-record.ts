@@ -10,6 +10,7 @@ export interface ProjectRecord {
   ankiConfig: AnkiNoteType;           // Anki配置
   ankiConnectUrl: string;             // Anki连接URL
   selectedDeck?: string;              // 选定的deck名称
+  globalTags?: string[];              // 全局标签
   timestamp: string;                  // 创建时间戳
 }
 
@@ -20,6 +21,7 @@ const PROJECT_RECORD_VERSION = "1.1.0";
  * 从当前应用状态创建项目记录
  * @param appState 应用状态
  * @param selectedDeck 选定的deck名称
+ * @param globalTags 全局标签
  * @returns 项目记录对象
  */
 export const createProjectRecord = (appState: {
@@ -29,7 +31,7 @@ export const createProjectRecord = (appState: {
   subtitleLines: SubtitleLine[];
   ankiConfig: AnkiNoteType;
   ankiConnectUrl: string;
-}, selectedDeck?: string): ProjectRecord => {
+}, selectedDeck?: string, globalTags?: string[]): ProjectRecord => {
   return {
     version: PROJECT_RECORD_VERSION,
     projectName: appState.projectName,
@@ -39,6 +41,7 @@ export const createProjectRecord = (appState: {
     ankiConfig: appState.ankiConfig,
     ankiConnectUrl: appState.ankiConnectUrl,
     selectedDeck,
+    globalTags,
     timestamp: new Date().toISOString()
   };
 };
@@ -155,6 +158,13 @@ const isValidProjectRecord = (record: any): record is ProjectRecord => {
   // 验证 selectedDeck（如果存在）
   if (record.selectedDeck !== undefined && typeof record.selectedDeck !== 'string') {
     return false;
+  }
+
+  // 验证 globalTags（如果存在）
+  if (record.globalTags !== undefined) {
+    if (!Array.isArray(record.globalTags) || !record.globalTags.every(tag => typeof tag === 'string')) {
+      return false;
+    }
   }
 
   // 验证每个字幕行的结构

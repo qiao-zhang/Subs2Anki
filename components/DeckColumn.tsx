@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import {Layers, Link2, Link2Off, Download, CloudUpload, ChevronDown, NotebookPen} from 'lucide-react';
+import React, {useState} from 'react';
+import {Layers, Link2, Link2Off, Download, CloudUpload, ChevronDown, NotebookPen, Tags} from 'lucide-react';
 import CardItem from '@/components/CardItem';
 import {AnkiCard} from '@/services/types.ts';
+import TagInput from '@/components/TagInput';
 
 interface DeckColumnProps {
   cards: AnkiCard[];
@@ -19,6 +20,8 @@ interface DeckColumnProps {
   projectName?: string;
   selectedDeck?: string;
   onDeckChange?: (deckName: string) => void;
+  globalTags?: string[];
+  onGlobalTagsChange?: (tags: string[]) => void;
 }
 
 const DeckColumn: React.FC<DeckColumnProps> = ({
@@ -33,11 +36,15 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  onDeleteSynced,
                                                  isConnected,
                                                  decks = [],
+                                                 ankiConnectUrl,
                                                  projectName = 'Subs2Anki Export',
                                                  selectedDeck: propSelectedDeck,
                                                  onDeckChange,
+                                                 globalTags = [],
+                                                 onGlobalTagsChange
                                                }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [isTagsExpanded, setIsTagsExpanded] = useState<boolean>(false);
 
   // Use the selected deck from props
   const selectedDeck = propSelectedDeck || (projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export');
@@ -64,11 +71,12 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                     className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded text-sm text-slate-200 transition"
                   >
                     <span className="truncate max-w-[full]">{selectedDeck}</span>
-                    <ChevronDown size={14} className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={14} className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}/>
                   </button>
 
                   {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-md shadow-lg z-30 max-h-60 overflow-y-auto">
+                    <div
+                      className="absolute top-full left-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-md shadow-lg z-30 max-h-60 overflow-y-auto">
                       <div className="py-1">
                         {decks.map((deck, index) => (
                           <button
@@ -99,6 +107,46 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
           </div>
         </div>
 
+        {/* Tags Section */}
+        <div className="pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Tags size={14} className="text-slate-400"/>
+              {/*<span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tags</span>*/}
+              {!isTagsExpanded && (
+                <div className="flex items-center align-middle flex-wrap gap-1">
+                  {globalTags.map((tag, index) => (
+                    <span className="bg-indigo-600/20 text-indigo-300 px-2 py-1 rounded text-xs"
+                          key={index}>{tag}</span>
+                  ))}
+                  {globalTags.length == 0 && (
+                    <span className="text-slate-500 text-xs">No tags specified</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setIsTagsExpanded(!isTagsExpanded)}
+              className="text-xs text-slate-500 hover:text-slate-300 transition"
+            >
+              {isTagsExpanded ? 'Collapse' : 'Edit'}
+            </button>
+          </div>
+
+          {isTagsExpanded && onGlobalTagsChange && (
+            <div className="mb-3">
+              <TagInput
+                tags={globalTags}
+                onTagsChange={onGlobalTagsChange}
+                placeholder="Add global tags..."
+              />
+            </div>
+          )}
+
+          {/* Show tags when collapsed */}
+
+        </div>
+
         <div className="flex justify-end">
           <div className="flex gap-1">
             <button
@@ -111,8 +159,8 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
               title={isConnected ? "Connected - Click to change settings" : "Disconnected - Click to change settings"}
             >
               {isConnected ?
-                <Link2 size={14} className="text-green-400" /> :
-                <Link2Off size={14} className="text-red-400" />
+                <Link2 size={14} className="text-green-400"/> :
+                <Link2Off size={14} className="text-red-400"/>
               }
               {/*<svg width="16" height="16" fill="none" stroke="currentColor"*/}
               {/*  className="text-green-400"*/}
@@ -147,7 +195,8 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
             className="p-1.5 hover:bg-red-900/50 rounded text-red-400 hover:text-red-300 transition disabled:opacity-50 disabled:hover:bg-transparent disabled:text-slate-600"
             title="Delete synced cards"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18"></path>
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
