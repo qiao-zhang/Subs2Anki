@@ -35,7 +35,7 @@ export const useAnkiConnect = (ankiConnectUrl: string): UseAnkiConnectResult => 
   };
 
   useEffect(() => {
-    checkAndFetchDecks();
+    checkAndFetchDecks().then();
   }, [ankiConnectUrl]);
 
   return {

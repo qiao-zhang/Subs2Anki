@@ -57,6 +57,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   useEffect(() => {
     if (!waveformContainerRef.current || !videoElement) return;
 
+    // If WaveSurfer is already initialized with the same video element, skip initialization
+    if (wavesurfer.current && wavesurfer.current.getMediaElement() === videoElement) {
+      return;
+    }
+
     // Destroy previous instance if it exists
     if (wavesurfer.current) {
       wavesurfer.current.destroy();
