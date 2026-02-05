@@ -42,7 +42,7 @@ const App: React.FC = () => {
   } = useAppStore();
 
   // --- AnkiConnect Status ---
-  const { isConnected, decks} = useAnkiConnect(ankiConnectUrl);
+  const { isConnected, decks, refreshDecks } = useAnkiConnect(ankiConnectUrl);
 
   // --- Selected Deck State ---
   const [selectedDeck, setSelectedDeck] = useState<string>('');
@@ -822,7 +822,7 @@ const App: React.FC = () => {
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)}
                            config={ankiConfig} onSave={setAnkiConfig}/>
       <AnkiConnectSettingsModal isOpen={isAnkiSettingsOpen} onClose={() => setIsAnkiSettingsOpen(false)}
-                                url={ankiConnectUrl} onSave={setAnkiConnectUrl}/>
+                                url={ankiConnectUrl} onSave={setAnkiConnectUrl} onTestSuccess={refreshDecks}/>
       <CardPreviewModal
         isOpen={!!previewCard}
         card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}

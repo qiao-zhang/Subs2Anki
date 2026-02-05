@@ -8,9 +8,10 @@ interface AnkiConnectSettingsModalProps {
   onClose: () => void;
   url: string;
   onSave: (url: string) => void;
+  onTestSuccess?: () => void; // 回调函数，在测试连接成功时调用
 }
 
-const AnkiConnectSettingsModal: React.FC<AnkiConnectSettingsModalProps> = ({isOpen, onClose, url, onSave}) => {
+const AnkiConnectSettingsModal: React.FC<AnkiConnectSettingsModalProps> = ({isOpen, onClose, url, onSave, onTestSuccess}) => {
   const [localUrl, setLocalUrl] = useState(url);
   const [status, setStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -32,6 +33,10 @@ const AnkiConnectSettingsModal: React.FC<AnkiConnectSettingsModalProps> = ({isOp
       const connected = await checkConnection(targetUrl);
       if (connected) {
         setStatus('connected');
+        // 如果提供了测试成功回调，则调用它
+        if (onTestSuccess) {
+          onTestSuccess();
+        }
       } else {
         setStatus('error');
         setErrorMsg('Could not connect. Is Anki running with AnkiConnect installed?');

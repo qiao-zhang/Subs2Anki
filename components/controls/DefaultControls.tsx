@@ -1,7 +1,7 @@
 import React from 'react';
-import {Video as VideoIcon, Camera, Play, RotateCcw, Redo} from 'lucide-react';
+import {Video as VideoIcon, Camera} from 'lucide-react';
 import {formatTimestamp} from '@/services/time.ts';
-import {BTN_BASE, BTN_SECONDARY, KBD_STYLE} from '@/services/shared-styles.ts';
+import {BTN_BASE, BTN_SECONDARY} from '@/services/shared-styles.ts';
 
 interface DefaultControlsProps {
   videoName: string;
@@ -27,7 +27,6 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
           <span className="truncate">{videoName || "Select Video"}</span>
           <input type="file" accept="video/*" onChange={onVideoUpload} className="hidden"/>
         </label>
-        <div className="h-5 w-px bg-slate-700/50 mx-1"></div>
       </div>
 
       {/* Center: Time Display */}
