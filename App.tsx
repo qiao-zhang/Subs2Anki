@@ -387,6 +387,8 @@ const App: React.FC = () => {
 
   const handleCreateCard = async (sub: SubtitleLine) => {
     if (!videoPlayerRef.current) return;
+    if (sub.status !== 'normal') return;
+
     // setPauseAtTime(null);
     const furigana = furiganaService.convert(sub.text);
 
@@ -423,12 +425,6 @@ const App: React.FC = () => {
 
     // Automatically lock the subtitle line after creating a card from it
     setSubtitleLineStatus(sub.id, 'locked');
-
-    /*
-    furigana.then(f => {
-      updateCard(cardId, {furigana: f});
-    });
-     */
   };
 
   const handleDeleteCard = async (id: string) => {

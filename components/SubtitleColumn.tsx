@@ -1,7 +1,19 @@
-/// <reference lib="dom" />
 import React, {useEffect, useRef, useState, useMemo} from 'react';
 import {Virtuoso, VirtuosoHandle} from 'react-virtuoso';
-import {FileText, FolderOpen, Save, Download, AlertCircle, Lock, Unlock, PlusCircle, Search, X, MoveHorizontal, EyeOff} from 'lucide-react';
+import {
+  FileText,
+  FolderOpen,
+  Save,
+  Download,
+  AlertCircle,
+  Lock,
+  Unlock,
+  PlusCircle,
+  Search,
+  X,
+  MoveHorizontal,
+  EyeOff
+} from 'lucide-react';
 import {parseSubtitles} from '@/services/parser.ts';
 import {SubtitleLine} from '@/services/types.ts';
 import {formatTimestamp} from '@/services/time.ts';
@@ -171,7 +183,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     return subtitleLines.reduce((counts, sub) => {
       counts[sub.status]++;
       return counts;
-    }, { normal: 0, locked: 0, ignored: 0 } as Record<'normal' | 'locked' | 'ignored', number>);
+    }, {normal: 0, locked: 0, ignored: 0} as Record<'normal' | 'locked' | 'ignored', number>);
   }, [subtitleLines]);
 
   // 过滤字幕行
@@ -239,8 +251,10 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         <button onClick={(e) => {
           e.stopPropagation();
           onToggleLock(sub.id);
-        }} className={`mt-1 ${sub.status === 'locked' ? 'text-red-400' : sub.status === 'ignored' ? 'text-green-400' : 'text-slate-700 group-hover:text-slate-500'}`}>
-          {sub.status === 'locked' ? <Lock size={12}/> : sub.status === 'ignored' ? <EyeOff size={12}/> : <Unlock size={12}/>}
+        }}
+                className={`mt-1 ${sub.status === 'locked' ? 'text-red-400' : sub.status === 'ignored' ? 'text-green-400' : 'text-slate-700 group-hover:text-slate-500'}`}>
+          {sub.status === 'locked' ? <Lock size={12}/> : sub.status === 'ignored' ? <EyeOff size={12}/> :
+            <Unlock size={12}/>}
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center mb-1">
@@ -254,25 +268,31 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
             </span>
           </div>
           <div className="relative">
-              <div
-                className={`w-full bg-transparent resize-none outline-none text-sm leading-snug ${
-                  (sub.status === 'locked' || sub.status === 'ignored')
-                    ? 'text-slate-500'
-                    : isActive
-                      ? 'text-white'
-                      : 'text-slate-400 hover:text-slate-300'
-                }`}
-                style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}
-              >
-                {searchTerm ? highlightText(sub.text, searchTerm, isCurrentSearchResult) : sub.text}
-              </div>
+            <div
+              className={`w-full bg-transparent resize-none outline-none text-sm leading-snug ${
+                (sub.status === 'locked' || sub.status === 'ignored')
+                  ? 'text-slate-500'
+                  : isActive
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-300'
+              }`}
+              style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}
+            >
+              {searchTerm ? highlightText(sub.text, searchTerm, isCurrentSearchResult) : sub.text}
+            </div>
           </div>
         </div>
-        <button onClick={(e) => {
-          e.stopPropagation();
-          onCreateCard(sub);
-        }} className={`mt-1 text-slate-600 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition`}
-                title="Create Card"><PlusCircle size={16}/></button>
+        {sub.status === 'normal' &&
+          <button
+            title="Create Card"
+            className="mt-1 text-slate-600 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateCard(sub);
+            }}>
+            <PlusCircle size={16}/>
+          </button>
+        }
       </div>
     );
   };
@@ -322,7 +342,8 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={handleOpenSubtitle} className="p-2 hover:bg-slate-700 rounded text-indigo-400 transition"
+                <button onClick={handleOpenSubtitle}
+                        className="p-2 hover:bg-slate-700 rounded text-indigo-400 transition"
                         title="Load Subtitles">
                   <FolderOpen size={16}/>
                 </button>
