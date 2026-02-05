@@ -1,8 +1,8 @@
 [package]
-name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+name = "Subs2Anki"
+version = "1.0.0"
+description = "Subs2Anki is a video subtitle processing tool that provides subtitle processing and flashcard creation solutions, designed to help language learners extract useful language materials from video content and automatically generate Anki flashcards."
+authors = ["qiao.zhang.2015@qq.com"]
 license = ""
 repository = ""
 edition = "2021"
