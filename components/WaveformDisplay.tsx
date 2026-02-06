@@ -34,7 +34,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onSubtitleLineRemoved,
                                                          }) => {
   // Access store for direct reads in listeners and reactive updates
-  const {subtitleLines, updateSubtitleTime, getSubtitleLine, toggleSubtitleLineStatus, groupSubtitles} = useAppStore();
+  const {subtitleLines, updateSubtitleTime, getSubtitleLine,
+    toggleSubtitleLineStatus, groupSubtitles, splitSubtitleLine} = useAppStore();
 
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -182,6 +183,14 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       tempRegion.current = region;
       onTempSubtitleLineCreated(region.start, region.end);
     });
+
+    regions.on('region-double-clicked', (region) => {
+      if (region.id === TEMP_REGION_ID) return;
+      const id = parseInt(region.id);
+      if (isNaN(id)) return;
+      videoElement.pause();
+      splitSubtitleLine(id);
+    })
 
     regions.on('region-updated', (region: Region) => {
       if (isSyncingSubtitles.current) return;

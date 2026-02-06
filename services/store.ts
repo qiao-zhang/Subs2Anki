@@ -60,6 +60,7 @@ interface AppState {
   groupSubtitles: (ids: number[]) => void;
   ungroupSubtitles: (groupId: string) => void;
   mergeSubtitleLines: (ids: number[]) => void;
+  splitSubtitleLine: (id: number) => void;
 
   // Undo/Redo
   undo: () => void;
@@ -380,6 +381,89 @@ export const useAppStore = create<AppState>((set, get) => ({
   canUndo: () => globalUndoRedoManager.canUndo(),
 
   canRedo: () => globalUndoRedoManager.canRedo(),
+
+  // Split a subtitle line into two based on text content
+  splitSubtitleLine: (id: number) => {
+    const currentState = get().subtitleLines;
+    const beforeState = [...currentState];
+    
+    const subtitleToSplit = currentState.find(s => s.id === id);
+    if (!subtitleToSplit) return; // Subtitle line not found
+
+    // Find the split point in the text
+    let splitIndex = -1;
+    const text = subtitleToSplit.text;
+    
+    // Look for spaces (either half-width or full-width) or newlines to split on
+    for (let i = 0; i < text.length; i++) {
+      if (/\s/.test(text[i])) { // Matches any whitespace character (space, tab, etc.)
+        splitIndex = i;
+        break;
+      }
+    }
+    
+    let firstPart: string, secondPart: string;
+    let firstDurationRatio: number, secondDurationRatio: number;
+    
+    if (splitIndex > 0) {
+      // Split at the first space found
+      firstPart = text.substring(0, splitIndex).trim();
+      secondPart = text.substring(splitIndex + 1).trim();
+      
+      // Calculate duration ratios based on text length
+      const firstLength = firstPart.length;
+      const secondLength = secondPart.length;
+      const totalLength = firstLength + secondLength;
+      
+      firstDurationRatio = totalLength > 0 ? firstLength / totalLength : 0.5;
+    } else {
+      // No space found, split evenly and keep the same text
+      firstPart = text;
+      secondPart = text;
+      firstDurationRatio = 0.5;
+    }
+    
+    // Calculate new start and end times for the two parts
+    const totalTime = subtitleToSplit.endTime - subtitleToSplit.startTime;
+    const firstEndTime = subtitleToSplit.startTime + (totalTime * firstDurationRatio);
+    
+    // Create the two new subtitle lines
+    const newSubtitle1: SubtitleLine = {
+      ...subtitleToSplit, // Copy all properties including status
+      id: subtitleToSplit.id, // Keep the original ID for the first part
+      text: firstPart,
+      endTime: firstEndTime - 0.05,
+      status: 'normal',
+    };
+    
+    const newSubtitle2: SubtitleLine = {
+      ...subtitleToSplit, // Copy all properties including status
+      id: Math.max(...currentState.map(s => s.id), 0) + 1, // Generate a new ID
+      text: secondPart,
+      startTime: firstEndTime + 0.05,
+      endTime: subtitleToSplit.endTime,
+      status: 'normal',
+    };
+    
+    // Create the new subtitle array: replace the original with the two new ones
+    const afterState = currentState
+      .filter(s => s.id !== id) // Remove the original subtitle
+      .concat([newSubtitle1, newSubtitle2]) // Add the two new subtitles
+      .sort((a, b) => a.startTime - b.startTime); // Sort by start time
+
+    // Record operation to history
+    globalUndoRedoManager.addOperation({
+      type: 'SPLIT_SUBTITLE_LINE',
+      beforeState,
+      afterState,
+      params: { id, originalSubtitle: subtitleToSplit }
+    });
+
+    set({
+      subtitleLines: afterState,
+      hasUnsavedChanges: true
+    });
+  },
 
   // Anki defaults
   ankiCards: [],
