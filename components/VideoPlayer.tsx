@@ -123,6 +123,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTim
           onTimeUpdate={(e) => onTimeUpdate(e.currentTarget.currentTime)}
           onLoadedMetadata={onLoadedMetadata}
           crossOrigin="anonymous" // Important for canvas tainting if loading from some sources
+          key={src} // Force re-render when src changes
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-slate-500">
