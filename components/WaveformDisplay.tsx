@@ -132,7 +132,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     regions.enableDragSelection({
       id: TEMP_REGION_ID,
       color: 'rgba(74, 222, 128, 0.4)',
-      content: 'Shift-click to dismiss'
+      content: 'Right-click to dismiss'
     });
 
     ws.on('ready', () => {
@@ -153,6 +153,23 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // --- Region Events ---
     regions.on('region-created', (region: Region) => {
+
+      region.element.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (region.id === TEMP_REGION_ID) {
+          region.remove();
+          removeTempRegion();
+          return;
+        }
+        const id = parseInt(region.id);
+        if (!isNaN(id)) {
+          region.remove();
+          onSubtitleLineRemoved(id);
+        }
+        // Other regions?
+      });
+
       if (isSyncingSubtitles.current) return;
       videoElement.pause();
 
@@ -183,20 +200,15 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     regions.on('region-clicked', (region: Region, e: MouseEvent) => {
       e.stopPropagation();
       if (region.id === TEMP_REGION_ID) {
-        if (e.shiftKey) {
-          removeTempRegion();
-          return;
-        }
         onTempSubtitleLineClicked();
         return;
       }
+      removeTempRegion();
       const id = parseInt(region.id);
       if (isNaN(id)) return;
-      removeTempRegion();
 
       if (e.shiftKey) {
-        region.remove();
-        onSubtitleLineRemoved(id);
+        console.log("Shift-clicked region", region.id);
         return;
       }
 
@@ -206,8 +218,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         const newSelectedRegions = new Set(selectedRegionsRef.current);
         if (newSelectedRegions.has(region.id)) {
           newSelectedRegions.delete(region.id);
-          // Reset region color to default
           const subtitleLine = getSubtitleLine(id);
+          // Reset region color to default
           if (subtitleLine) {
             const color = subtitleLine.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
               subtitleLine.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
@@ -222,39 +234,34 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
         selectedRegionsRef.current = newSelectedRegions;
         setSelectedRegions(newSelectedRegions);
-      } else {
-        // Single selection - clear previous selections
-        selectedRegionsRef.current.forEach(selectedId => {
-          if (selectedId !== region.id) {
-            const selectedRegion = wsRegions.current?.getRegions().find(r => r.id === selectedId);
-            if (selectedRegion) {
-              const selectedIdNum = parseInt(selectedId);
-              const subtitleLine = getSubtitleLine(selectedIdNum);
-              if (subtitleLine) {
-                const color = subtitleLine.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
-                  subtitleLine.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
-                    'rgba(99, 102, 241, 0.2)'; // Blue for normal
-                selectedRegion.setOptions({color});
-              }
+        return;
+      }
+
+      // Normal click, need to clear previous selections
+      selectedRegionsRef.current.forEach(selectedId => {
+        if (selectedId !== region.id) {
+          const selectedRegion = wsRegions.current?.getRegions().find(r => r.id === selectedId);
+          if (selectedRegion) {
+            const selectedIdNum = parseInt(selectedId);
+            const subtitleLine = getSubtitleLine(selectedIdNum);
+            if (subtitleLine) {
+              const color = subtitleLine.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
+                subtitleLine.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
+                  'rgba(99, 102, 241, 0.2)'; // Blue for normal
+              selectedRegion.setOptions({color});
             }
           }
-        });
-
-        const newSelectedRegions = new Set([]);
-        selectedRegionsRef.current = newSelectedRegions;
-        setSelectedRegions(newSelectedRegions);
-
-        // Highlight selected region
-        region.setOptions({color: 'rgba(255, 165, 0, 0.4)'}); // Orange for selected
-
-        /*
-        if (e.ctrlKey) {
-          onSubtitleLineDoubleClicked(id);
-          return;
         }
-         */
-        onSubtitleLineClicked(id);
-      }
+      });
+
+      const newSelectedRegions = new Set([]);
+      selectedRegionsRef.current = newSelectedRegions;
+      setSelectedRegions(newSelectedRegions);
+
+      // Highlight selected region
+      region.setOptions({color: 'rgba(255, 165, 0, 0.4)'}); // Orange for selected
+
+      onSubtitleLineClicked(id);
     });
 
     // Keyboard event listener for M (merge) and G (group) shortcuts
@@ -275,12 +282,26 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
     };
 
+    // Prevent context menu on waveform container
+    const waveformContainer = waveformContainerRef.current;
+    const handleContextMenu = (e: Event) => {
+      console.log('right clicked waveform container');
+      e.preventDefault();
+    };
+
+    if (waveformContainer) {
+      waveformContainer.addEventListener('contextmenu', handleContextMenu);
+    }
+
     document.addEventListener('keydown', handleKeyDown);
 
     wavesurfer.current = ws;
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      if (waveformContainer) {
+        waveformContainer.removeEventListener('contextmenu', handleContextMenu);
+      }
       ws.destroy();
     };
   }, [videoElement, videoSrc]); // Re-run when video source or subtitle lines change
