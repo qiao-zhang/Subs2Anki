@@ -1,5 +1,14 @@
 import React, {useEffect, useState} from 'react';
-import {Trash2, Image as ImageIcon, Loader2, Clock, AlertCircle, CloudUpload, CheckCircle, LoaderCircle} from 'lucide-react';
+import {
+  Trash2,
+  Image as ImageIcon,
+  Loader2,
+  Clock,
+  AlertCircle,
+  CloudUpload,
+  CheckCircle,
+  LoaderCircle
+} from 'lucide-react';
 import {AnkiCard} from '@/services/types.ts';
 import {getMedia} from '@/services/db.ts';
 
@@ -8,6 +17,7 @@ interface CardItemProps {
   onDelete: (id: string) => void;
   onPreview: (card: AnkiCard) => void;
   onSyncCard: (id: string) => void;
+  isConnected?: boolean;
 }
 
 /**
@@ -20,7 +30,7 @@ interface CardItemProps {
  * - Action buttons (Delete, Analyze).
  * - Audio processing status.
  */
-const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview, onSyncCard}) => {
+const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview, onSyncCard, isConnected = false}) => {
   const [thumbnailSrc, setThumbnailSrc] = useState<string | null>(null);
 
   // Async load thumbnail from IDB
@@ -109,13 +119,15 @@ const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview, onSyncCar
               e.stopPropagation();
               onSyncCard(card.id);
             }}
-            disabled={card.syncStatus !== 'unsynced' || card.audioStatus !== 'done'}
+            disabled={card.syncStatus !== 'unsynced' || card.audioStatus !== 'done' || !isConnected}
             className={`p-2 rounded transition-colors ${
-              card.syncStatus === 'unsynced' && card.audioStatus === 'done'
+              card.syncStatus === 'unsynced' && card.audioStatus === 'done' && isConnected
                 ? 'text-indigo-400 hover:text-indigo-300 hover:bg-slate-700/50'
                 : 'text-slate-600'
             }`}
-            title={card.syncStatus === 'synced' ? 'Already synced' : card.syncStatus === 'syncing' ? 'Syncing...' : card.audioStatus !== 'done' ? 'Media not ready' : 'Sync to Anki'}
+            title={!isConnected ? 'Not connected to Anki' : card.syncStatus === 'synced' ?
+              'Already synced' : card.syncStatus === 'syncing' ?
+                'Syncing...' : card.audioStatus !== 'done' ? 'Media not ready' : 'Sync to Anki'}
           >
             {card.syncStatus === 'unsynced' && <CloudUpload size={18}/>}
             {card.syncStatus === 'synced' && <CheckCircle size={18}/>}

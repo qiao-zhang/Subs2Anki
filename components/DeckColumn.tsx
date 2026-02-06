@@ -185,9 +185,9 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
           <div className="w-px h-4 bg-slate-700 mx-1 self-center"></div>
           <button
             onClick={onSyncAnki}
-            disabled={cards.length === 0}
+            disabled={cards.length === 0 || !isConnected}
             className="p-1.5 hover:bg-indigo-900/50 rounded text-indigo-400 hover:text-indigo-300 transition disabled:opacity-50 disabled:hover:bg-transparent disabled:text-slate-600"
-            title="Sync to Anki"
+            title={!isConnected ? "Not connected to Anki" : "Sync to Anki"}
           >
             <CloudUpload size={16}/>
           </button>
@@ -231,6 +231,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
               onDelete={onDelete}
               onPreview={onPreview}
               onSyncCard={onSyncCard}
+              isConnected={isConnected}
             />
           ))
         )}
