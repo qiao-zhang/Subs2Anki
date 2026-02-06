@@ -18,7 +18,11 @@ const DEFAULT_NOTE_TYPE: AnkiNoteType = {
     {name: "AfterAudio"},
     {name: "Meaning", source: 'Translation'},
     {name: "Media", source: 'Image'},
-    {name: "Notes", source: 'Notes'}
+    {name: "Notes", source: 'Notes'},
+    {name: "PrevText"}, // New field for previous subtitle text in a group
+    {name: "PrevAudio"}, // New field for previous subtitle audio in a group
+    {name: "NextText"}, // New field for next subtitle text in a group
+    {name: "NextAudio"} // New field for next subtitle audio in a group
   ],
   templates: [{
     Name: "Card 1",
@@ -48,10 +52,14 @@ interface AppState {
   updateSubtitleTime: (id: number, start: number, end: number) => void;
   toggleSubtitleLineStatus: (id: number) => void;
   setSubtitleLineStatus: (id: number, status: 'normal' | 'locked' | 'ignored') => void;
-  addSubtitle: (sub: SubtitleLine) => void;
+  addSubtitleLine: (sub: SubtitleLine) => void;
+  getSubtitleLine: (id: number) => SubtitleLine | null;
   removeSubtitle: (id: number) => void;
   shiftSubtitles: (offset: number) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
+  groupSubtitles: (ids: number[]) => void;
+  ungroupSubtitles: (groupId: string) => void;
+  mergeSubtitleLines: (ids: number[]) => void;
 
   // Undo/Redo
   undo: () => void;
@@ -166,17 +174,52 @@ export const useAppStore = create<AppState>((set, get) => ({
     } : s)
   })),
 
-  addSubtitle: (sub) => {
+  addSubtitleLine: (subLine: SubtitleLine) => {
     const currentState = get().subtitleLines;
     const beforeState = [...currentState];
-    const afterState = [...currentState, sub].sort((a, b) => a.startTime - b.startTime);
+    const afterState = [...currentState, subLine].sort((a, b) => a.startTime - b.startTime);
 
     // 记录操作到历史记录
     globalUndoRedoManager.addOperation({
-      type: 'ADD_SUBTITLE',
+      type: 'ADD_SUBTITLE_LINE',
       beforeState,
       afterState,
-      params: { sub }
+      params: { sub: subLine }
+    });
+
+    set({
+      subtitleLines: afterState,
+      hasUnsavedChanges: true
+    });
+  },
+
+  getSubtitleLine: (id: number) => {
+    return get().subtitleLines.find(line => line.id === id) || null;
+  },
+
+  mergeSubtitleLines: (ids: number[]) => {
+    const linesToMerge = get().subtitleLines.filter(s => ids.includes(s.id));
+    if (linesToMerge.length < 2) return;
+    const beforeState = [...get().subtitleLines];
+    linesToMerge.sort((a, b) => a.startTime - b.startTime);
+    const startTime = linesToMerge[0].startTime;
+    const endTime = linesToMerge.at(-1).endTime;
+    const text = linesToMerge.map(l => l.text).join('\n');
+    const newSubLine: SubtitleLine = {
+      id: linesToMerge[0].id,
+      startTime,
+      endTime,
+      text,
+      status: 'normal'
+    };
+    const afterState = [...beforeState.filter(s => !ids.includes(s.id)), newSubLine]
+      .sort((a, b) => a.startTime - b.startTime);
+
+    // 记录操作到历史记录
+    globalUndoRedoManager.addOperation({
+      type: 'MERGE_SUBTITLE_LINES',
+      beforeState,
+      afterState,
     });
 
     set({
@@ -193,7 +236,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // 记录操作到历史记录
     globalUndoRedoManager.addOperation({
-      type: 'REMOVE_SUBTITLE',
+      type: 'REMOVE_SUBTITLE_LINE',
       beforeState,
       afterState,
       params: { id, removedSubtitle }
@@ -230,6 +273,88 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setHasUnsavedChanges: (val) => set({hasUnsavedChanges: val}),
+
+  groupSubtitles: (ids: number[]) => {
+    if (ids.length < 2) return; // Need at least 2 subtitles to form a group
+
+    const currentState = get().subtitleLines;
+    const beforeState = [...currentState];
+    
+    // Generate a unique group ID
+    const groupId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Find the subtitles to be grouped
+    const subtitlesToGroup = currentState.filter(s => ids.includes(s.id));
+    
+    // Sort subtitles by start time
+    const sortedSubtitles = [...subtitlesToGroup].sort((a, b) => a.startTime - b.startTime);
+    
+    // Update subtitles with group info and prev/next relationships
+    const afterState = currentState.map(sub => {
+      if (ids.includes(sub.id)) {
+        const idx = sortedSubtitles.findIndex(s => s.id === sub.id);
+        const updatedSub = { ...sub, groupId };
+        
+        // Set prev/next relationships
+        if (idx > 0) {
+          updatedSub.prevText = sortedSubtitles[idx - 1].text;
+          updatedSub.prevAudio = sortedSubtitles[idx - 1].text; // In a real app, this would be an audio reference
+        }
+        if (idx < sortedSubtitles.length - 1) {
+          updatedSub.nextText = sortedSubtitles[idx + 1].text;
+          updatedSub.nextAudio = sortedSubtitles[idx + 1].text; // In a real app, this would be an audio reference
+        }
+        
+        return updatedSub;
+      }
+      return sub;
+    });
+
+    // Record operation to history
+    globalUndoRedoManager.addOperation({
+      type: 'GROUP_SUBTITLE_LINES',
+      beforeState,
+      afterState,
+      params: { ids, groupId }
+    });
+
+    set({
+      subtitleLines: afterState,
+      hasUnsavedChanges: true
+    });
+  },
+
+  ungroupSubtitles: (groupId: string) => {
+    const currentState = get().subtitleLines;
+    const beforeState = [...currentState];
+    
+    // Remove group ID and prev/next relationships from subtitles in the group
+    const afterState = currentState.map(sub => {
+      if (sub.groupId === groupId) {
+        const updatedSub = { ...sub };
+        delete updatedSub.groupId;
+        delete updatedSub.prevText;
+        delete updatedSub.prevAudio;
+        delete updatedSub.nextText;
+        delete updatedSub.nextAudio;
+        return updatedSub;
+      }
+      return sub;
+    });
+
+    // Record operation to history
+    globalUndoRedoManager.addOperation({
+      type: 'UNGROUP_SUBTITLE_LINES',
+      beforeState,
+      afterState,
+      params: { groupId }
+    });
+
+    set({
+      subtitleLines: afterState,
+      hasUnsavedChanges: true
+    });
+  },
 
   // Undo/Redo 实现
   undo: () => {

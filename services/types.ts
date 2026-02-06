@@ -7,6 +7,11 @@ export interface SubtitleLine {
   endTime: number;   // End time in seconds
   text: string;      // The actual dialogue text
   status: 'normal' | 'locked' | 'ignored';  // Status of the subtitle line: normal, locked, or ignored
+  groupId?: string;  // Optional group ID for grouped subtitle lines
+  prevText?: string; // Previous subtitle text in a group
+  prevAudio?: string; // Previous subtitle audio reference in a group
+  nextText?: string; // Next subtitle text in a group
+  nextAudio?: string; // Next subtitle audio reference in a group
 }
 
 /**
@@ -30,6 +35,12 @@ export interface AnkiCard {
 
   // Sync status
   syncStatus?: 'unsynced' | 'syncing' | 'synced';       // Whether the card has been synced to Anki
+  
+  // Group-related fields
+  prevText?: string;         // Previous subtitle text in a group
+  prevAudio?: string;        // Previous subtitle audio reference in a group
+  nextText?: string;         // Next subtitle text in a group
+  nextAudio?: string;        // Next subtitle audio reference in a group
 }
 
 /**

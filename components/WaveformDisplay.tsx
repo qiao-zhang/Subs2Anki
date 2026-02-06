@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import React, {useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.esm.js';
@@ -8,7 +7,6 @@ import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
 import {useAppStore} from '@/services/store.ts';
 
 interface WaveformDisplayProps {
-  // Removed audioSrc as we use the videoElement directly
   videoElement: HTMLVideoElement | null;
   videoSrc: string;
   currentTime: number;
@@ -19,7 +17,6 @@ interface WaveformDisplayProps {
   onTempSubtitleLineClicked: () => void;
   onTempSubtitleLineRemoved: () => void;
   onSubtitleLineClicked: (id: number) => void;
-  onSubtitleLineDoubleClicked: (id: number) => void;
   onSubtitleLineRemoved: (id: number) => void;
   onCreateCard: (id: number) => void;
 }
@@ -34,11 +31,10 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onTempSubtitleLineClicked,
                                                            onTempSubtitleLineRemoved,
                                                            onSubtitleLineClicked,
-                                                           onSubtitleLineDoubleClicked,
                                                            onSubtitleLineRemoved,
                                                          }) => {
   // Access store for direct reads in listeners and reactive updates
-  const {subtitleLines, updateSubtitleTime, hasUnsavedChanges} = useAppStore();
+  const {subtitleLines, updateSubtitleTime, getSubtitleLine, groupSubtitles} = useAppStore();
 
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -48,6 +44,10 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const [isReady, setIsReady] = useState(false);
 
   const isSyncingSubtitles = useRef(false);
+
+  // Multi-selection state
+  const [selectedRegions, setSelectedRegions] = useState<Set<string>>(new Set());
+  const selectedRegionsRef = useRef<Set<string>>(new Set());
 
   // Constants & Refs
   const TEMP_REGION_ID = 'subs2anki-temp-segment';
@@ -136,6 +136,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     });
 
     ws.on('ready', () => {
+      console.log("is ready");
       setIsReady(true);
     });
 
@@ -145,6 +146,9 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       onSeek(newTime);
       // Remove temp region if clicking elsewhere on timeline
       removeTempRegion();
+      // Clear selection when clicking on empty space
+      selectedRegionsRef.current.clear();
+      setSelectedRegions(new Set());
     });
 
     // --- Region Events ---
@@ -195,19 +199,91 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         onSubtitleLineRemoved(id);
         return;
       }
-      if (e.ctrlKey) {
-        onSubtitleLineDoubleClicked(id);
+
+      // Handle multi-selection with Ctrl/Cmd key
+      if (e.ctrlKey || e.metaKey) {
+        // Toggle selection
+        const newSelectedRegions = new Set(selectedRegionsRef.current);
+        if (newSelectedRegions.has(region.id)) {
+          newSelectedRegions.delete(region.id);
+          // Reset region color to default
+          const subtitleLine = getSubtitleLine(id);
+          if (subtitleLine) {
+            const color = subtitleLine.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
+              subtitleLine.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
+                'rgba(99, 102, 241, 0.2)'; // Blue for normal
+            region.setOptions({color});
+          }
+        } else {
+          newSelectedRegions.add(region.id);
+          // Highlight selected region
+          region.setOptions({color: 'rgba(255, 165, 0, 0.4)'}); // Orange for selected
+        }
+
+        selectedRegionsRef.current = newSelectedRegions;
+        setSelectedRegions(newSelectedRegions);
+      } else {
+        // Single selection - clear previous selections
+        selectedRegionsRef.current.forEach(selectedId => {
+          if (selectedId !== region.id) {
+            const selectedRegion = wsRegions.current?.getRegions().find(r => r.id === selectedId);
+            if (selectedRegion) {
+              const selectedIdNum = parseInt(selectedId);
+              const subtitleLine = getSubtitleLine(selectedIdNum);
+              if (subtitleLine) {
+                const color = subtitleLine.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
+                  subtitleLine.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
+                    'rgba(99, 102, 241, 0.2)'; // Blue for normal
+                selectedRegion.setOptions({color});
+              }
+            }
+          }
+        });
+
+        const newSelectedRegions = new Set([]);
+        selectedRegionsRef.current = newSelectedRegions;
+        setSelectedRegions(newSelectedRegions);
+
+        // Highlight selected region
+        region.setOptions({color: 'rgba(255, 165, 0, 0.4)'}); // Orange for selected
+
+        /*
+        if (e.ctrlKey) {
+          onSubtitleLineDoubleClicked(id);
+          return;
+        }
+         */
+        onSubtitleLineClicked(id);
+      }
+    });
+
+    // Keyboard event listener for M (merge) and G (group) shortcuts
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only process shortcuts when focus is not on an input element
+      if ((e.target as Element).tagName === 'INPUT' || (e.target as Element).tagName === 'TEXTAREA') {
         return;
       }
-      onSubtitleLineClicked(id);
-    });
+
+      if (e.key.toLowerCase() === 'm' && selectedRegionsRef.current.size > 1) {
+        // Merge selected regions
+        e.preventDefault();
+        mergeSelectedRegions();
+      } else if (e.key.toLowerCase() === 'g' && selectedRegionsRef.current.size > 1) {
+        // Group selected regions
+        e.preventDefault();
+        groupSelectedRegions();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
 
     wavesurfer.current = ws;
 
     return () => {
+      document.removeEventListener('keydown', handleKeyDown);
       ws.destroy();
     };
-  }, [videoElement, videoSrc]); // Re-run when video source changes
+  }, [videoElement, videoSrc]); // Re-run when video source or subtitle lines change
 
   // Handle Zoom
   useEffect(() => {
@@ -216,9 +292,62 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
   }, [zoom, isReady]);
 
+  // Function to merge selected regions
+  const mergeSelectedRegions = () => {
+    if (!wsRegions.current || selectedRegionsRef.current.size < 2) return;
+
+    const selectedRegionObjects = Array.from(selectedRegionsRef.current)
+      .map(id => wsRegions.current?.getRegions().find(r => r.id === id))
+      .filter(Boolean) as Region[];
+
+    if (selectedRegionObjects.length < 2) return;
+
+    // Sort regions by start time
+    selectedRegionObjects.sort((a, b) => a.start - b.start);
+
+    // Extract subtitle IDs from selected regions
+    const subtitleIds = selectedRegionObjects
+      .map(region => parseInt(region.id))
+      .filter(id => !isNaN(id));
+
+    // Call the store function to merge the subtitles
+    const {mergeSubtitleLines} = useAppStore.getState();
+    mergeSubtitleLines(subtitleIds);
+
+    // Clear selection after merging
+    selectedRegionsRef.current.clear();
+    setSelectedRegions(new Set());
+  };
+
+  // Function to group selected regions
+  const groupSelectedRegions = () => {
+    if (!wsRegions.current || selectedRegionsRef.current.size < 2) return;
+
+    const selectedRegionObjects = Array.from(selectedRegionsRef.current)
+      .map(id => wsRegions.current?.getRegions().find(r => r.id === id))
+      .filter(Boolean) as Region[];
+
+    if (selectedRegionObjects.length < 2) return;
+
+    // Sort regions by start time
+    selectedRegionObjects.sort((a, b) => a.start - b.start);
+
+    // Extract subtitle IDs from selected regions
+    const subtitleIds = selectedRegionObjects
+      .map(region => parseInt(region.id))
+      .filter(id => !isNaN(id));
+
+    // Call the store function to group the subtitles
+    groupSubtitles(subtitleIds);
+
+    // Clear selection after grouping
+    selectedRegionsRef.current.clear();
+    setSelectedRegions(new Set());
+  };
+
   // Sync Regions with Store Data
   useEffect(() => {
-    if (!wsRegions.current) return;
+    if (!wsRegions.current || !isReady) return;
 
     isSyncingSubtitles.current = true;
     const regionsPlugin = wsRegions.current;
@@ -240,9 +369,20 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       processedIds.add(idStr);
 
       const r = existingRegions.get(idStr);
-      const color = sub.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
-                   sub.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
-                   'rgba(99, 102, 241, 0.2)'; // Blue for normal
+      let color = sub.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
+        sub.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
+          'rgba(99, 102, 241, 0.2)'; // Blue for normal
+
+      // Check if this region is selected
+      if (selectedRegionsRef.current.has(idStr)) {
+        color = 'rgba(255, 165, 0, 0.4)'; // Orange for selected
+      }
+
+      // Check if this region is grouped
+      if (sub.groupId) {
+        color = 'rgba(0, 128, 128, 0.3)'; // Teal for grouped
+      }
+
       const content = sub.text;
 
       if (r) {
@@ -256,16 +396,41 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           color,
           content
         });
+
+        // Update CSS classes based on selection and grouping
+        if (selectedRegionsRef.current.has(idStr)) {
+          r.element.classList.add('selected');
+        } else {
+          r.element.classList.remove('selected');
+        }
+
+        if (sub.groupId) {
+          r.element.classList.add('grouped');
+        } else {
+          r.element.classList.remove('grouped');
+        }
       } else {
-        regionsPlugin.addRegion({
-          id: idStr,
-          start: sub.startTime,
-          end: sub.endTime,
-          content,
-          color,
-          drag: !(sub.status === 'locked' || sub.status === 'ignored'),
-          resize: !(sub.status === 'locked' || sub.status === 'ignored'),
-        });
+        // Double-check that regionsPlugin is still valid before adding region
+        if (regionsPlugin && typeof regionsPlugin.addRegion === 'function') {
+          const newRegion = wsRegions.current.addRegion({
+            id: idStr,
+            start: sub.startTime,
+            end: sub.endTime,
+            content,
+            color,
+            drag: !(sub.status === 'locked' || sub.status === 'ignored'),
+            resize: !(sub.status === 'locked' || sub.status === 'ignored'),
+          });
+
+          // Apply CSS classes based on selection and grouping
+          if (selectedRegionsRef.current.has(idStr)) {
+            newRegion.element.classList.add('selected');
+          }
+
+          if (sub.groupId) {
+            newRegion.element.classList.add('grouped');
+          }
+        }
       }
     });
 
@@ -277,7 +442,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     isSyncingSubtitles.current = false;
 
-  }, [subtitleLines, isReady, regionsHidden, hasUnsavedChanges]);
+  }, [subtitleLines, isReady, regionsHidden, selectedRegions]);
 
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));
@@ -316,6 +481,14 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         .wavesurfer-region:hover {
           background-color: rgba(99, 102, 241, 0.3) !important;
           z-index: 10;
+        }
+        .wavesurfer-region.selected {
+          background-color: rgba(255, 165, 0, 0.4) !important; /* Orange for selected */
+          border: 2px solid rgba(255, 165, 0, 0.8) !important;
+        }
+        .wavesurfer-region.grouped {
+          background-color: rgba(0, 128, 128, 0.3) !important; /* Teal for grouped */
+          border: 2px solid rgba(0, 128, 128, 0.8) !important;
         }
         .wavesurfer-region::before {
            color: rgba(255,255,255,0.7);

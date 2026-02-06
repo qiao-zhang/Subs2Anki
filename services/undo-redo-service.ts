@@ -2,11 +2,14 @@ import {SubtitleLine} from './types.ts';
 
 // 定义操作类型
 export type OperationType =
+  | 'MERGE_SUBTITLE_LINES'
+  | 'GROUP_SUBTITLE_LINES'
+  | 'UNGROUP_SUBTITLE_LINES'
   | 'SHIFT_SUBTITLES'
   | 'UPDATE_SUBTITLE_TIME'
   | 'UPDATE_SUBTITLE_TEXT'
-  | 'ADD_SUBTITLE'
-  | 'REMOVE_SUBTITLE'
+  | 'ADD_SUBTITLE_LINE'
+  | 'REMOVE_SUBTITLE_LINE'
   | 'MOVE_SUBTITLE';
 
 // 操作接口定义

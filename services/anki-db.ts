@@ -261,7 +261,19 @@ export const createAnkiDatabase = async (
             return '';
         }
       }
-      return "";
+      // Handle fields without explicit source mapping (for PrevText, PrevAudio, NextText, NextAudio)
+      switch (f.name) {
+        case 'PrevText':
+          return card.prevText || '';
+        case 'PrevAudio':
+          return card.prevAudio || '';
+        case 'NextText':
+          return card.nextText || '';
+        case 'NextAudio':
+          return card.nextAudio || '';
+        default:
+          return '';
+      }
     });
 
     const fldsStr = fieldValues.join(ANKI_SEP);

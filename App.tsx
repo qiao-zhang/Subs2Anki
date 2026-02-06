@@ -33,7 +33,7 @@ const App: React.FC = () => {
     videoSrc, videoName, projectName, videoFile, setVideo, setProjectName,
     subtitleLines, subtitleFileName, fileHandle, setSubtitles,
     updateSubtitleText, toggleSubtitleLineStatus, setSubtitleLineStatus,
-    addSubtitle, removeSubtitle,
+    addSubtitleLine, removeSubtitle,
     shiftSubtitles,
     undo, redo, canUndo, canRedo,
     ankiCards, addCard, updateCard, deleteCard,
@@ -241,14 +241,14 @@ const App: React.FC = () => {
     if (!tempSubtitleLine) return;
     const lines = useAppStore.getState().subtitleLines;
     const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
-    const newSub: SubtitleLine = {
+    const newSubLine: SubtitleLine = {
       id: maxId + 1,
       startTime: tempSubtitleLine.start,
       endTime: tempSubtitleLine.end,
       text,
       status: 'normal'
     };
-    addSubtitle(newSub);
+    addSubtitleLine(newSubLine);
     setTempSubtitleLine(null);
   };
 
@@ -419,6 +419,11 @@ const App: React.FC = () => {
       audioStatus: 'pending',
       timestampStr: timestampStr,
       syncStatus: 'unsynced', // New cards are not synced by default
+      // Group-related fields
+      prevText: sub.prevText,
+      prevAudio: sub.prevAudio,
+      nextText: sub.nextText,
+      nextAudio: sub.nextAudio,
     };
 
     addCard(newCard);
