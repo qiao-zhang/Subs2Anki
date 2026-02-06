@@ -22,6 +22,7 @@ interface DeckColumnProps {
   onDeckChange?: (deckName: string) => void;
   globalTags?: string[];
   onGlobalTagsChange?: (tags: string[]) => void;
+  className?: string;
 }
 
 const DeckColumn: React.FC<DeckColumnProps> = ({
@@ -41,7 +42,8 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  selectedDeck: propSelectedDeck,
                                                  onDeckChange,
                                                  globalTags = [],
-                                                 onGlobalTagsChange
+                                                 onGlobalTagsChange,
+                                                 className = ''
                                                }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [isTagsExpanded, setIsTagsExpanded] = useState<boolean>(false);
@@ -49,7 +51,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
   // Use the selected deck from props
   const selectedDeck = propSelectedDeck || (projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export');
   return (
-    <aside className="w-80 flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900/50 z-20">
+    <aside className={`w-80 flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900/50 z-20 ${className}`}>
 
       {/* Logo Section */}
       <div className="h-14 flex items-center px-4 border-b border-slate-800 bg-slate-950 select-none">

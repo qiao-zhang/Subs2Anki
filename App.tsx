@@ -42,7 +42,7 @@ const App: React.FC = () => {
   } = useAppStore();
 
   // --- AnkiConnect Status ---
-  const { isConnected, decks, refreshDecks } = useAnkiConnect(ankiConnectUrl);
+  const {isConnected, decks, refreshDecks} = useAnkiConnect(ankiConnectUrl);
 
   // --- Selected Deck State ---
   const [selectedDeck, setSelectedDeck] = useState<string>('');
@@ -68,7 +68,7 @@ const App: React.FC = () => {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncProgress, setSyncProgress] = useState({current: 0, total: 0});
-  const [notification, setNotification] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' });
+  const [notification, setNotification] = useState<{ visible: boolean; text: string }>({visible: false, text: ''});
 
   // noinspection JSUnusedLocalSymbols
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
@@ -118,7 +118,7 @@ const App: React.FC = () => {
 
       // Update sync status for all
       unsyncedCards.forEach(card => {
-        updateCard(card.id, { syncStatus: 'syncing' });
+        updateCard(card.id, {syncStatus: 'syncing'});
       });
 
       await syncToAnki(ankiConnectUrl, targetDeckName, projectName, ankiConfig, unsyncedCards, (cur, tot) => {
@@ -127,7 +127,7 @@ const App: React.FC = () => {
 
       // Update sync status for all successfully synced cards
       unsyncedCards.forEach(card => {
-        updateCard(card.id, { syncStatus: 'synced' });
+        updateCard(card.id, {syncStatus: 'synced'});
       });
 
       alert(`Successfully synced ${unsyncedCards.length} cards to Anki deck: ${targetDeckName}!`);
@@ -359,9 +359,9 @@ const App: React.FC = () => {
 
   // 显示复制通知
   const showNotification = (text: string) => {
-    setNotification({ visible: true, text });
+    setNotification({visible: true, text});
     setTimeout(() => {
-      setNotification({ visible: false, text: '' });
+      setNotification({visible: false, text: ''});
     }, 2000); // 2秒后自动隐藏
   };
 
@@ -468,13 +468,13 @@ const App: React.FC = () => {
       const deckName = targetDeckName || (projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export');
 
       // Sync only this card
-      updateCard(id, { syncStatus: 'syncing' });
+      updateCard(id, {syncStatus: 'syncing'});
       await syncToAnki(ankiConnectUrl, deckName, projectName, ankiConfig, [card], (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
       });
 
       // Update card's sync status
-      updateCard(id, { syncStatus: 'synced' });
+      updateCard(id, {syncStatus: 'synced'});
 
       // alert(`Successfully synced card to Anki!`);
     } catch (e) {
@@ -659,42 +659,43 @@ const App: React.FC = () => {
 
       {/* Top Part: 3 Columns */}
       <div className="flex flex-1 min-h-0 w-full">
-        {!isVideoOnly && (
-          <DeckColumn
-            cards={ankiCards}
-            onDelete={handleDeleteCard}
-            onPreview={(c) => setPreviewCard(c)}
-            onSyncCard={(id) => handleSyncCard(id, selectedDeck)}
-            onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
-            onExport={() => handleActionClick('export')}
-            onSyncAnki={() => handleActionClick('sync', selectedDeck)}
-            onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
-            onDeleteSynced={handleDeleteSyncedCards}
-            isConnected={isConnected}
-            decks={decks}
-            ankiConnectUrl={ankiConnectUrl}
-            projectName={projectName}
-            selectedDeck={selectedDeck}
-            onDeckChange={setSelectedDeck}
-            globalTags={globalTags}
-            onGlobalTagsChange={setGlobalTags}
-          />
-        )}
+        <DeckColumn
+          className={`${isVideoOnly ? 'hidden' : ''}`}
+          cards={ankiCards}
+          onDelete={handleDeleteCard}
+          onPreview={(c) => setPreviewCard(c)}
+          onSyncCard={(id) => handleSyncCard(id, selectedDeck)}
+          onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
+          onExport={() => handleActionClick('export')}
+          onSyncAnki={() => handleActionClick('sync', selectedDeck)}
+          onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
+          onDeleteSynced={handleDeleteSyncedCards}
+          isConnected={isConnected}
+          decks={decks}
+          ankiConnectUrl={ankiConnectUrl}
+          projectName={projectName}
+          selectedDeck={selectedDeck}
+          onDeckChange={setSelectedDeck}
+          globalTags={globalTags}
+          onGlobalTagsChange={setGlobalTags}
+        />
 
         {/* COL 2: VIDEO (Center) */}
         <main className="flex-1 flex flex-col bg-slate-950 relative min-w-0">
           {/* Project Controls Above Video Player */}
-          <div className="p-4 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
-            <EditableProjectName
-              projectName={projectName}
-              onProjectNameChange={setProjectName}
-              className="text-lg font-semibold"
-            />
-            <ProjectControls
-              onSaveProject={handleSaveProject}
-              onLoadProject={handleLoadProject}
-            />
-          </div>
+          {!isVideoOnly &&
+            <div className="p-4 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
+              <EditableProjectName
+                projectName={projectName}
+                onProjectNameChange={setProjectName}
+                className="text-lg font-semibold"
+              />
+              <ProjectControls
+                onSaveProject={handleSaveProject}
+                onLoadProject={handleLoadProject}
+              />
+            </div>
+          }
 
           {/* Video Player Area */}
           <div className="flex-1 flex flex-col items-center justify-center p-2 bg-black/20 min-h-0">
@@ -711,24 +712,23 @@ const App: React.FC = () => {
         </main>
 
         {/* COL 3: SUBTITLE LINES (Right) */}
-        {!isVideoOnly && (
-          <SubtitleColumn
-            subtitleLines={subtitleLines}
-            activeSubtitleLineId={activeSubtitleLineId}
-            subtitleFileName={subtitleFileName}
-            canSave={fileHandle !== null}
-            onSetSubtitles={setSubtitles}
-            onSubtitleLineClicked={handleSubtitleLineClicked}
-            onToggleLock={toggleSubtitleLineStatus}
-            onCreateCard={(sub) => {
-              const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
-              if (s) handleCreateCard(s).then();
-            }}
-            onSave={handleSaveSubtitles}
-            onDownload={handleDownloadSubtitles}
-            onShiftSubtitles={shiftSubtitles}
-          />
-        )}
+        <SubtitleColumn
+          className={`${isVideoOnly ? 'hidden' : ''}`}
+          subtitleLines={subtitleLines}
+          activeSubtitleLineId={activeSubtitleLineId}
+          subtitleFileName={subtitleFileName}
+          canSave={fileHandle !== null}
+          onSetSubtitles={setSubtitles}
+          onSubtitleLineClicked={handleSubtitleLineClicked}
+          onToggleLock={toggleSubtitleLineStatus}
+          onCreateCard={(sub) => {
+            const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
+            if (s) handleCreateCard(s).then();
+          }}
+          onSave={handleSaveSubtitles}
+          onDownload={handleDownloadSubtitles}
+          onShiftSubtitles={shiftSubtitles}
+        />
       </div>
 
       {/* Control Bar - Full Width with Auto Height for Editor */}
@@ -750,7 +750,8 @@ const App: React.FC = () => {
       )}
 
       {/* Bottom Part: Full-width Waveform */}
-      <div className={`h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative ${isVideoOnly ? 'hidden' : ''}`}>
+      <div
+        className={`h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative ${isVideoOnly ? 'hidden' : ''}`}>
         <WaveformDisplay
           videoElement={videoPlayerRef.current?.getVideoElement() || null}
           videoSrc={videoSrc}
@@ -842,7 +843,8 @@ const App: React.FC = () => {
 
       {/* 全局通知 */}
       {notification.visible && (
-        <div className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-50 bg-slate-700/80 text-slate-200 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 border border-slate-600">
+        <div
+          className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-50 bg-slate-700/80 text-slate-200 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 border border-slate-600">
           "{notification.text.substring(0, 30)}{notification.text.length > 30 ? '...' : ''}" copied!
         </div>
       )}

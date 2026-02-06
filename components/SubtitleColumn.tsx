@@ -30,6 +30,7 @@ interface SubtitleColumnProps {
   onSave: () => void;
   onDownload: () => void;
   onShiftSubtitles: (offset: number) => void;
+  className?: string;
 }
 
 const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
@@ -44,6 +45,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          onSave,
                                                          onDownload,
                                                          onShiftSubtitles,
+                                                         className = ''
                                                        }) => {
   const MIN_SHIFT_MS = 10;
   const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
@@ -298,7 +300,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   };
 
   return (
-    <aside className="w-80 flex-shrink-0 flex flex-col border-l border-slate-800 bg-slate-900/50 z-20">
+    <aside className={`w-80 flex-shrink-0 flex flex-col border-l border-slate-800 bg-slate-900/50 z-20 ${className}`}>
       {/* Header with file info and controls */}
       <div className="flex flex-col px-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
         <div className="h-10 flex items-center justify-between">
