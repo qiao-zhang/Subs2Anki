@@ -34,7 +34,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onSubtitleLineRemoved,
                                                          }) => {
   // Access store for direct reads in listeners and reactive updates
-  const {subtitleLines, updateSubtitleTime, getSubtitleLine, groupSubtitles} = useAppStore();
+  const {subtitleLines, updateSubtitleTime, getSubtitleLine, toggleSubtitleLineStatus, groupSubtitles} = useAppStore();
 
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -208,7 +208,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       if (isNaN(id)) return;
 
       if (e.shiftKey) {
-        console.log("Shift-clicked region", region.id);
+        toggleSubtitleLineStatus(id);
         return;
       }
 

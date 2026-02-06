@@ -2,8 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Provider } from 'jotai/react';
-import WaveformDisplay from './WaveformDisplay';
-import { useAppStore } from '../services/store';
+import WaveformDisplay from '../../components/WaveformDisplay.tsx';
+import { useAppStore } from '../../services/store.ts';
 
 // Mock the wavesurfer.js library
 vi.mock('wavesurfer.js', () => ({

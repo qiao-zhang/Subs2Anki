@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createAnkiDatabase } from './anki-db';
-import { AnkiCard, AnkiNoteType } from './types';
+import { createAnkiDatabase } from '../../services/anki-db.ts';
+import { AnkiCard, AnkiNoteType } from '../../services/types.ts';
 
 // Mock sql.js
 vi.mock('sql.js', () => ({
@@ -67,7 +67,7 @@ describe('Anki Database Creation with Group Fields', () => {
     const creationTime = Date.now();
     
     // Spy on the database operations to verify field mapping
-    const originalCreateAnkiDatabase = await import('./anki-db');
+    const originalCreateAnkiDatabase = await import('../../services/anki-db.ts');
     const spy = vi.spyOn(originalCreateAnkiDatabase, 'createAnkiDatabase');
     
     try {

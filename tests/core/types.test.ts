@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SubtitleLine, AnkiCard } from './types';
+import { SubtitleLine, AnkiCard } from '../../services/types.ts';
 
 describe('Type Definitions', () => {
   it('should include group-related fields in SubtitleLine', () => {

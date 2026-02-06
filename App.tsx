@@ -768,7 +768,6 @@ const App: React.FC = () => {
           onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
           onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
           onSubtitleLineClicked={(id) => handleSubtitleLineClicked(id, false)}
-          onSubtitleLineDoubleClicked={toggleSubtitleLineStatus}
           onSubtitleLineRemoved={removeSubtitle}
           onCreateCard={(id) => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === id);

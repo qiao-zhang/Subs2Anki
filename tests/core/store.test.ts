@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useAppStore } from '../services/store';
+import { useAppStore } from '../../services/store.ts';
 import { create } from 'zustand';
-import { SubtitleLine } from '../services/types';
+import { SubtitleLine } from '../../services/types.ts';
 
 // Create a test version of the store
 const createStore = () => create(useAppStore);
