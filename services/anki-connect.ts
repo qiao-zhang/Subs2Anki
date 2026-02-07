@@ -93,10 +93,10 @@ export const getDecks = async (url: string): Promise<string[]> => {
 export const syncToAnki = async (
   url: string,
   deckName: string,
-  projectName: string,
   noteType: AnkiNoteType,
   cards: AnkiCard[],
-  onProgress: (current: number, total: number) => void
+  onProgress: (current: number, total: number) => void,
+  onCardSynced?: (id: string) => void,
 ) => {
   // 1. Create Deck
   await invoke('createDeck', {deck: deckName}, url);
@@ -196,8 +196,8 @@ export const syncToAnki = async (
         }
       }, url);
 
-      // TODO: If the note was added successfully (result is the note ID), we could potentially use this info
-      // but for now we just proceed with the sync
+      onCardSynced && onCardSynced(card.id);
+
     } catch (e) {
       console.error(`Failed to add note for card ${card.id}`, e);
       // Continue to next card

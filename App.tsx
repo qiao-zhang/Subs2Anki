@@ -71,6 +71,7 @@ const App: React.FC = () => {
   const [syncProgress, setSyncProgress] = useState({current: 0, total: 0});
   const [isBulkCreating, setIsBulkCreating] = useState<boolean>(false);
   const [bulkCreateProgress, setBulkCreateProgress] = useState({current: 0, total: 0});
+  const [autoDeleteSynced, setAutoDeleteSynced] = useState<boolean>(true);
   const [notification, setNotification] = useState<{ visible: boolean; text: string }>({visible: false, text: ''});
 
   // noinspection JSUnusedLocalSymbols
@@ -434,13 +435,16 @@ const App: React.FC = () => {
 
       // Sync only this card
       updateCardSyncStatus(id, 'syncing');
-      await syncToAnki(ankiConnectUrl, deckName, projectName, ankiConfig, [card], (cur, tot) => {
+      await syncToAnki(ankiConnectUrl, deckName, ankiConfig, [card], (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
       });
 
       // Update card's sync status
       updateCardSyncStatus(id, 'synced');
 
+      if (autoDeleteSynced) {
+        await handleDeleteCard(id);
+      }
       showNotification(`Successfully synced card to Anki!`);
     } catch (e) {
       console.error(e);
@@ -463,7 +467,7 @@ const App: React.FC = () => {
       const unsyncedCards = ankiCards.filter(card => card.syncStatus === 'unsynced');
 
       if (unsyncedCards.length === 0) {
-        showNotification('All cards have already been synced to Anki!');
+        alert('All cards have already been synced to Anki!');
         return;
       }
 
@@ -472,13 +476,14 @@ const App: React.FC = () => {
         updateCardSyncStatus(card.id, 'syncing');
       });
 
-      await syncToAnki(ankiConnectUrl, selectedDeck, projectName, ankiConfig, unsyncedCards, (cur, tot) => {
+      await syncToAnki(ankiConnectUrl, selectedDeck, ankiConfig, unsyncedCards, (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
-      });
-
-      // Update sync status for all successfully synced cards
-      unsyncedCards.forEach(card => {
-        updateCardSyncStatus(card.id, 'synced');
+      }, async (cardId: string) => {
+        if (autoDeleteSynced) {
+          await handleDeleteCard(cardId);
+        } else {
+          updateCardSyncStatus(cardId, 'synced');
+        }
       });
 
       showNotification(`Successfully synced ${unsyncedCards.length} cards to Anki deck: ${selectedDeck}!`);
@@ -686,6 +691,8 @@ const App: React.FC = () => {
           onDeckChange={setSelectedDeck}
           globalTags={globalTags}
           onGlobalTagsChange={setGlobalTags}
+          autoDeleteSynced={autoDeleteSynced}
+          onAutoDeleteSyncedChange={setAutoDeleteSynced}
         />
 
         {/* COL 2: VIDEO (Center) */}
