@@ -139,7 +139,6 @@ const CardPreviewModal: React.FC<CardPreviewModalProps> = ({isOpen, card, onClos
 };
 
 // --- Helper Functions for HTML Generation ---
-
 const generatePreviewHtml = (
   card: AnkiCard,
   config: AnkiNoteType,

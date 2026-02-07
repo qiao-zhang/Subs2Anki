@@ -68,6 +68,8 @@ const App: React.FC = () => {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncProgress, setSyncProgress] = useState({current: 0, total: 0});
+  const [isBulkCreating, setIsBulkCreating] = useState<boolean>(false);
+  const [bulkCreateProgress, setBulkCreateProgress] = useState({current: 0, total: 0});
   const [notification, setNotification] = useState<{ visible: boolean; text: string }>({visible: false, text: ''});
 
   // noinspection JSUnusedLocalSymbols
@@ -432,6 +434,26 @@ const App: React.FC = () => {
     setSubtitleLineStatus(sub.id, 'locked');
   };
 
+  const handleBulkCreateCards = async () => {
+    const normalSubtitles = subtitleLines.filter(sub => sub.status === 'normal');
+    
+    if (normalSubtitles.length === 0) {
+      showNotification('No subtitle lines to make cards');
+      return;
+    }
+    
+    setIsBulkCreating(true);
+    setBulkCreateProgress({ current: 0, total: normalSubtitles.length });
+    
+    for (let i = 0; i < normalSubtitles.length; i++) {
+      await handleCreateCard(normalSubtitles[i]);
+      setBulkCreateProgress({ current: i + 1, total: normalSubtitles.length });
+    }
+    
+    setIsBulkCreating(false);
+    showNotification(`Successfully created ${normalSubtitles.length} cards!`);
+  };
+
   const handleDeleteCard = async (id: string) => {
     const card = ankiCards.find(c => c.id === id);
     if (card) {
@@ -655,12 +677,28 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
-      <ProcessingOverlay
-        isExporting={isExporting}
-        isSyncing={isSyncing}
-        syncProgress={syncProgress}
-        setIsExporting={setIsExporting}
-      />
+
+      {isSyncing && <ProcessingOverlay
+        isInProcess={isSyncing}
+        InProcessMessage="Syncing to Anki..."
+        Progress={syncProgress}
+      >
+        {syncProgress.current} / {syncProgress.total} cards synced
+      </ProcessingOverlay>}
+      {isBulkCreating && <ProcessingOverlay
+        isInProcess={isBulkCreating}
+        InProcessMessage="Creating Cards..."
+        Progress={bulkCreateProgress}
+      >
+        {bulkCreateProgress.current} / {bulkCreateProgress.total} cards created
+      </ProcessingOverlay>}
+      {isExporting && <ProcessingOverlay
+        isInProcess={isExporting}
+        InProcessMessage="Preparing Export..."
+        onCancel={() => setIsExporting(false)}
+      >
+        Processing media (${ankiCards.filter(c => c.audioStatus !== 'done').length} remaining)
+      </ProcessingOverlay>}
 
       {/* Top Part: 3 Columns */}
       <div className="flex flex-1 min-h-0 w-full">
@@ -730,6 +768,7 @@ const App: React.FC = () => {
             const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
             if (s) handleCreateCard(s).then();
           }}
+          onBulkCreateCards={handleBulkCreateCards}
           onSave={handleSaveSubtitles}
           onDownload={handleDownloadSubtitles}
           onShiftSubtitles={shiftSubtitles}

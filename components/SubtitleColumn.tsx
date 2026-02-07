@@ -27,6 +27,7 @@ interface SubtitleColumnProps {
   onSubtitleLineClicked: (id: number, copyText?: boolean) => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (sub: SubtitleLine) => void;
+  onBulkCreateCards: () => void;
   onSave: () => void;
   onDownload: () => void;
   onShiftSubtitles: (offset: number) => void;
@@ -42,6 +43,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          onSubtitleLineClicked,
                                                          onToggleLock,
                                                          onCreateCard,
+                                                         onBulkCreateCards,
                                                          onSave,
                                                          onDownload,
                                                          onShiftSubtitles,
@@ -383,6 +385,22 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
             )}
           </div>
         )}
+      </div>
+
+      {/* Bulk Create Button */}
+      <div className="h-10 flex items-center px-4 bg-slate-900/60">
+        <button
+          onClick={onBulkCreateCards}
+          disabled={subtitleCounts.normal === 0}
+          className={`flex items-center gap-2 px-3 py-1 text-xs rounded ${
+            subtitleCounts.normal === 0
+              ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+          }`}
+          title={subtitleCounts.normal === 0 ? 'No normal subtitles to create cards from' : 'Create cards for all normal subtitles'}
+        >
+          <PlusCircle size={14}/> Bulk Create Cards ({subtitleCounts.normal})
+        </button>
       </div>
 
       {/* Search bar */}
