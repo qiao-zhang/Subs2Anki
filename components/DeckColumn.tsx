@@ -9,9 +9,9 @@ interface DeckColumnProps {
   onDelete: (id: string) => void;
   onPreview: (card: AnkiCard) => void;
   onSyncCard: (id: string) => void;
+  onSyncCards: () => void;
   onOpenTemplateSettings: () => void;
   onExport: () => void;
-  onSyncAnki: () => void;
   onOpenAnkiSettings: () => void;
   onDeleteSynced: () => void;
   isConnected?: boolean;
@@ -30,14 +30,13 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  onDelete,
                                                  onPreview,
                                                  onSyncCard,
+                                                 onSyncCards,
                                                  onOpenTemplateSettings,
                                                  onExport,
-                                                 onSyncAnki,
                                                  onOpenAnkiSettings,
                                                  onDeleteSynced,
                                                  isConnected,
                                                  decks = [],
-                                                 ankiConnectUrl,
                                                  projectName = 'Subs2Anki Export',
                                                  selectedDeck: propSelectedDeck,
                                                  onDeckChange,
@@ -184,8 +183,10 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
           </button>
           <div className="w-px h-4 bg-slate-700 mx-1 self-center"></div>
           <button
-            onClick={onSyncAnki}
-            disabled={cards.length === 0 || !isConnected}
+            onClick={onSyncCards}
+            disabled={
+              !cards.some(card => card.syncStatus === 'unsynced') ||
+              cards.some(card => card.syncStatus === 'syncing') || !isConnected}
             className="p-1.5 hover:bg-indigo-900/50 rounded text-indigo-400 hover:text-indigo-300 transition disabled:opacity-50 disabled:hover:bg-transparent disabled:text-slate-600"
             title={!isConnected ? "Not connected to Anki" : "Sync to Anki"}
           >

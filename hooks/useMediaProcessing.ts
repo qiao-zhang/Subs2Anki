@@ -6,42 +6,37 @@ import {AnkiCard} from '@/services/types.ts';
 
 export const useMediaProcessing = (
   videoFile: File | null,
-  previewCard: AnkiCard | null,
-  isExporting: boolean,
-  onExportReady: () => void
+  previewCard: AnkiCard | null
 ) => {
-  const {ankiCards, updateCard} = useAppStore();
+  const {ankiCards, updateCardAudioStatus, getSubtitleLine} = useAppStore();
   const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
 
   // --- Background Audio Extraction Queue ---
   useEffect(() => {
     if (backgroundProcessingId) return;
 
-    const cards = useAppStore.getState().ankiCards;
-    let nextCard = previewCard && cards.find(c => c.id === previewCard.id && c.audioStatus === 'pending');
+    let nextCard = previewCard && ankiCards.find(c => c.id === previewCard.id && c.audioStatus === 'pending');
 
     if (!nextCard) {
-      nextCard = cards.find(c => c.audioStatus === 'pending');
+      nextCard = ankiCards.find(c => c.audioStatus === 'pending');
     }
 
-    if (nextCard && videoFile) {
+    if (nextCard) {
       processCardAudio(nextCard.id, nextCard.subtitleId).then();
-    } else if (!nextCard && isExporting) {
-      finalizeExportIfReady();
     }
-  }, [ankiCards, backgroundProcessingId, previewCard, isExporting, videoFile]);
+  }, [ankiCards, backgroundProcessingId, previewCard, videoFile]);
 
   const processCardAudio = async (cardId: string, subtitleId: number) => {
     if (!videoFile) return;
 
-    const sub = useAppStore.getState().subtitleLines.find(s => s.id === subtitleId);
+    const sub = getSubtitleLine(subtitleId);
     if (!sub) {
-      updateCard(cardId, {audioStatus: 'error'});
+      updateCardAudioStatus(cardId, 'error');
       return;
     }
 
     setBackgroundProcessingId(cardId);
-    updateCard(cardId, {audioStatus: 'processing'});
+    updateCardAudioStatus(cardId, 'processing');
 
     try {
       const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime);
@@ -52,25 +47,15 @@ export const useMediaProcessing = (
 
       const currentCards = useAppStore.getState().ankiCards;
       if (currentCards.find(c => c.id === cardId)) {
-        updateCard(cardId, {audioStatus: 'done', audioRef: audioId});
+        updateCardAudioStatus(cardId, 'done', audioId);
       }
     } catch (e) {
       console.error("Audio extraction failed", e);
-      updateCard(cardId, {audioStatus: 'error'});
+      updateCardAudioStatus(cardId, 'error');
     } finally {
       setBackgroundProcessingId(null);
     }
   };
-
-  const finalizeExportIfReady = () => {
-    const cards = useAppStore.getState().ankiCards;
-    const pendingAudio = cards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
-
-    if (!pendingAudio) {
-      onExportReady();
-    }
-  }
-
   return {
     isProcessing: !!(backgroundProcessingId)
   };

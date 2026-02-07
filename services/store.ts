@@ -70,11 +70,12 @@ interface AppState {
 
   // Anki Cards
   ankiCards: AnkiCard[];
-  ankiConfig: AnkiNoteType;
   processing: ProcessingState;
   addCard: (card: AnkiCard) => void;
-  updateCard: (id: string, updates: Partial<AnkiCard>) => void;
+  updateCardSyncStatus: (id: string, status: 'unsynced' | 'syncing' | 'synced') => void;
+  updateCardAudioStatus: (id: string, status: 'pending' | 'processing' | 'done' | 'error', audioRef?: string) => void;
   deleteCard: (id: string) => void;
+  ankiConfig: AnkiNoteType;
   setAnkiConfig: (config: AnkiNoteType) => void;
 
   // Anki Connect
@@ -403,7 +404,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     
     let firstPart: string, secondPart: string;
-    let firstDurationRatio: number, secondDurationRatio: number;
+    let firstDurationRatio: number;
     
     if (splitIndex > 0) {
       // Split at the first space found
@@ -470,8 +471,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   ankiConfig: DEFAULT_NOTE_TYPE,
   processing: {isAnalyzing: false, progress: 0, total: 0},
   addCard: (card) => set((state) => ({ankiCards: [card, ...state.ankiCards]})),
-  updateCard: (id, updates) => set((state) => ({
-    ankiCards: state.ankiCards.map(c => c.id === id ? {...c, ...updates} : c)
+  updateCardSyncStatus: (id, syncStatus) => set((state) => ({
+    ankiCards: state.ankiCards.map(c => c.id === id ? {...c, syncStatus} : c)
+  })),
+  updateCardAudioStatus: (id, audioStatus, audioRef? : string | null) => set((state) => ({
+    ankiCards: state.ankiCards.map(c => c.id === id ? {...c, audioStatus, audioRef} : c)
   })),
   deleteCard: (id) => set((state) => ({ankiCards: state.ankiCards.filter(c => c.id !== id)})),
   setAnkiConfig: (config) => set({ankiConfig: config}),

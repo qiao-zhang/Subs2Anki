@@ -38,20 +38,20 @@ async function invoke<T>(action: string, params: any = {}, url: string): Promise
       mode: 'cors', // AnkiConnect must be configured to allow CORS
     });
   } catch (e) {
-    console.error(`AnkiConnect Error (${action}):`, e);
+    console.debug(`AnkiConnect Error (${action}):`, e);
     throw e;
   }
 
   if (!response.ok) {
     const message = `HTTP error! status: ${response.status}`;
-    console.log(message);
+    console.debug(message);
     throw new Error(message);
   }
 
   const json = await response.json() as AnkiConnectResponse<T>;
 
   if (json.error) {
-    console.log(json.error);
+    console.debug(json.error);
     throw new Error(json.error);
   }
 
@@ -77,7 +77,7 @@ export const getDecks = async (url: string): Promise<string[]> => {
   try {
     return await invoke<string[]>('deckNames', {}, url);
   } catch (e) {
-    console.error('Failed to get decks from Anki:', e);
+    console.debug('Failed to get decks from Anki:', e);
     throw e;
   }
 };
@@ -151,7 +151,6 @@ export const syncToAnki = async (
             // Handle Image
             if (card.screenshotRef) {
               const data = await getMedia(card.screenshotRef);
-              console.log(data);
               if (data && typeof data === 'string') {
                 const filename = `${card.id}.jpg`;
                 const base64 = stringToBase64(data);

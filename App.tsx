@@ -36,7 +36,8 @@ const App: React.FC = () => {
     addSubtitleLine, removeSubtitle,
     shiftSubtitles,
     undo, redo, canUndo, canRedo,
-    ankiCards, addCard, updateCard, deleteCard,
+    ankiCards, addCard, deleteCard,
+    updateCardSyncStatus,
     ankiConfig, setAnkiConfig,
     ankiConnectUrl, setAnkiConnectUrl,
   } = useAppStore();
@@ -94,72 +95,9 @@ const App: React.FC = () => {
   }, [videoSrc]);
 
   // --- Background Media Processing ---
-  const finalizeExport = async () => {
-    setIsExporting(false);
-    await generateAnkiDeck(ankiCards, projectName, ankiConfig);
-  };
-
-  const finalizeSync = async (targetDeckName: string) => {
-    setIsSyncing(true);
-    try {
-      const connected = await checkConnection(ankiConnectUrl);
-      if (!connected) {
-        setIsSyncing(false);
-        alert('Could not connect to Anki. Please check your AnkiConnect settings and ensure Anki is running.');
-        setIsAnkiSettingsOpen(true);
-        return;
-      }
-
-      // Filter out cards that are already synced
-      const unsyncedCards = ankiCards.filter(card => card.syncStatus === 'unsynced');
-
-      if (unsyncedCards.length === 0) {
-        showNotification('All cards have already been synced to Anki!');
-        return;
-      }
-
-      // Update sync status for all
-      unsyncedCards.forEach(card => {
-        updateCard(card.id, {syncStatus: 'syncing'});
-      });
-
-      await syncToAnki(ankiConnectUrl, targetDeckName, projectName, ankiConfig, unsyncedCards, (cur, tot) => {
-        setSyncProgress({current: cur, total: tot});
-      });
-
-      // Update sync status for all successfully synced cards
-      unsyncedCards.forEach(card => {
-        updateCard(card.id, {syncStatus: 'synced'});
-      });
-
-      showNotification(`Successfully synced ${unsyncedCards.length} cards to Anki deck: ${targetDeckName}!`);
-    } catch (e) {
-      console.error(e);
-      alert(`Sync failed: ${(e as Error).message}`);
-    } finally {
-      setIsSyncing(false);
-      setSyncProgress({current: 0, total: 0});
-    }
-  }
-
-  // Reuse media processing hook but trigger different finalizers based on state
-  // We need a ref to know which action triggered the wait
-  const pendingActionRef = useRef<'export' | 'sync' | null>(null);
-
-  const onMediaReady = () => {
-    if (pendingActionRef.current === 'export') {
-      finalizeExport().then();
-    } else if (pendingActionRef.current === 'sync') {
-      finalizeSync(selectedDeck).then();
-    }
-    pendingActionRef.current = null;
-  };
-
   useMediaProcessing(
     videoFile,
-    previewCard,
-    isExporting || isSyncing, // isProcessing if either active
-    onMediaReady
+    previewCard
   );
 
   // --- Logic Helpers ---
@@ -495,13 +433,13 @@ const App: React.FC = () => {
       const deckName = targetDeckName || (projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export');
 
       // Sync only this card
-      updateCard(id, {syncStatus: 'syncing'});
+      updateCardSyncStatus(id, 'syncing');
       await syncToAnki(ankiConnectUrl, deckName, projectName, ankiConfig, [card], (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
       });
 
       // Update card's sync status
-      updateCard(id, {syncStatus: 'synced'});
+      updateCardSyncStatus(id, 'synced');
 
       showNotification(`Successfully synced card to Anki!`);
     } catch (e) {
@@ -510,27 +448,54 @@ const App: React.FC = () => {
     }
   };
 
-  const handleActionClick = (action: 'export' | 'sync', targetDeckName?: string) => {
-    pendingActionRef.current = action;
-
-    const pendingAudio = ankiCards.some(c => c.audioStatus === 'pending' || c.audioStatus === 'processing');
-
-    if (pendingAudio) {
-      if (action === 'export') setIsExporting(true);
-      if (action === 'sync' && targetDeckName) {
-        setIsSyncing(true);
-        finalizeSync(targetDeckName).then();
-      } else {
-        setIsExporting(true); // Using generic loading overlay
+  const handleSyncCards = async () => {
+    setIsSyncing(true);
+    try {
+      const connected = await checkConnection(ankiConnectUrl);
+      if (!connected) {
+        setIsSyncing(false);
+        alert('Could not connect to Anki. Please check your AnkiConnect settings and ensure Anki is running.');
+        setIsAnkiSettingsOpen(true);
+        return;
       }
-    } else {
-      if (action === 'sync' && targetDeckName) {
-        finalizeSync(targetDeckName).then();
-      } else {
-        onMediaReady();
+
+      // Filter out cards that are already synced
+      const unsyncedCards = ankiCards.filter(card => card.syncStatus === 'unsynced');
+
+      if (unsyncedCards.length === 0) {
+        showNotification('All cards have already been synced to Anki!');
+        return;
       }
+
+      // Update sync status for all
+      unsyncedCards.forEach(card => {
+        updateCardSyncStatus(card.id, 'syncing');
+      });
+
+      await syncToAnki(ankiConnectUrl, selectedDeck, projectName, ankiConfig, unsyncedCards, (cur, tot) => {
+        setSyncProgress({current: cur, total: tot});
+      });
+
+      // Update sync status for all successfully synced cards
+      unsyncedCards.forEach(card => {
+        updateCardSyncStatus(card.id, 'synced');
+      });
+
+      showNotification(`Successfully synced ${unsyncedCards.length} cards to Anki deck: ${selectedDeck}!`);
+    } catch (e) {
+      console.error(e);
+      alert(`Sync failed: ${(e as Error).message}`);
+    } finally {
+      setIsSyncing(false);
+      setSyncProgress({current: 0, total: 0});
     }
-  };
+  }
+
+  const handleExportApkg = async () => {
+    setIsExporting(true);
+    await generateAnkiDeck(ankiCards, projectName, ankiConfig);
+    setIsExporting(false);
+  }
 
   const handleCaptureFrame = async () => {
     if (!videoPlayerRef.current) return;
@@ -708,9 +673,9 @@ const App: React.FC = () => {
           onDelete={handleDeleteCard}
           onPreview={(c) => setPreviewCard(c)}
           onSyncCard={(id) => handleSyncCard(id, selectedDeck)}
+          onSyncCards={handleSyncCards}
           onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
-          onExport={() => handleActionClick('export')}
-          onSyncAnki={() => handleActionClick('sync', selectedDeck)}
+          onExport={handleExportApkg}
           onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
           onDeleteSynced={handleDeleteSyncedCards}
           isConnected={isConnected}
