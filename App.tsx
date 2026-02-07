@@ -829,11 +829,11 @@ const App: React.FC = () => {
             if (sub) handleSubtitleLineClicked(sub.id, false);
           }
         }}
-        /*
-        onToggleLock={() => {
+        onToggleStatusOfActiveSubtitleLine={() => {
           if (activeSubtitleLineId === null) return;
-          toggleSubtitleLock(activeSubtitleLineId);
+          toggleSubtitleLineStatus(activeSubtitleLineId);
         }}
+        /*
         onShiftSubtitles={(offset) => shiftSubtitles(offset)}
          */
         onOpenOrCloseShortcutsModal={() => setIsShortcutsModalOpen(prev => !prev)}

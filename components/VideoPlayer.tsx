@@ -116,6 +116,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTim
     <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-lg border border-slate-800">
       {src ? (
         <video
+          id="video-player"
           ref={videoRef}
           src={src}
           className="w-full h-full object-contain"

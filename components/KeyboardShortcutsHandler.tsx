@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { useAppStore } from '@/services/store.ts';
+import React, {useEffect} from 'react';
+import {useAppStore} from '@/services/store.ts';
 
 interface KeyboardShortcutsHandlerProps {
   activeSubtitleLineId: number | null;
@@ -16,33 +16,33 @@ interface KeyboardShortcutsHandlerProps {
   onJumpPrev: () => void;
   onJumpNextCard: () => void;
   onJumpPrevCard: () => void;
-  // onToggleLock: () => void;
-  // onShiftSubtitles: (offset: number) => void;
+  onToggleStatusOfActiveSubtitleLine: () => void;
   onOpenOrCloseShortcutsModal: () => void;
   onUndo: () => void;
   onRedo: () => void;
 }
 
 const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
-  activeSubtitleLineId,
-  tempSubtitleLine,
-  regionsHidden,
-  isVideoOnly,
-  setActiveSubtitleLineId,
-  setTempSubtitleLine,
-  toggleRegionsHidden,
-  setIsVideoOnlyMode,
-  onReplayPressed,
-  onCreateCard,
-  onJumpNext,
-  onJumpPrev,
-  onJumpNextCard,
-  onJumpPrevCard,
-  onOpenOrCloseShortcutsModal,
-  onUndo,
-  onRedo
-}) => {
-  const { subtitleLines } = useAppStore();
+                                                                             activeSubtitleLineId,
+                                                                             tempSubtitleLine,
+                                                                             regionsHidden,
+                                                                             isVideoOnly,
+                                                                             setActiveSubtitleLineId,
+                                                                             setTempSubtitleLine,
+                                                                             toggleRegionsHidden,
+                                                                             setIsVideoOnlyMode,
+                                                                             onReplayPressed,
+                                                                             onCreateCard,
+                                                                             onJumpNext,
+                                                                             onJumpPrev,
+                                                                             onJumpNextCard,
+                                                                             onJumpPrevCard,
+                                                                             onToggleStatusOfActiveSubtitleLine,
+                                                                             onOpenOrCloseShortcutsModal,
+                                                                             onUndo,
+                                                                             onRedo
+                                                                           }) => {
+  const {subtitleLines} = useAppStore();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -73,7 +73,9 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
         case 'Space':
           e.preventDefault();
           const videoPlayer = document.querySelector('#video-player') as HTMLVideoElement;
-          if (videoPlayer) {
+          if (!videoPlayer) {
+            alert('no video player!');
+          } else {
             if (videoPlayer.paused) {
               videoPlayer.play().then();
             } else {
@@ -81,13 +83,11 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
             }
           }
           break;
-        case 'KeyH':
+        case 'Slash':
           e.preventDefault();
-          if (e.shiftKey) {
-            onOpenOrCloseShortcutsModal();
-            break;
-          }
-        /* fallthrough */
+          onOpenOrCloseShortcutsModal();
+          break;
+        case 'KeyH':
         case 'ArrowLeft':
           e.preventDefault();
           if (document.querySelector('#video-player')) {
@@ -149,22 +149,26 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
           e.preventDefault();
           setIsVideoOnlyMode(!isVideoOnly); // 切换全屏模式
           break;
-          /*
-        case 'KeyT':
+        case 'KeyI':
           e.preventDefault();
-          onToggleLock();
+          onToggleStatusOfActiveSubtitleLine();
           break;
-        case 'KeyU':
-          e.preventDefault();
-          // Shift+U 用于快速向前移动字幕 100ms
-          if (e.shiftKey) {
-            onShiftSubtitles(0.1);
-          } else {
-            // U 键用于快速向后移动字幕 100ms
-            onShiftSubtitles(-0.1);
-          }
-          break;
-           */
+        /*
+      case 'KeyT':
+        e.preventDefault();
+        onToggleLock();
+        break;
+      case 'KeyU':
+        e.preventDefault();
+        // Shift+U 用于快速向前移动字幕 100ms
+        if (e.shiftKey) {
+          onShiftSubtitles(0.1);
+        } else {
+          // U 键用于快速向后移动字幕 100ms
+          onShiftSubtitles(-0.1);
+        }
+        break;
+         */
       }
     };
 
@@ -185,8 +189,6 @@ const KeyboardShortcutsHandler: React.FC<KeyboardShortcutsHandlerProps> = ({
     onJumpPrev,
     onJumpNextCard,
     onJumpPrevCard,
-    // onToggleLock,
-    // onShiftSubtitles,
     onOpenOrCloseShortcutsModal,
     onUndo,
     onRedo,
