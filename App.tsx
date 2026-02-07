@@ -112,7 +112,7 @@ const App: React.FC = () => {
       const unsyncedCards = ankiCards.filter(card => card.syncStatus === 'unsynced');
 
       if (unsyncedCards.length === 0) {
-        alert('All cards have already been synced to Anki!');
+        showNotification('All cards have already been synced to Anki!');
         return;
       }
 
@@ -130,7 +130,7 @@ const App: React.FC = () => {
         updateCard(card.id, {syncStatus: 'synced'});
       });
 
-      alert(`Successfully synced ${unsyncedCards.length} cards to Anki deck: ${targetDeckName}!`);
+      showNotification(`Successfully synced ${unsyncedCards.length} cards to Anki deck: ${targetDeckName}!`);
     } catch (e) {
       console.error(e);
       alert(`Sync failed: ${(e as Error).message}`);
@@ -481,7 +481,7 @@ const App: React.FC = () => {
       // Update card's sync status
       updateCard(id, {syncStatus: 'synced'});
 
-      // alert(`Successfully synced card to Anki!`);
+      showNotification(`Successfully synced card to Anki!`);
     } catch (e) {
       console.error(e);
       alert(`Sync failed: ${(e as Error).message}`);
