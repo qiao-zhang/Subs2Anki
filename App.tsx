@@ -22,19 +22,19 @@ import AnkiConnectSettingsModal from '@/components/modals/AnkiConnectSettingsMod
 import {useAppStore} from '@/services/store.ts';
 import {useMediaProcessing} from '@/hooks/useMediaProcessing.ts';
 import ProcessingOverlay from '@/components/ProcessingOverlay.tsx';
-import KeyboardShortcutsHandler from '@/components/KeyboardShortcutsHandler.tsx';
 import ShortcutsCheatSheetModal from '@/components/modals/ShortcutsCheatSheetModal.tsx';
 import {createProjectRecord, saveProjectRecord, loadProjectRecord} from './services/project-record.ts';
 import {useAnkiConnect} from '@/hooks/useAnkiConnect.ts';
+import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts.tsx";
 
 const App: React.FC = () => {
   // --- Global State from Zustand ---
   const {
     videoSrc, videoName, projectName, videoFile, setVideo, setProjectName,
-    subtitleLines, subtitleFileName, fileHandle, setSubtitles,
+    subtitleLines, subtitleFileName, fileHandle,
+    setSubtitles, shiftSubtitles,
+    addSubtitleLine, removeSubtitle, getSubtitleLine,
     updateSubtitleText, toggleSubtitleLineStatus, setSubtitleLineStatus,
-    addSubtitleLine, removeSubtitle,
-    shiftSubtitles,
     undo, redo, canUndo, canRedo,
     ankiCards, addCard, deleteCard,
     updateCardSyncStatus,
@@ -131,6 +131,72 @@ const App: React.FC = () => {
       playTimeSpan(sub.startTime, sub.endTime);
     }
   }, [subtitleLines, activeSubtitleLineId, currentTime]);
+
+  // Undo/Redo handler
+  const handleUndo = () => {
+    if (canUndo()) {
+      undo();
+    }
+  };
+
+  const handleRedo = () => {
+    if (canRedo()) {
+      redo();
+    }
+  };
+
+  useKeyboardShortcuts({
+    setActiveSubtitleLineId,
+    setTempSubtitleLine,
+    onToggleRegionsHidden: () => {
+      if (regionsHidden) {
+        setRegionsHidden(false);
+        return;
+      }
+      setActiveSubtitleLineId(null);
+      setTempSubtitleLine(null);
+      setRegionsHidden(true);
+    },
+    onToggleIsVideoOnlyMode: () => {
+      if (isVideoOnly) {
+        setIsVideoOnlyMode(false);
+        return;
+      }
+      setActiveSubtitleLineId(null);
+      setTempSubtitleLine(null);
+      setIsVideoOnlyMode(true);
+    },
+    onPlay: () => {
+      setActiveSubtitleLineId(null);
+      setTempSubtitleLine(null);
+      videoPlayerRef.current?.playPause();
+    },
+    onReplay(): void {
+      if (activeSubtitleLineId !== null) {
+        handleSubtitleLineClicked(activeSubtitleLineId);
+        return;
+      }
+      if (tempSubtitleLine !== null) {
+        playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
+        return;
+      }
+      videoPlayerRef.current?.playPause();
+    },
+    onCreateCard: async () => {
+      if (activeSubtitleLineId === null) return;
+      const s = getSubtitleLine(activeSubtitleLineId);
+      if (s) await handleCreateCard(s);
+    },
+    onJumpNext: () => jumpToSubtitle('next'),
+    onJumpPrev: () => jumpToSubtitle('prev'),
+    onToggleStatusOfActiveSubtitleLine: () => {
+      if (activeSubtitleLineId === null) return;
+      toggleSubtitleLineStatus(activeSubtitleLineId);
+    },
+    onOpenOrCloseShortcutsModal: () => setIsShortcutsModalOpen(prev => !prev),
+    onRedo: handleRedo,
+    onUndo: handleUndo,
+  });
 
   // --- Handlers ---
 
@@ -273,31 +339,6 @@ const App: React.FC = () => {
     videoPlayerRef.current?.seekTo(time);
   };
 
-  const handlePlay = () => {
-    if (activeSubtitleLineId !== null) {
-      handleSubtitleLineClicked(activeSubtitleLineId);
-      return;
-    }
-    if (tempSubtitleLine !== null) {
-      playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
-      return;
-    }
-    videoPlayerRef.current?.playPause();
-  }
-
-  // Undo/Redo handler
-  const handleUndo = () => {
-    if (canUndo()) {
-      undo();
-    }
-  };
-
-  const handleRedo = () => {
-    if (canRedo()) {
-      redo();
-    }
-  };
-
   // 显示复制通知
   const showNotification = (text: string) => {
     setNotification({visible: true, text});
@@ -375,20 +416,20 @@ const App: React.FC = () => {
 
   const handleBulkCreateCards = async () => {
     const normalSubtitles = subtitleLines.filter(sub => sub.status === 'normal');
-    
+
     if (normalSubtitles.length === 0) {
       showNotification('No subtitle lines to make cards');
       return;
     }
-    
+
     setIsBulkCreating(true);
-    setBulkCreateProgress({ current: 0, total: normalSubtitles.length });
-    
+    setBulkCreateProgress({current: 0, total: normalSubtitles.length});
+
     for (let i = 0; i < normalSubtitles.length; i++) {
       await handleCreateCard(normalSubtitles[i]);
-      setBulkCreateProgress({ current: i + 1, total: normalSubtitles.length });
+      setBulkCreateProgress({current: i + 1, total: normalSubtitles.length});
     }
-    
+
     setIsBulkCreating(false);
     showNotification(`Successfully created ${normalSubtitles.length} cards!`);
   };
@@ -786,60 +827,6 @@ const App: React.FC = () => {
           }}
         />
       </div>
-
-      {/* Keyboard Shortcuts Handler */}
-      <KeyboardShortcutsHandler
-        activeSubtitleLineId={activeSubtitleLineId}
-        tempSubtitleLine={tempSubtitleLine}
-        regionsHidden={regionsHidden}
-        isVideoOnly={isVideoOnly}
-        setActiveSubtitleLineId={setActiveSubtitleLineId}
-        setTempSubtitleLine={setTempSubtitleLine}
-        toggleRegionsHidden={() => setRegionsHidden(prev => !prev)}
-        setIsVideoOnlyMode={setIsVideoOnlyMode}
-        onReplayPressed={(id: number) => handleSubtitleLineClicked(id, false)}
-        onCreateCard={() => {
-          if (activeSubtitleLineId === null) return;
-          const s = subtitleLines.find(x => x.id === activeSubtitleLineId);
-          if (s) handleCreateCard(s).then();
-        }}
-        onJumpNext={() => jumpToSubtitle('next')}
-        onJumpPrev={() => jumpToSubtitle('prev')}
-        onJumpNextCard={() => {
-          if (ankiCards.length === 0) return;
-          const nextCard = ankiCards.find(c => c.subtitleId === activeSubtitleLineId)?.id;
-          if (nextCard) {
-            // Find next card in the list
-            const currentIndex = ankiCards.findIndex(c => c.id === nextCard);
-            const nextCardIndex = (currentIndex + 1) % ankiCards.length;
-            const nextCardItem = ankiCards[nextCardIndex];
-            const sub = subtitleLines.find(s => s.id === nextCardItem.subtitleId);
-            if (sub) handleSubtitleLineClicked(sub.id, false);
-          }
-        }}
-        onJumpPrevCard={() => {
-          if (ankiCards.length === 0) return;
-          const nextCard = ankiCards.find(c => c.subtitleId === activeSubtitleLineId)?.id;
-          if (nextCard) {
-            // Find previous card in the list
-            const currentIndex = ankiCards.findIndex(c => c.id === nextCard);
-            const prevCardIndex = (currentIndex - 1 + ankiCards.length) % ankiCards.length;
-            const prevCardItem = ankiCards[prevCardIndex];
-            const sub = subtitleLines.find(s => s.id === prevCardItem.subtitleId);
-            if (sub) handleSubtitleLineClicked(sub.id, false);
-          }
-        }}
-        onToggleStatusOfActiveSubtitleLine={() => {
-          if (activeSubtitleLineId === null) return;
-          toggleSubtitleLineStatus(activeSubtitleLineId);
-        }}
-        /*
-        onShiftSubtitles={(offset) => shiftSubtitles(offset)}
-         */
-        onOpenOrCloseShortcutsModal={() => setIsShortcutsModalOpen(prev => !prev)}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-      />
 
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)}
