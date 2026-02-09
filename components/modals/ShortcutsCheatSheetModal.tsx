@@ -7,22 +7,19 @@ interface ShortcutsCheatSheetModalProps {
 
 const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOpen, onClose}) => {
   const shortcuts = [
-    {keys: ['Space'], description: 'Play/Pause'},
-    {keys: ['←', 'K'], description: 'Skip back 0.5 seconds'},
-    {keys: ['→', 'L'], description: 'Skip forward 0.5 seconds'},
-    {keys: ['Shift + ←', 'Shift + K'], description: 'Skip back 5 seconds'},
-    {keys: ['Shift + →', 'Shift + L'], description: 'Skip forward 5 seconds'},
-    {keys: ['Ctrl + ←', 'Ctrl + K'], description: 'Skip back 0.1 seconds'},
-    {keys: ['Ctrl + →', 'Ctrl + L'], description: 'Skip forward 0.1 seconds'},
+    {keys: ['/'], description: 'Show/Hide this cheatsheet'},
+    {keys: ['Space'], description: 'Replay the current region'},
+    {keys: ['P'], description: 'Play/Pause'},
     {keys: ['↑', 'K'], description: 'Previous subtitle line'},
     {keys: ['↓', 'J'], description: 'Next subtitle line'},
-    {keys: ['R'], description: 'Replay the current region'},
-    {keys: ['C'], description: 'Create Anki card for current subtitle line'},
-    {keys: ['N'], description: 'Hide/Unhide the subtitle regions'},
+    {keys: ['H'], description: 'Hide/Unhide the subtitle regions'},
     {keys: ['V'], description: 'Turn on/off the video-only mode'},
-    {keys: ['Ctrl + Z'], description: 'Undo last action'},
+    {keys: ['C'], description: 'Create Anki card for current subtitle line'},
+    {keys: ['I'], description: 'Toggle status of current subtitle line'},
+    {keys: ['N'], description: 'Split current subtitle line into 2 new lines'},
+    {keys: ['M'], description: 'Merge selected subtitle lines'},
+    {keys: ['Ctrl + Z', 'U'], description: 'Undo last action'},
     {keys: ['Ctrl + Y', 'Ctrl + Shift + Z'], description: 'Redo last undone action'},
-    {keys: ['Shift + H'], description: 'Show/Hide this cheatsheet'},
   ];
 
   // 处理ESC键关闭模态框
