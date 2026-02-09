@@ -32,6 +32,7 @@ interface SubtitleColumnProps {
   onDownload: () => void;
   onShiftSubtitles: (offset: number) => void;
   showBulkCreateButton?: boolean;
+  bulkCreateLimit: number;
   className?: string;
 }
 
@@ -49,6 +50,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          onDownload,
                                                          onShiftSubtitles,
                                                          showBulkCreateButton = true,
+                                                         bulkCreateLimit,
                                                          className = ''
                                                        }) => {
   const MIN_SHIFT_MS = 10;
@@ -400,9 +402,11 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                 ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}
-            title={subtitleCounts.normal === 0 ? 'No normal subtitles to create cards from' : 'Create cards for all normal subtitles'}
+            title={subtitleCounts.normal === 0 ? 'No normal subtitles to create cards from'
+              : 'Create cards for all normal subtitles'}
           >
-            <PlusCircle size={14}/> Bulk Create Cards ({subtitleCounts.normal})
+            <PlusCircle size={14}/> Bulk
+            Create {subtitleCounts.normal > bulkCreateLimit ? bulkCreateLimit : subtitleCounts.normal} Cards
           </button>
         </div>
       )}

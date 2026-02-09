@@ -804,6 +804,7 @@ const App: React.FC = () => {
           onDownload={handleDownloadSubtitles}
           onShiftSubtitles={shiftSubtitles}
           showBulkCreateButton={showBulkCreateButton}
+          bulkCreateLimit={bulkCreateLimit}
         />
       </div>
 
