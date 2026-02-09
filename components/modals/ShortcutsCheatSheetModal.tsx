@@ -16,7 +16,7 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
     {keys: ['V'], description: 'Turn on/off the video-only mode'},
     {keys: ['C'], description: 'Create Anki card for current subtitle line'},
     {keys: ['I'], description: 'Toggle status of current subtitle line'},
-    {keys: ['N'], description: 'Split current subtitle line into 2 new lines'},
+    {keys: ['B'], description: 'Break up current subtitle line into 2 new lines'},
     {keys: ['M'], description: 'Merge selected subtitle lines'},
     {keys: ['Ctrl + Z', 'U'], description: 'Undo last action'},
     {keys: ['Ctrl + Y', 'Ctrl + Shift + Z'], description: 'Redo last undone action'},

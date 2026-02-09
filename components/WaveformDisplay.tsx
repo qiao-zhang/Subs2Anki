@@ -39,6 +39,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const updateSubtitleTime = useAppStore(state => state.updateSubtitleTime);
   const getSubtitleLine = useAppStore(state => state.getSubtitleLine);
   const toggleSubtitleLineStatus = useAppStore(state => state.toggleSubtitleLineStatus);
+  const breakUpSubtitleLine = useAppStore(state => state.breakUpSubtitleLine);
 
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -211,6 +212,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
       if (e.shiftKey) {
         toggleSubtitleLineStatus(id);
+        return;
+      }
+
+      if (e.altKey) {
+        breakUpSubtitleLine(id);
         return;
       }
 

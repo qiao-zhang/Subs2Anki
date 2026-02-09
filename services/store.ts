@@ -55,7 +55,7 @@ interface AppState {
   shiftSubtitles: (offset: number) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   mergeSubtitleLines: (ids: number[]) => void;
-  splitSubtitleLine: (id: number) => void;
+  breakUpSubtitleLine: (id: number) => void;
 
   // Undo/Redo
   undo: () => void;
@@ -173,8 +173,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleSubtitleLineStatus: (id) => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => s.id === id ? {
       ...s,
-      status: s.status === 'normal' ? 'locked' :
-              s.status === 'locked' ? 'ignored' :
+      status: s.status === 'normal' ? 'ignored' :
+              s.status === 'ignored' ? 'locked' :
               'normal'
     } : s)
   })),
@@ -311,8 +311,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   canRedo: () => globalUndoRedoManager.canRedo(),
 
-  // Split a subtitle line into two based on text content
-  splitSubtitleLine: (id: number) => {
+  // Break up a subtitle line into two based on text content
+  breakUpSubtitleLine: (id: number) => {
     const currentState = get().subtitleLines;
     const beforeState = [...currentState];
     

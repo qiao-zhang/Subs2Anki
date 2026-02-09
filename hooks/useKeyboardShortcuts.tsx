@@ -1,22 +1,5 @@
 import {useEffect} from 'react';
 
-interface KeyboardShortcutsOptions {
-  setActiveSubtitleLineId: (id: number | null) => void;
-  setTempSubtitleLine: (line: { start: number; end: number } | null) => void;
-  onToggleRegionsHidden: () => void;
-  onToggleIsVideoOnlyMode: () => void;
-  onPlay: () => void;
-  onReplay: () => void;
-  onCreateCard: () => void;
-  onJumpNext: () => void;
-  onJumpPrev: () => void;
-  onToggleStatusOfActiveSubtitleLine: () => void;
-  onOpenOrCloseShortcutsModal: () => void;
-  onOpenOrCloseSettings: () => void;
-  onUndo: () => void;
-  onRedo: () => void;
-}
-
 export const useMergeKeyboardShortcut = (onMerge: () => void) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -33,6 +16,24 @@ export const useMergeKeyboardShortcut = (onMerge: () => void) => {
   }, [onMerge]);
 }
 
+interface KeyboardShortcutsOptions {
+  setActiveSubtitleLineId: (id: number | null) => void;
+  setTempSubtitleLine: (line: { start: number; end: number } | null) => void;
+  onToggleRegionsHidden: () => void;
+  onToggleIsVideoOnlyMode: () => void;
+  onPlay: () => void;
+  onReplay: () => void;
+  onCreateCard: () => void;
+  onJumpNext: () => void;
+  onJumpPrev: () => void;
+  onToggleStatusOfActiveSubtitleLine: () => void;
+  onOpenOrCloseShortcutsModal: () => void;
+  onOpenOrCloseSettings: () => void;
+  onBreakUp: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+}
+
 export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
   const {
     setActiveSubtitleLineId,
@@ -47,6 +48,7 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
     onToggleStatusOfActiveSubtitleLine,
     onOpenOrCloseShortcutsModal,
     onOpenOrCloseSettings,
+    onBreakUp,
     onUndo,
     onRedo,
   } = options;
@@ -121,12 +123,10 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
           e.preventDefault();
           onToggleStatusOfActiveSubtitleLine();
           break;
-        /* TODO
-      case 'KeyN':
-        e.preventDefault();
-        onBreakUp();
-        break;
-         */
+        case 'KeyB':
+          e.preventDefault();
+          onBreakUp();
+          break;
         case 'Semicolon':
           e.preventDefault();
           onOpenOrCloseSettings();
@@ -148,6 +148,7 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
     onToggleStatusOfActiveSubtitleLine,
     onOpenOrCloseShortcutsModal,
     onOpenOrCloseSettings,
+    onBreakUp,
     onUndo,
     onRedo,
   ]);

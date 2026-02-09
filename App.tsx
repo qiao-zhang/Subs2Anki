@@ -34,7 +34,7 @@ const App: React.FC = () => {
     setProjectName,
     subtitleLines, subtitleFileName, fileHandle,
     setSubtitles, shiftSubtitles,
-    addSubtitleLine, removeSubtitle, getSubtitleLine,
+    addSubtitleLine, removeSubtitle, getSubtitleLine, breakUpSubtitleLine,
     updateSubtitleText, toggleSubtitleLineStatus, setSubtitleLineStatus,
     undo, redo, canUndo, canRedo,
     ankiCards, addCard, deleteCard,
@@ -155,6 +155,12 @@ const App: React.FC = () => {
     }
   };
 
+  const handleBreakUp = () => {
+    if (activeSubtitleLineId !== null) {
+      breakUpSubtitleLine(activeSubtitleLineId);
+    }
+  };
+
   useKeyboardShortcuts({
     setActiveSubtitleLineId,
     setTempSubtitleLine,
@@ -204,6 +210,7 @@ const App: React.FC = () => {
     },
     onOpenOrCloseShortcutsModal: () => setIsShortcutsModalOpen(prev => !prev),
     onOpenOrCloseSettings: () => setIsSettingsModalOpen(prev => !prev),
+    onBreakUp: handleBreakUp,
     onRedo: handleRedo,
     onUndo: handleUndo,
   });
