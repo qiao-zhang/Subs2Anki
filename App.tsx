@@ -42,6 +42,7 @@ const App: React.FC = () => {
     ankiConnectUrl, setAnkiConnectUrl,
     bulkCreateLimit, setBulkCreateLimit,
     autoDeleteSynced, setAutoDeleteSynced,
+    showBulkCreateButton, setShowBulkCreateButton,
   } = useAppStore();
 
   // --- AnkiConnect Status ---
@@ -581,7 +582,7 @@ const App: React.FC = () => {
         ankiConnectUrl
       };
 
-      const record = createProjectRecord(appState, selectedDeck, globalTags);
+      const record = createProjectRecord(appState, selectedDeck, globalTags, bulkCreateLimit, autoDeleteSynced, showBulkCreateButton);
       await saveProjectRecord(record);
       showNotification("Project saved successfully!");
     } catch (error) {
@@ -617,6 +618,21 @@ const App: React.FC = () => {
         setGlobalTags(record.globalTags);
       } else {
         setGlobalTags([]); // 默认为空数组
+      }
+
+      // 如果记录中包含批量创建限制，则恢复它
+      if (record.bulkCreateLimit !== undefined) {
+        setBulkCreateLimit(record.bulkCreateLimit);
+      }
+
+      // 如果记录中包含自动删除同步后卡片的设置，则恢复它
+      if (record.autoDeleteSynced !== undefined) {
+        setAutoDeleteSynced(record.autoDeleteSynced);
+      }
+
+      // 如果记录中包含显示批量创建按钮的设置，则恢复它
+      if (record.showBulkCreateButton !== undefined) {
+        setShowBulkCreateButton(record.showBulkCreateButton);
       }
 
       showNotification("Project loaded successfully!");
@@ -787,6 +803,7 @@ const App: React.FC = () => {
           onSave={handleSaveSubtitles}
           onDownload={handleDownloadSubtitles}
           onShiftSubtitles={shiftSubtitles}
+          showBulkCreateButton={showBulkCreateButton}
         />
       </div>
 
@@ -842,6 +859,8 @@ const App: React.FC = () => {
         onAutoDeleteSyncedChange={setAutoDeleteSynced}
         bulkCreateLimit={bulkCreateLimit}
         onBulkCreateLimitChange={setBulkCreateLimit}
+        showBulkCreateButton={showBulkCreateButton}
+        onShowBulkCreateButtonChange={setShowBulkCreateButton}
         onTestSuccess={refreshDecks}
       />
       <CardPreviewModal

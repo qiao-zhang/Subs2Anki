@@ -12,16 +12,22 @@ export interface ProjectRecord {
   selectedDeck?: string;              // 选定的deck名称
   globalTags?: string[];              // 全局标签
   timestamp: string;                  // 创建时间戳
+  autoDeleteSynced?: boolean;         // 自动删除同步后的卡片
+  bulkCreateLimit?: number;           // 批量创建限制
+  showBulkCreateButton?: boolean;     // 是否显示批量创建按钮
 }
 
 // 默认版本号
-const PROJECT_RECORD_VERSION = "1.1.0";
+const PROJECT_RECORD_VERSION = "1.2.0";
 
 /**
  * 从当前应用状态创建项目记录
  * @param appState 应用状态
  * @param selectedDeck 选定的deck名称
  * @param globalTags 全局标签
+ * @param autoDeleteSynced 自动删除同步后的卡片
+ * @param bulkCreateLimit 批量创建限制
+ * @param showBulkCreateButton 是否显示批量创建按钮
  * @returns 项目记录对象
  */
 export const createProjectRecord = (appState: {
@@ -31,7 +37,7 @@ export const createProjectRecord = (appState: {
   subtitleLines: SubtitleLine[];
   ankiConfig: AnkiNoteType;
   ankiConnectUrl: string;
-}, selectedDeck?: string, globalTags?: string[]): ProjectRecord => {
+}, selectedDeck?: string, globalTags?: string[], bulkCreateLimit?: number, autoDeleteSynced?: boolean, showBulkCreateButton?: boolean): ProjectRecord => {
   return {
     version: PROJECT_RECORD_VERSION,
     projectName: appState.projectName,
@@ -42,6 +48,9 @@ export const createProjectRecord = (appState: {
     ankiConnectUrl: appState.ankiConnectUrl,
     selectedDeck,
     globalTags,
+    autoDeleteSynced,
+    bulkCreateLimit,
+    showBulkCreateButton,
     timestamp: new Date().toISOString()
   };
 };
@@ -165,6 +174,21 @@ const isValidProjectRecord = (record: any): record is ProjectRecord => {
     if (!Array.isArray(record.globalTags) || !record.globalTags.every(tag => typeof tag === 'string')) {
       return false;
     }
+  }
+
+  // 验证 bulkCreateLimit（如果存在）
+  if (record.bulkCreateLimit !== undefined && (typeof record.bulkCreateLimit !== 'number' || record.bulkCreateLimit < 1 || record.bulkCreateLimit > 50)) {
+    return false;
+  }
+
+  // 验证 autoDeleteSynced（如果存在）
+  if (record.autoDeleteSynced !== undefined && typeof record.autoDeleteSynced !== 'boolean') {
+    return false;
+  }
+
+  // 验证 showBulkCreateButton（如果存在）
+  if (record.showBulkCreateButton !== undefined && typeof record.showBulkCreateButton !== 'boolean') {
+    return false;
   }
 
   // 验证每个字幕行的结构

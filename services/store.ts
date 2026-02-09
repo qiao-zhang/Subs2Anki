@@ -81,6 +81,8 @@ interface AppState {
   setBulkCreateLimit: (limit: number) => void;
   autoDeleteSynced: boolean;
   setAutoDeleteSynced: (enabled: boolean) => void;
+  showBulkCreateButton: boolean;
+  setShowBulkCreateButton: (show: boolean) => void;
 }
 
 // 创建全局的 undo/redo 管理器实例
@@ -415,5 +417,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAutoDeleteSynced: (enabled) => {
     localStorage.setItem('subs2anki_auto_delete_synced', enabled.toString());
     set({autoDeleteSynced: enabled});
+  },
+  showBulkCreateButton: localStorage.getItem('subs2anki_show_bulk_create_button') !== 'false', // 默认为true
+  setShowBulkCreateButton: (show) => {
+    localStorage.setItem('subs2anki_show_bulk_create_button', show.toString());
+    set({showBulkCreateButton: show});
   }
 }));

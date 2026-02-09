@@ -31,6 +31,7 @@ interface SubtitleColumnProps {
   onSave: () => void;
   onDownload: () => void;
   onShiftSubtitles: (offset: number) => void;
+  showBulkCreateButton?: boolean;
   className?: string;
 }
 
@@ -47,6 +48,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          onSave,
                                                          onDownload,
                                                          onShiftSubtitles,
+                                                         showBulkCreateButton = true,
                                                          className = ''
                                                        }) => {
   const MIN_SHIFT_MS = 10;
@@ -388,20 +390,22 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       </div>
 
       {/* Bulk Create Button */}
-      <div className="h-10 flex items-center px-4 bg-slate-900/60">
-        <button
-          onClick={onBulkCreateCards}
-          disabled={subtitleCounts.normal === 0}
-          className={`flex items-center gap-2 px-3 py-1 text-xs rounded ${
-            subtitleCounts.normal === 0
-              ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-          }`}
-          title={subtitleCounts.normal === 0 ? 'No normal subtitles to create cards from' : 'Create cards for all normal subtitles'}
-        >
-          <PlusCircle size={14}/> Bulk Create Cards ({subtitleCounts.normal})
-        </button>
-      </div>
+      {showBulkCreateButton && (
+        <div className="h-10 flex items-center px-4 bg-slate-900/60">
+          <button
+            onClick={onBulkCreateCards}
+            disabled={subtitleCounts.normal === 0}
+            className={`flex items-center gap-2 px-3 py-1 text-xs rounded ${
+              subtitleCounts.normal === 0
+                ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
+            title={subtitleCounts.normal === 0 ? 'No normal subtitles to create cards from' : 'Create cards for all normal subtitles'}
+          >
+            <PlusCircle size={14}/> Bulk Create Cards ({subtitleCounts.normal})
+          </button>
+        </div>
+      )}
 
       {/* Search bar */}
       <div className="h-10 flex items-center px-4 bg-slate-900/60">

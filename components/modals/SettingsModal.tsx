@@ -11,6 +11,8 @@ interface SettingsModalProps {
   onAutoDeleteSyncedChange: (checked: boolean) => void;
   bulkCreateLimit: number;
   onBulkCreateLimitChange: (limit: number) => void;
+  showBulkCreateButton: boolean;
+  onShowBulkCreateButtonChange: (checked: boolean) => void;
   onTestSuccess?: () => void; // 回调函数，在测试连接成功时调用
 }
 
@@ -23,6 +25,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onAutoDeleteSyncedChange,
   bulkCreateLimit,
   onBulkCreateLimitChange,
+  showBulkCreateButton,
+  onShowBulkCreateButtonChange,
   onTestSuccess
 }) => {
   const [localUrl, setLocalUrl] = useState(ankiConnectUrl);
@@ -30,6 +34,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [localBulkCreateLimit, setLocalBulkCreateLimit] = useState(bulkCreateLimit);
   const [localAutoDeleteSynced, setLocalAutoDeleteSynced] = useState(autoDeleteSynced);
+  const [localShowBulkCreateButton, setLocalShowBulkCreateButton] = useState(showBulkCreateButton);
 
   // 检查输入的限制值是否有效
   const isValidLimit = localBulkCreateLimit >= 1 && localBulkCreateLimit <= 50;
@@ -68,6 +73,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onSaveAnkiConnectUrl(localUrl);
     onAutoDeleteSyncedChange(localAutoDeleteSynced);
     onBulkCreateLimitChange(localBulkCreateLimit);
+    onShowBulkCreateButtonChange(localShowBulkCreateButton);
     
     onClose();
   };
@@ -206,6 +212,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-500">Limit the number of cards created in a single bulk operation to prevent memory issues</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-slate-300">Show Bulk Create Cards Button</label>
+                <p className="text-xs text-slate-500">Display the bulk creation button in the subtitle column</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={localShowBulkCreateButton}
+                  onChange={(e) => setLocalShowBulkCreateButton(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
             </div>
           </div>
 
