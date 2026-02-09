@@ -1,14 +1,16 @@
 import React from 'react';
-import { Save, FolderOpen } from 'lucide-react';
+import { Save, FolderOpen, Settings } from 'lucide-react';
 
 interface ProjectControlsProps {
   onSaveProject: () => void;
   onLoadProject: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onOpenSettings: () => void;
 }
 
 const ProjectControls: React.FC<ProjectControlsProps> = ({
   onSaveProject,
-  onLoadProject
+  onLoadProject,
+  onOpenSettings
 }) => {
   return (
     <div className="flex gap-1 ml-auto">
@@ -32,6 +34,13 @@ const ProjectControls: React.FC<ProjectControlsProps> = ({
         title="Save Project"
       >
         <Save size={14} />
+      </button>
+      <button
+        onClick={onOpenSettings}
+        className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition"
+        title="Settings"
+      >
+        <Settings size={14} />
       </button>
     </div>
   );

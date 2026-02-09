@@ -18,7 +18,7 @@ import EditableProjectName from './components/EditableProjectName.tsx';
 import ProjectControls from '@/components/ProjectControls.tsx';
 import TemplateEditorModal from '@/components/modals/TemplateEditorModal.tsx';
 import CardPreviewModal from '@/components/modals/CardPreviewModal.tsx';
-import AnkiConnectSettingsModal from '@/components/modals/AnkiConnectSettingsModal.tsx';
+import SettingsModal from '@/components/modals/SettingsModal.tsx';
 import {useAppStore} from '@/services/store.ts';
 import {useMediaProcessing} from '@/hooks/useMediaProcessing.ts';
 import ProcessingOverlay from '@/components/ProcessingOverlay.tsx';
@@ -40,6 +40,8 @@ const App: React.FC = () => {
     updateCardSyncStatus,
     ankiConfig, setAnkiConfig,
     ankiConnectUrl, setAnkiConnectUrl,
+    bulkCreateLimit, setBulkCreateLimit,
+    autoDeleteSynced, setAutoDeleteSynced,
   } = useAppStore();
 
   // --- AnkiConnect Status ---
@@ -71,7 +73,6 @@ const App: React.FC = () => {
   const [syncProgress, setSyncProgress] = useState({current: 0, total: 0});
   const [isBulkCreating, setIsBulkCreating] = useState<boolean>(false);
   const [bulkCreateProgress, setBulkCreateProgress] = useState({current: 0, total: 0});
-  const [autoDeleteSynced, setAutoDeleteSynced] = useState<boolean>(true);
   const [notification, setNotification] = useState<{ visible: boolean; text: string }>({visible: false, text: ''});
 
   // noinspection JSUnusedLocalSymbols
@@ -81,7 +82,7 @@ const App: React.FC = () => {
 
   // Modals
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
-  const [isAnkiSettingsOpen, setIsAnkiSettingsOpen] = useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [previewCard, setPreviewCard] = useState<AnkiCard | null>(null);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
 
@@ -416,16 +417,24 @@ const App: React.FC = () => {
       return;
     }
 
-    setIsBulkCreating(true);
-    setBulkCreateProgress({current: 0, total: normalSubtitles.length});
+    // Limit the number of cards created in bulk to prevent memory issues
+    const limitedSubtitles = normalSubtitles.slice(0, bulkCreateLimit);
 
-    for (let i = 0; i < normalSubtitles.length; i++) {
-      await handleCreateCard(normalSubtitles[i]);
-      setBulkCreateProgress({current: i + 1, total: normalSubtitles.length});
+    setIsBulkCreating(true);
+    setBulkCreateProgress({current: 0, total: limitedSubtitles.length});
+
+    for (let i = 0; i < limitedSubtitles.length; i++) {
+      await handleCreateCard(limitedSubtitles[i]);
+      setBulkCreateProgress({current: i + 1, total: limitedSubtitles.length});
     }
 
     setIsBulkCreating(false);
-    showNotification(`Successfully created ${normalSubtitles.length} cards!`);
+    
+    if (normalSubtitles.length > bulkCreateLimit) {
+      showNotification(`Successfully created ${limitedSubtitles.length} cards! (Limited to ${bulkCreateLimit} per operation)`);
+    } else {
+      showNotification(`Successfully created ${limitedSubtitles.length} cards!`);
+    }
   };
 
   const handleDeleteCard = async (id: string) => {
@@ -462,7 +471,7 @@ const App: React.FC = () => {
       const connected = await checkConnection(ankiConnectUrl);
       if (!connected) {
         alert('Could not connect to Anki. Please check your AnkiConnect settings and ensure Anki is running.');
-        setIsAnkiSettingsOpen(true);
+        setIsSettingsModalOpen(true);
         return;
       }
 
@@ -494,7 +503,7 @@ const App: React.FC = () => {
       if (!connected) {
         setIsSyncing(false);
         alert('Could not connect to Anki. Please check your AnkiConnect settings and ensure Anki is running.');
-        setIsAnkiSettingsOpen(true);
+        setIsSettingsModalOpen(true);
         return;
       }
 
@@ -708,7 +717,6 @@ const App: React.FC = () => {
       {/* Top Part: 3 Columns */}
       <div className="flex flex-1 min-h-0 w-full">
         <DeckColumn
-          className={`${isVideoOnly ? 'hidden' : ''}`}
           cards={ankiCards}
           onDelete={handleDeleteCard}
           onPreview={(c) => setPreviewCard(c)}
@@ -716,7 +724,7 @@ const App: React.FC = () => {
           onSyncCards={handleSyncCards}
           onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
           onExport={handleExportApkg}
-          onOpenAnkiSettings={() => setIsAnkiSettingsOpen(true)}
+          onOpenAnkiSettings={() => setIsSettingsModalOpen(true)}
           onDeleteSynced={handleDeleteSyncedCards}
           isConnected={isConnected}
           decks={decks}
@@ -726,8 +734,7 @@ const App: React.FC = () => {
           onDeckChange={setSelectedDeck}
           globalTags={globalTags}
           onGlobalTagsChange={setGlobalTags}
-          autoDeleteSynced={autoDeleteSynced}
-          onAutoDeleteSyncedChange={setAutoDeleteSynced}
+          className={`${isVideoOnly ? 'hidden' : ''}`}
         />
 
         {/* COL 2: VIDEO (Center) */}
@@ -743,6 +750,7 @@ const App: React.FC = () => {
               <ProjectControls
                 onSaveProject={handleSaveProject}
                 onLoadProject={handleLoadProject}
+                onOpenSettings={() => setIsSettingsModalOpen(true)}
               />
             </div>
           }
@@ -825,8 +833,17 @@ const App: React.FC = () => {
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)}
                            config={ankiConfig} onSave={setAnkiConfig}/>
-      <AnkiConnectSettingsModal isOpen={isAnkiSettingsOpen} onClose={() => setIsAnkiSettingsOpen(false)}
-                                url={ankiConnectUrl} onSave={setAnkiConnectUrl} onTestSuccess={refreshDecks}/>
+      <SettingsModal 
+        isOpen={isSettingsModalOpen} 
+        onClose={() => setIsSettingsModalOpen(false)}
+        ankiConnectUrl={ankiConnectUrl} 
+        onSaveAnkiConnectUrl={setAnkiConnectUrl} 
+        autoDeleteSynced={autoDeleteSynced}
+        onAutoDeleteSyncedChange={setAutoDeleteSynced}
+        bulkCreateLimit={bulkCreateLimit}
+        onBulkCreateLimitChange={setBulkCreateLimit}
+        onTestSuccess={refreshDecks}
+      />
       <CardPreviewModal
         isOpen={!!previewCard}
         card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}

@@ -22,8 +22,6 @@ interface DeckColumnProps {
   onDeckChange?: (deckName: string) => void;
   globalTags?: string[];
   onGlobalTagsChange?: (tags: string[]) => void;
-  autoDeleteSynced?: boolean;
-  onAutoDeleteSyncedChange?: (checked: boolean) => void;
   className?: string;
 }
 
@@ -44,8 +42,6 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  onDeckChange,
                                                  globalTags = [],
                                                  onGlobalTagsChange,
-                                                 autoDeleteSynced,
-                                                 onAutoDeleteSyncedChange,
                                                  className = ''
                                                }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
@@ -148,8 +144,6 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
             </div>
           )}
 
-          {/* Show tags when collapsed */}
-
         </div>
 
         <div className="flex justify-end">
@@ -211,17 +205,6 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
               <line x1="14" y1="11" x2="14" y2="17"></line>
             </svg>
           </button>
-          <div className="flex items-center ml-2">
-            <label className="flex items-center gap-1 cursor-pointer">
-              <span className="text-xs text-slate-400 mr-1">Delete card after synced</span>
-              <input
-                type="checkbox"
-                checked={autoDeleteSynced}
-                onChange={(e) => onAutoDeleteSyncedChange?.(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500 focus:ring-2"
-              />
-            </label>
-          </div>
           <div className="w-px h-4 bg-slate-700 mx-1 self-center"></div>
           <button
             onClick={onExport}

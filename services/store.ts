@@ -75,6 +75,12 @@ interface AppState {
   // Anki Connect
   ankiConnectUrl: string;
   setAnkiConnectUrl: (url: string) => void;
+
+  // Settings
+  bulkCreateLimit: number;
+  setBulkCreateLimit: (limit: number) => void;
+  autoDeleteSynced: boolean;
+  setAutoDeleteSynced: (enabled: boolean) => void;
 }
 
 // 创建全局的 undo/redo 管理器实例
@@ -397,5 +403,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAnkiConnectUrl: (url) => {
     localStorage.setItem('subs2anki_anki_url', url);
     set({ankiConnectUrl: url});
+  },
+
+  // Settings
+  bulkCreateLimit: parseInt(localStorage.getItem('subs2anki_bulk_create_limit') || '10'),
+  setBulkCreateLimit: (limit) => {
+    localStorage.setItem('subs2anki_bulk_create_limit', limit.toString());
+    set({bulkCreateLimit: limit});
+  },
+  autoDeleteSynced: localStorage.getItem('subs2anki_auto_delete_synced') === 'true',
+  setAutoDeleteSynced: (enabled) => {
+    localStorage.setItem('subs2anki_auto_delete_synced', enabled.toString());
+    set({autoDeleteSynced: enabled});
   }
 }));
