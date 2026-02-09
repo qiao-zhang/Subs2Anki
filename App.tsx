@@ -58,7 +58,7 @@ const App: React.FC = () => {
       const defaultDeckName = projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
       setSelectedDeck(defaultDeckName);
     }
-  }, [projectName, selectedDeck]);
+  }, [projectName]);
 
   // --- Local UI State (Transient) ---
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
@@ -102,7 +102,7 @@ const App: React.FC = () => {
   );
 
   // --- Logic Helpers ---
-  const jumpToSubtitle = useCallback((direction: 'next' | 'prev') => {
+  const jumpToSubtitleLine = useCallback((direction: 'next' | 'prev') => {
     if (subtitleLines.length === 0) return;
 
     let nextIndex: number;
@@ -187,8 +187,8 @@ const App: React.FC = () => {
       const s = getSubtitleLine(activeSubtitleLineId);
       if (s) await handleCreateCard(s);
     },
-    onJumpNext: () => jumpToSubtitle('next'),
-    onJumpPrev: () => jumpToSubtitle('prev'),
+    onJumpNext: () => jumpToSubtitleLine('next'),
+    onJumpPrev: () => jumpToSubtitleLine('prev'),
     onToggleStatusOfActiveSubtitleLine: () => {
       if (activeSubtitleLineId === null) return;
       toggleSubtitleLineStatus(activeSubtitleLineId);
@@ -199,7 +199,6 @@ const App: React.FC = () => {
   });
 
   // --- Handlers ---
-
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -401,11 +400,6 @@ const App: React.FC = () => {
       audioStatus: 'pending',
       timestampStr: timestampStr,
       syncStatus: 'unsynced', // New cards are not synced by default
-      // Group-related fields
-      prevText: sub.prevText,
-      prevAudio: sub.prevAudio,
-      nextText: sub.nextText,
-      nextAudio: sub.nextAudio,
     };
 
     addCard(newCard);

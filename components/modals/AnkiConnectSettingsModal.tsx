@@ -1,7 +1,6 @@
-/// <reference lib="dom" />
 import React, {useState, useEffect} from 'react';
 import {X, Save, Wifi, AlertCircle, CheckCircle2, ExternalLink} from 'lucide-react';
-import {checkConnection} from '../../services/anki-connect.ts';
+import {checkConnection} from '@/services/anki-connect.ts';
 
 interface AnkiConnectSettingsModalProps {
   isOpen: boolean;

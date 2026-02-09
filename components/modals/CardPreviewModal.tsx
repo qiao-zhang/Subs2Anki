@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import React, {useEffect, useState} from 'react';
 import {X, Loader2} from 'lucide-react';
 import {AnkiCard, AnkiNoteType} from '@/services/types.ts';

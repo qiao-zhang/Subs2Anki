@@ -16,6 +16,22 @@ interface KeyboardShortcutsOptions {
   onRedo: () => void;
 }
 
+export const useMergeKeyboardShortcut = (onMerge: () => void) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
+
+      if (e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        onMerge();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onMerge]);
+}
+
 export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
   const {
     setActiveSubtitleLineId,
@@ -104,10 +120,6 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
           onToggleStatusOfActiveSubtitleLine();
           break;
           /*
-        case 'KeyM':
-          e.preventDefault();
-          onMerge();
-          break;
         case 'KeyN':
           e.preventDefault();
           onBreakUp();

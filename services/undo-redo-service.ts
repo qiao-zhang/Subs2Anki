@@ -3,8 +3,6 @@ import {SubtitleLine} from './types.ts';
 // 定义操作类型
 export type OperationType =
   | 'MERGE_SUBTITLE_LINES'
-  | 'GROUP_SUBTITLE_LINES'
-  | 'UNGROUP_SUBTITLE_LINES'
   | 'SPLIT_SUBTITLE_LINE'
   | 'SHIFT_SUBTITLES'
   | 'UPDATE_SUBTITLE_TIME'

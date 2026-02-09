@@ -1,6 +1,5 @@
-/// <reference lib="dom" />
 import React, {useState, useEffect} from 'react';
-import {AnkiNoteType, AnkiFieldSource, AnkiCardTemplate} from '../../services/types.ts';
+import {AnkiNoteType, AnkiFieldSource, AnkiCardTemplate} from '@/services/types.ts';
 import {
   X,
   Plus,
@@ -70,7 +69,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
 
   const handleFieldMapping = (index: number, source: AnkiFieldSource | undefined) => {
     const newFields = [...localConfig.fields];
-    // Remove this source from any other field first (optional constraint: one-to-one or one-to-many? Anki usually allows one source to many fields, but user said "each Field most can correspond to one square", implying 1 field <- 1 source. But can 1 source go to multiple fields? Usually yes. )
+    // Remove this source from any other field first (optional constraint: one-to-one or one-to-many? Anki usually allows one source to many fields, but user said "each Field most can correspond to one square", implying 1 field <- 1 source. But can 1 source go to multiple fields? Usually yes.)
     // Let's allow one source to be mapped to multiple fields, but one field only accepts one source.
     newFields[index].source = source;
     setLocalConfig(prev => ({...prev, fields: newFields}));
