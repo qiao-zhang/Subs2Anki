@@ -38,7 +38,7 @@ const App: React.FC = () => {
     updateSubtitleText, toggleSubtitleLineStatus, setSubtitleLineStatus,
     undo, redo, canUndo, canRedo,
     ankiCards, addCard, deleteCard,
-    updateCardSyncStatus,
+    updateCardSyncStatus, clearCards,
     ankiConfig, setAnkiConfig,
     ankiConnectUrl, setAnkiConnectUrl,
     bulkCreateLimit, setBulkCreateLimit,
@@ -457,7 +457,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteCard = async (id: string) => {
+  const deleteScreenshotAndAudioForCard = async (id: string) => {
     const card = ankiCards.find(c => c.id === id);
     if (card) {
       try {
@@ -466,8 +466,12 @@ const App: React.FC = () => {
       } catch (e) {
         console.error("Failed to delete media from DB", e);
       }
-      deleteCard(id);
     }
+  }
+
+  const handleDeleteCard = async (id: string) => {
+    await deleteScreenshotAndAudioForCard(id);
+    deleteCard(id);
   };
 
   const handleSyncCard = async (id: string, targetDeckName?: string) => {
@@ -764,8 +768,8 @@ const App: React.FC = () => {
     setIsVideoOnlyMode(false);
     
     // Clear all cards
-    // We need to iterate through all cards and delete them individually
-    [...ankiCards].forEach(card => deleteCard(card.id));
+    ankiCards.forEach(async card => await deleteScreenshotAndAudioForCard(card.id));
+    clearCards();
     
     // Reset deck and tags to initial state
     setSelectedDeck('Subs2Anki Export'); // Default deck name when project is reset
@@ -939,7 +943,6 @@ const App: React.FC = () => {
         onClose={() => setIsShortcutsModalOpen(false)}
       />
 
-      {/* 全局通知 */}
       {notification.visible && (
         <div
           className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-50 bg-slate-700/80 text-slate-200 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 border border-slate-600">

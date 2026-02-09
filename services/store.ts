@@ -70,6 +70,7 @@ interface AppState {
   updateCardSyncStatus: (id: string, status: 'unsynced' | 'syncing' | 'synced') => void;
   updateCardAudioStatus: (id: string, status: 'pending' | 'processing' | 'done' | 'error', audioRef?: string) => void;
   deleteCard: (id: string) => void;
+  clearCards: () => void;
   ankiConfig: AnkiNoteType;
   setAnkiConfig: (config: AnkiNoteType) => void;
 
@@ -406,6 +407,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     ankiCards: state.ankiCards.map(c => c.id === id ? {...c, audioStatus, audioRef} : c)
   })),
   deleteCard: (id) => set((state) => ({ankiCards: state.ankiCards.filter(c => c.id !== id)})),
+  clearCards: () => set((_) => ({ankiCards: []})),
   setAnkiConfig: (config) => set({ankiConfig: config}),
 
   // Anki Connect

@@ -30,7 +30,6 @@ const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
       </div>
       <div className="text-sm text-slate-400 mt-2">
         {children ? children :
-          /* 或使用默认的进度显示 */
           Progress ? `Item ${Progress.current} of ${Progress.total}` : 'Processing...'}
       </div>
       {onCancel && (
