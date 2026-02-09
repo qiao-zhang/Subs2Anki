@@ -37,6 +37,7 @@ interface AppState {
   videoName: string;
   videoFile: File | null; // Added: Raw file object for FFmpeg
   setVideo: (file: File) => void; // Changed: Takes File object
+  resetVideo: () => void;
 
   // Subtitles
   subtitleLines: SubtitleLine[];
@@ -96,6 +97,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   videoSrc: '',
   videoName: '',
   videoFile: null,
+  resetVideo: () => {
+    set({
+      videoSrc: '',
+      videoName: '',
+      videoFile: null
+    });
+  },
   setVideo: (file) => {
     const src = URL.createObjectURL(file);
     // 当设置视频时，如果项目名称为空，则使用视频文件名作为默认项目名称

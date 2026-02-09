@@ -30,7 +30,8 @@ import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts.tsx";
 const App: React.FC = () => {
   // --- Global State from Zustand ---
   const {
-    videoSrc, videoName, projectName, videoFile, setVideo, setProjectName,
+    videoSrc, videoName, projectName, videoFile, setVideo, resetVideo,
+    setProjectName,
     subtitleLines, subtitleFileName, fileHandle,
     setSubtitles, shiftSubtitles,
     addSubtitleLine, removeSubtitle, getSubtitleLine,
@@ -45,6 +46,12 @@ const App: React.FC = () => {
     showBulkCreateButton, setShowBulkCreateButton,
     setHasUnsavedChanges
   } = useAppStore();
+
+  // Determine if there is project data to show the reset button
+  const hasProjectData = videoSrc !== '' || 
+                        subtitleLines.length > 0 || 
+                        ankiCards.length > 0 || 
+                        projectName !== '';
 
   // --- AnkiConnect Status ---
   const {isConnected, decks, refreshDecks} = useAnkiConnect(ankiConnectUrl);
@@ -709,6 +716,56 @@ const App: React.FC = () => {
     }
   };
 
+  const resetProject = () => {
+    // Revoke the current video object URL if it exists to free memory
+    if (videoSrc) {
+      URL.revokeObjectURL(videoSrc);
+    }
+    
+    // Reset all app state to initial values using the store setters
+    setProjectName('');
+    
+    // Reset video state to initial values
+    resetVideo();
+
+    // Also reset subtitles
+    setSubtitles([], '');
+    setHasUnsavedChanges(false);
+    
+    // Reset UI state
+    setPauseAtTime(null);
+    setCurrentTime(0);
+    setActiveSubtitleLineId(null);
+    setCurrentSubtitleText('');
+    setTempSubtitleLine(null);
+    
+    // Reset processing states
+    setIsExporting(false);
+    setIsSyncing(false);
+    setSyncProgress({current: 0, total: 0});
+    setIsBulkCreating(false);
+    setBulkCreateProgress({current: 0, total: 0});
+    
+    // Reset video player state
+    if (videoPlayerRef.current) {
+      videoPlayerRef.current.seekTo(0);
+    }
+    
+    // Reset regions and video-only modes
+    setRegionsHidden(false);
+    setIsVideoOnlyMode(false);
+    
+    // Clear all cards
+    // We need to iterate through all cards and delete them individually
+    [...ankiCards].forEach(card => deleteCard(card.id));
+    
+    // Reset deck and tags to initial state
+    setSelectedDeck('Subs2Anki Export'); // Default deck name when project is reset
+    setGlobalTags([]);
+    
+    showNotification("Project has been reset");
+  };
+
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
 
@@ -771,6 +828,8 @@ const App: React.FC = () => {
                 onSaveProject={handleSaveProject}
                 onLoadProject={handleLoadProject}
                 onOpenSettings={() => setIsSettingsModalOpen(true)}
+                onResetProject={resetProject}
+                hasProjectData={hasProjectData}
               />
             </div>
           }
