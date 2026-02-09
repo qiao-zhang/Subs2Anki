@@ -12,6 +12,7 @@ interface KeyboardShortcutsOptions {
   onJumpPrev: () => void;
   onToggleStatusOfActiveSubtitleLine: () => void;
   onOpenOrCloseShortcutsModal: () => void;
+  onOpenOrCloseSettings: () => void;
   onUndo: () => void;
   onRedo: () => void;
 }
@@ -45,6 +46,7 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
     onJumpPrev,
     onToggleStatusOfActiveSubtitleLine,
     onOpenOrCloseShortcutsModal,
+    onOpenOrCloseSettings,
     onUndo,
     onRedo,
   } = options;
@@ -119,12 +121,16 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
           e.preventDefault();
           onToggleStatusOfActiveSubtitleLine();
           break;
-          /*
-        case 'KeyN':
+        /* TODO
+      case 'KeyN':
+        e.preventDefault();
+        onBreakUp();
+        break;
+         */
+        case 'Semicolon':
           e.preventDefault();
-          onBreakUp();
+          onOpenOrCloseSettings();
           break;
-           */
       }
     };
 
@@ -141,6 +147,7 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
     onJumpPrev,
     onToggleStatusOfActiveSubtitleLine,
     onOpenOrCloseShortcutsModal,
+    onOpenOrCloseSettings,
     onUndo,
     onRedo,
   ]);

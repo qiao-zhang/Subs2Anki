@@ -203,6 +203,7 @@ const App: React.FC = () => {
       toggleSubtitleLineStatus(activeSubtitleLineId);
     },
     onOpenOrCloseShortcutsModal: () => setIsShortcutsModalOpen(prev => !prev),
+    onOpenOrCloseSettings: () => setIsSettingsModalOpen(prev => !prev),
     onRedo: handleRedo,
     onUndo: handleUndo,
   });
