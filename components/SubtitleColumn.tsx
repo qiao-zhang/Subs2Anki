@@ -26,7 +26,7 @@ interface SubtitleColumnProps {
   onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: any) => void;
   onSubtitleLineClicked: (id: number, copyText?: boolean) => void;
   onToggleLock: (id: number) => void;
-  onCreateCard: (sub: SubtitleLine) => void;
+  onCreateCard: (id: number) => void;
   onBulkCreateCards: () => void;
   onSave: () => void;
   onDownload: () => void;
@@ -296,7 +296,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
             className="mt-1 text-slate-600 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition"
             onClick={(e) => {
               e.stopPropagation();
-              onCreateCard(sub);
+              onCreateCard(sub.id);
             }}>
             <PlusCircle size={16}/>
           </button>

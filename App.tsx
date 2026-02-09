@@ -43,6 +43,7 @@ const App: React.FC = () => {
     bulkCreateLimit, setBulkCreateLimit,
     autoDeleteSynced, setAutoDeleteSynced,
     showBulkCreateButton, setShowBulkCreateButton,
+    setHasUnsavedChanges
   } = useAppStore();
 
   // --- AnkiConnect Status ---
@@ -186,8 +187,7 @@ const App: React.FC = () => {
     },
     onCreateCard: async () => {
       if (activeSubtitleLineId === null) return;
-      const s = getSubtitleLine(activeSubtitleLineId);
-      if (s) await handleCreateCard(s);
+      await handleCreateCard(activeSubtitleLineId);
     },
     onJumpNext: () => jumpToSubtitleLine('next'),
     onJumpPrev: () => jumpToSubtitleLine('prev'),
@@ -247,8 +247,7 @@ const App: React.FC = () => {
 
   const handleCommitTempSubtitleLine = (text: string) => {
     if (!tempSubtitleLine) return;
-    const lines = useAppStore.getState().subtitleLines;
-    const maxId = lines.reduce((max, s) => Math.max(max, s.id), 0);
+    const maxId = subtitleLines.reduce((max, s) => Math.max(max, s.id), 0);
     const newSubLine: SubtitleLine = {
       id: maxId + 1,
       startTime: tempSubtitleLine.start,
@@ -272,12 +271,12 @@ const App: React.FC = () => {
         await writable.write(content);
         // @ts-ignore
         await writable.close();
-        useAppStore.getState().setHasUnsavedChanges(false);
+        setHasUnsavedChanges(false);
       } catch (err) {
         alert('Failed to save file.');
       }
     } else {
-      useAppStore.getState().setHasUnsavedChanges(false);
+      setHasUnsavedChanges(false);
     }
   };
 
@@ -302,7 +301,7 @@ const App: React.FC = () => {
       } else {
         const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
         saveAs(blob, subtitleFileName);
-        useAppStore.getState().setHasUnsavedChanges(false);
+        setHasUnsavedChanges(false);
       }
     } catch (err) {
     }
@@ -349,7 +348,7 @@ const App: React.FC = () => {
   };
 
   const handleSubtitleLineClicked = (id: number, copyText: boolean = true) => {
-    const sub = useAppStore.getState().subtitleLines.find(s => s.id === id);
+    const sub = getSubtitleLine(id);
 
     if (sub && copyText) {
       // 复制字幕文本到剪贴板
@@ -368,7 +367,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCreateCard = async (sub: SubtitleLine) => {
+  const handleCreateCard = async (id: number) => {
+    const s = getSubtitleLine(id);
+    if (s) await createCardForSubtitleLine(s);
+  }
+
+  const createCardForSubtitleLine = async (sub: SubtitleLine) => {
     if (!videoPlayerRef.current) return;
     if (sub.status !== 'normal') return;
 
@@ -425,7 +429,7 @@ const App: React.FC = () => {
     setBulkCreateProgress({current: 0, total: limitedSubtitles.length});
 
     for (let i = 0; i < limitedSubtitles.length; i++) {
-      await handleCreateCard(limitedSubtitles[i]);
+      await createCardForSubtitleLine(limitedSubtitles[i]);
       setBulkCreateProgress({current: i + 1, total: limitedSubtitles.length});
     }
 
@@ -795,10 +799,7 @@ const App: React.FC = () => {
           onSetSubtitles={setSubtitles}
           onSubtitleLineClicked={handleSubtitleLineClicked}
           onToggleLock={toggleSubtitleLineStatus}
-          onCreateCard={(sub) => {
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === sub.id);
-            if (s) handleCreateCard(s).then();
-          }}
+          onCreateCard={handleCreateCard}
           onBulkCreateCards={handleBulkCreateCards}
           onSave={handleSaveSubtitles}
           onDownload={handleDownloadSubtitles}
@@ -841,10 +842,7 @@ const App: React.FC = () => {
           onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
           onSubtitleLineClicked={(id) => handleSubtitleLineClicked(id, false)}
           onSubtitleLineRemoved={removeSubtitle}
-          onCreateCard={(id) => {
-            const s = useAppStore.getState().subtitleLines.find(x => x.id === id);
-            if (s) handleCreateCard(s).then();
-          }}
+          onCreateCard={handleCreateCard}
         />
       </div>
 
