@@ -8,8 +8,12 @@ export const useMediaProcessing = (
   videoFile: File | null,
   previewCard: AnkiCard | null
 ) => {
-  const {ankiCards, updateCardAudioStatus, getSubtitleLine} = useAppStore();
+  const ankiCards = useAppStore(state => state.ankiCards);
+  const updateCardAudioStatus = useAppStore(state => state.updateCardAudioStatus);
+  const getSubtitleLine = useAppStore(state => state.getSubtitleLine);
+
   const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
+  const [lastFinishedIndex, setLastFinishedIndex] = useState<number>(0);
 
   // --- Background Audio Extraction Queue ---
   useEffect(() => {
@@ -24,7 +28,7 @@ export const useMediaProcessing = (
     if (nextCard) {
       processCardAudio(nextCard.id, nextCard.subtitleId).then();
     }
-  }, [ankiCards, backgroundProcessingId, previewCard, videoFile]);
+  }, [ankiCards, previewCard, videoFile, lastFinishedIndex]);
 
   const processCardAudio = async (cardId: string, subtitleId: number) => {
     if (!videoFile) return;
@@ -54,8 +58,10 @@ export const useMediaProcessing = (
       updateCardAudioStatus(cardId, 'error');
     } finally {
       setBackgroundProcessingId(null);
+      setLastFinishedIndex(prev => prev + 1);
     }
   };
+
   return {
     isProcessing: !!(backgroundProcessingId)
   };

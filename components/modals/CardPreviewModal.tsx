@@ -11,7 +11,7 @@ interface CardPreviewModalProps {
 }
 
 const CardPreviewModal: React.FC<CardPreviewModalProps> = ({isOpen, card, onClose}) => {
-  const {ankiConfig} = useAppStore();
+  const ankiConfig = useAppStore(state => state.ankiConfig);
 
   // Loaded Media State
   const [audioUrl, setAudioUrl] = useState<string | null>(null);

@@ -18,15 +18,13 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
                                                                                  onDownloadAudio,
                                                                                  onTextChange,
                                                                                }) => {
-  const {
-    subtitleLines
-  } = useAppStore();
+  const getSubtitleLine = useAppStore(state => state.getSubtitleLine);
 
   const [subtitleLine, setSubtitleLine] = useState<SubtitleLine | null>(null);
   const [localText, setLocalText] = useState<string | null>(null);
 
   useEffect(() => {
-    const line = subtitleLines.find(s => s.id === subtitleLineId);
+    const line = getSubtitleLine(subtitleLineId);
     setSubtitleLine(line || null);
     setLocalText(line?.text || null);
   }, [subtitleLineId]);
