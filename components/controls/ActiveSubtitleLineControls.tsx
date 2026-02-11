@@ -65,7 +65,6 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
           initialValue={localText}
           onSave={handleTextSave}
           placeholder="Subtitle Line Text..."
-          className="flex-1 bg-transparent border-none text-lg placeholder-slate-600 focus:ring-0 focus:outline-none px-2 font-medium h-9"
         />
         <button
           onClick={onDownloadAudio}
