@@ -85,6 +85,8 @@ interface AppState {
   setAutoDeleteSynced: (enabled: boolean) => void;
   showBulkCreateButton: boolean;
   setShowBulkCreateButton: (show: boolean) => void;
+  audioVolume: number;
+  setAudioVolume: (volume: number) => void;
 }
 
 // 创建全局的 undo/redo 管理器实例
@@ -432,5 +434,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setShowBulkCreateButton: (show) => {
     localStorage.setItem('subs2anki_show_bulk_create_button', show.toString());
     set({showBulkCreateButton: show});
+  },
+  audioVolume: parseFloat(localStorage.getItem('subs2anki_audio_volume') || '1.5'),
+  setAudioVolume: (volume) => {
+    localStorage.setItem('subs2anki_audio_volume', volume.toString());
+    set({audioVolume: volume});
   }
 }));

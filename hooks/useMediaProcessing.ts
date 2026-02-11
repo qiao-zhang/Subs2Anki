@@ -11,6 +11,7 @@ export const useMediaProcessing = (
   const ankiCards = useAppStore(state => state.ankiCards);
   const updateCardAudioStatus = useAppStore(state => state.updateCardAudioStatus);
   const getSubtitleLine = useAppStore(state => state.getSubtitleLine);
+  const audioVolume = useAppStore(state => state.audioVolume);
 
   const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
   const [lastFinishedIndex, setLastFinishedIndex] = useState<number>(0);
@@ -43,7 +44,7 @@ export const useMediaProcessing = (
     updateCardAudioStatus(cardId, 'processing');
 
     try {
-      const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime);
+      const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime, audioVolume);
 
       // Store Blob in IndexedDB
       const audioId = crypto.randomUUID();

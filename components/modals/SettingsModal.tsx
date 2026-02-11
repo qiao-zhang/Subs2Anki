@@ -13,6 +13,8 @@ interface SettingsModalProps {
   onBulkCreateLimitChange: (limit: number) => void;
   showBulkCreateButton: boolean;
   onShowBulkCreateButtonChange: (checked: boolean) => void;
+  audioVolume: number;
+  onAudioVolumeChange: (volume: number) => void;
   onTestSuccess?: () => void; // 回调函数，在测试连接成功时调用
 }
 
@@ -27,6 +29,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                        onBulkCreateLimitChange,
                                                        showBulkCreateButton,
                                                        onShowBulkCreateButtonChange,
+  audioVolume,
+  onAudioVolumeChange,
                                                        onTestSuccess
                                                      }) => {
   const [localUrl, setLocalUrl] = useState(ankiConnectUrl);
@@ -35,6 +39,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [localBulkCreateLimit, setLocalBulkCreateLimit] = useState(bulkCreateLimit);
   const [localAutoDeleteSynced, setLocalAutoDeleteSynced] = useState(autoDeleteSynced);
   const [localShowBulkCreateButton, setLocalShowBulkCreateButton] = useState(showBulkCreateButton);
+  const [localAudioVolume, setLocalAudioVolume] = useState(audioVolume);
 
   // 检查输入的限制值是否有效
   const isValidLimit = localBulkCreateLimit >= 1 && localBulkCreateLimit <= 50;
@@ -74,6 +79,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onAutoDeleteSyncedChange(localAutoDeleteSynced);
     onBulkCreateLimitChange(localBulkCreateLimit);
     onShowBulkCreateButtonChange(localShowBulkCreateButton);
+    onAudioVolumeChange(localAudioVolume);
 
     onClose();
   };
@@ -110,7 +116,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </h3>
 
                 <div className="space-y-2">
-                  <label className="text-xs uppercase font-bold text-slate-500">AnkiConnect URL</label>
+                  <label className="text-sm font-medium text-slate-300">AnkiConnect URL</label>
+                  {/*<label className="text-xs uppercase font-bold text-slate-500">AnkiConnect URL</label>*/}
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -215,7 +222,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs uppercase font-bold text-slate-500">Max Cards Per Bulk Operation</label>
+                  <label className="text-sm font-medium text-slate-300">Max Cards Per Bulk Operation</label>
                   <div className="flex gap-2 items-center">
                     <input
                       type="number"
@@ -233,6 +240,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <p className="text-xs text-slate-500">Limit to prevent memory issues</p>
                 </div>
 
+
+
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-md font-bold flex items-center gap-2 text-slate-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                    <line x1="9" y1="21" x2="9" y2="9"></line>
+                  </svg>
+                  Audio Volume
+                </h3>
+                {/* Audio Volume Control */}
+                <div className="space-y-2">
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="5"
+                      step="0.1"
+                      value={localAudioVolume}
+                      onChange={(e) => setLocalAudioVolume(parseFloat(e.target.value))}
+                      className="w-full bg-slate-700 accent-indigo-500 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <span className="text-sm text-slate-400 w-12">{localAudioVolume.toFixed(1)}</span>
+                  </div>
+                  <p className="text-xs text-slate-500">Adjust volume of generated audio clips (1.0 = normal)</p>
+                </div>
               </div>
             </div>
           </div>

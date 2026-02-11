@@ -44,6 +44,7 @@ const App: React.FC = () => {
     bulkCreateLimit, setBulkCreateLimit,
     autoDeleteSynced, setAutoDeleteSynced,
     showBulkCreateButton, setShowBulkCreateButton,
+    audioVolume, setAudioVolume,
     setHasUnsavedChanges
   } = useAppStore();
 
@@ -931,6 +932,8 @@ const App: React.FC = () => {
         onBulkCreateLimitChange={setBulkCreateLimit}
         showBulkCreateButton={showBulkCreateButton}
         onShowBulkCreateButtonChange={setShowBulkCreateButton}
+        audioVolume={audioVolume}
+        onAudioVolumeChange={setAudioVolume}
         onTestSuccess={refreshDecks}
       />
       <CardPreviewModal

@@ -42,15 +42,15 @@ class FFmpegService {
   /**
    * Extracts an audio clip from a video file.
    */
-  async extractAudioClip(file: File, start: number, end: number): Promise<Blob> {
+  async extractAudioClip(file: File, start: number, end: number, volume: number = 1.5): Promise<Blob> {
     if (!this.loaded) {
       await this.load();
     }
-    
+
     if (!this.ffmpeg) throw new Error("FFmpeg not loaded");
 
     const duration = Math.max(0.1, end - start);
-    const inputName = 'input_audio.video'; 
+    const inputName = 'input_audio.video';
     const outputName = 'output.wav';
 
     await this.ffmpeg.writeFile(inputName, await fetchFile(file));
@@ -60,6 +60,7 @@ class FFmpegService {
       '-t', duration.toString(),
       '-i', inputName,
       '-vn',
+      '-af', `volume=${volume}`,
       '-acodec', 'pcm_s16le',
       '-ar', '44100',
       '-y',
@@ -67,7 +68,7 @@ class FFmpegService {
     ]);
 
     const data = await this.ffmpeg.readFile(outputName);
-    
+
     await this.ffmpeg.deleteFile(inputName);
     await this.ffmpeg.deleteFile(outputName);
 
