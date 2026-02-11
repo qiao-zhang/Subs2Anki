@@ -391,26 +391,6 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         )}
       </div>
 
-      {/* Bulk Create Button */}
-      {showBulkCreateButton && (
-        <div className="h-10 flex items-center px-4 bg-slate-900/60">
-          <button
-            onClick={onBulkCreateCards}
-            disabled={subtitleCounts.normal === 0}
-            className={`flex items-center gap-2 px-3 py-1 text-xs rounded ${
-              subtitleCounts.normal === 0
-                ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            }`}
-            title={subtitleCounts.normal === 0 ? 'No normal subtitles to create cards from'
-              : 'Create cards for all normal subtitles'}
-          >
-            <PlusCircle size={14}/> Bulk
-            Create {subtitleCounts.normal > bulkCreateLimit ? bulkCreateLimit : subtitleCounts.normal} Cards
-          </button>
-        </div>
-      )}
-
       {/* Search bar */}
       <div className="h-10 flex items-center px-4 bg-slate-900/60">
         <div className="flex items-center gap-1 w-full">
@@ -464,7 +444,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       </div>
 
       {/* Status Filters */}
-      <div className="h-8 flex items-center px-4 bg-slate-900/40 border-b border-slate-800 text-xs">
+      <div className="h-8 flex items-center px-4 bg-slate-900/40 text-xs">
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-1">
             <input
@@ -496,7 +476,27 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 bg-slate-900 pt-2">
+      {/* Bulk Create Button */}
+      {showBulkCreateButton && subtitleCounts.normal > 0 && (
+        <div className="h-10 flex items-center px-4 bg-slate-900/60">
+          <button
+            onClick={onBulkCreateCards}
+            disabled={subtitleCounts.normal === 0}
+            className={`flex items-center gap-2 px-3 py-1 text-xs rounded ${
+              subtitleCounts.normal === 0
+                ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
+            title={subtitleCounts.normal === 0 ? 'No normal subtitles to create cards from'
+              : 'Create cards for all normal subtitles'}
+          >
+            <PlusCircle size={14}/>
+            Create cards for the next {subtitleCounts.normal > bulkCreateLimit ? bulkCreateLimit : subtitleCounts.normal} normal lines
+          </button>
+        </div>
+      )}
+
+      <div className="flex-1 min-h-0 bg-slate-900 border-t border-slate-800 pt-2">
         {filteredSubtitleLines.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs">
             <AlertCircle size={24} className="mb-2 opacity-50"/>
