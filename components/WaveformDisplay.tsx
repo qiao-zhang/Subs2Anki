@@ -140,7 +140,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     });
 
     ws.on('ready', () => {
-      console.log("is ready");
       setIsReady(true);
     });
 
@@ -269,7 +268,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     // Prevent context menu on waveform container
     const waveformContainer = waveformContainerRef.current;
     const handleContextMenu = (e: Event) => {
-      console.log('right clicked waveform container');
       e.preventDefault();
     };
 

@@ -49,10 +49,10 @@ const App: React.FC = () => {
   } = useAppStore();
 
   // Determine if there is project data to show the reset button
-  const hasProjectData = videoSrc !== '' || 
-                        subtitleLines.length > 0 || 
-                        ankiCards.length > 0 || 
-                        projectName !== '';
+  const hasProjectData = videoSrc !== '' ||
+    subtitleLines.length > 0 ||
+    ankiCards.length > 0 ||
+    projectName !== '';
 
   // --- AnkiConnect Status ---
   const {isConnected, decks, refreshDecks} = useAnkiConnect(ankiConnectUrl);
@@ -450,7 +450,7 @@ const App: React.FC = () => {
     }
 
     setIsBulkCreating(false);
-    
+
     if (normalSubtitles.length > bulkCreateLimit) {
       showNotification(`Successfully created ${limitedSubtitles.length} cards! (Limited to ${bulkCreateLimit} per operation)`);
     } else {
@@ -574,24 +574,41 @@ const App: React.FC = () => {
   const handleCaptureFrame = async () => {
     if (!videoPlayerRef.current) return;
     const dataUrl = await videoPlayerRef.current.captureFrame();
-    if (dataUrl) {
-      fetch(dataUrl)
-        .then(res => res.blob())
-        .then(blob => {
-          const currentTime = videoPlayerRef.current?.getCurrentTime() || 0;
+    if (!dataUrl) return;
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const currentTime = videoPlayerRef.current?.getCurrentTime() || 0;
 
-          // 查找当前时间对应的字幕行
-          const currentSubtitle = subtitleLines.find(sub =>
-            currentTime >= sub.startTime && currentTime <= sub.endTime
-          );
+    // 查找当前时间对应的字幕行
+    const currentSubtitle = subtitleLines.find(sub =>
+      currentTime >= sub.startTime && currentTime <= sub.endTime
+    );
 
-          // 使用共享的工具函数生成文件名
-          const timeStr = formatTimeForFilename(currentTime);
-          const fileName = makeMediaFileName(videoName, '.jpg', timeStr, currentSubtitle ? currentSubtitle.text : '');
+    // 使用共享的工具函数生成文件名
+    const timeStr = formatTimeForFilename(currentTime);
+    const fileName = makeMediaFileName(videoName, '.jpg', timeStr, currentSubtitle ? currentSubtitle.text : '');
 
-          // TODO add save picker version
-          saveAs(blob, fileName);
+    try {
+      // @ts-ignore
+      if (window.showSaveFilePicker) {
+        // @ts-ignore
+        const handle = await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{
+            description: 'Snapshot',
+            // accept: "*.wav"
+          }]
         });
+        // @ts-ignore
+        const writable = await handle.createWritable();
+        // @ts-ignore
+        await writable.write(blob);
+        // @ts-ignore
+        await writable.close();
+      } else {
+        saveAs(blob, fileName);
+      }
+    } catch (err) {
     }
   };
 
@@ -734,48 +751,48 @@ const App: React.FC = () => {
     if (videoSrc) {
       URL.revokeObjectURL(videoSrc);
     }
-    
+
     // Reset all app state to initial values using the store setters
     setProjectName('');
-    
+
     // Reset video state to initial values
     resetVideo();
 
     // Also reset subtitles
     setSubtitles([], '');
     setHasUnsavedChanges(false);
-    
+
     // Reset UI state
     setPauseAtTime(null);
     setCurrentTime(0);
     setActiveSubtitleLineId(null);
     setCurrentSubtitleText('');
     setTempSubtitleLine(null);
-    
+
     // Reset processing states
     setIsExporting(false);
     setIsSyncing(false);
     setSyncProgress({current: 0, total: 0});
     setIsBulkCreating(false);
     setBulkCreateProgress({current: 0, total: 0});
-    
+
     // Reset video player state
     if (videoPlayerRef.current) {
       videoPlayerRef.current.seekTo(0);
     }
-    
+
     // Reset regions and video-only modes
     setRegionsHidden(false);
     setIsVideoOnlyMode(false);
-    
+
     // Clear all cards
     ankiCards.forEach(async card => await deleteScreenshotAndAudioForCard(card.id));
     clearCards();
-    
+
     // Reset deck and tags to initial state
     setSelectedDeck('Subs2Anki Export'); // Default deck name when project is reset
     setGlobalTags([]);
-    
+
     showNotification("Project has been reset");
   };
 
@@ -921,11 +938,11 @@ const App: React.FC = () => {
       {/* Modals */}
       <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)}
                            config={ankiConfig} onSave={setAnkiConfig}/>
-      <SettingsModal 
-        isOpen={isSettingsModalOpen} 
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-        ankiConnectUrl={ankiConnectUrl} 
-        onSaveAnkiConnectUrl={setAnkiConnectUrl} 
+        ankiConnectUrl={ankiConnectUrl}
+        onSaveAnkiConnectUrl={setAnkiConnectUrl}
         autoDeleteSynced={autoDeleteSynced}
         onAutoDeleteSyncedChange={setAutoDeleteSynced}
         bulkCreateLimit={bulkCreateLimit}
