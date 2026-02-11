@@ -182,9 +182,10 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
           <div className="w-px h-4 bg-slate-700 mx-1 self-center"></div>
           <button
             onClick={onSyncCards}
-            disabled={
+            disabled={!isConnected ||
               !cards.some(card => card.syncStatus === 'unsynced') ||
-              cards.some(card => card.syncStatus === 'syncing') || !isConnected}
+              cards.some(card => card.syncStatus === 'syncing') ||
+              cards.some(card => card.audioStatus !== 'done')}
             className="p-1.5 hover:bg-indigo-900/50 rounded text-indigo-400 hover:text-indigo-300 transition disabled:opacity-50 disabled:hover:bg-transparent disabled:text-slate-600"
             title={!isConnected ? "Not connected to Anki" : "Sync to Anki"}
           >
