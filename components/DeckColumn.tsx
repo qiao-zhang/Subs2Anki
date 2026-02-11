@@ -61,7 +61,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
       </div>
 
       {/* Deck Header */}
-      <div className="p-3 border-b border-slate-800 flex flex-col gap-2 bg-slate-900/80 backdrop-blur">
+      <div className="p-3 z-50 border-b border-slate-800 flex flex-col gap-2 bg-slate-900/80 backdrop-blur">
         <div className="flex justify-between items-center">
           <div className="relative">
             {isConnected ? (
