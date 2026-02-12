@@ -623,7 +623,8 @@ const App: React.FC = () => {
         ankiConnectUrl
       };
 
-      const record = createProjectRecord(appState, selectedDeck, globalTags, bulkCreateLimit, autoDeleteSynced, showBulkCreateButton);
+      const record = createProjectRecord(appState, selectedDeck, globalTags,
+        bulkCreateLimit, autoDeleteSynced, showBulkCreateButton, audioVolume);
       await saveProjectRecord(record);
       showNotification("Project saved successfully!");
     } catch (error) {

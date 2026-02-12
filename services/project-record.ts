@@ -15,6 +15,7 @@ export interface ProjectRecord {
   autoDeleteSynced?: boolean;         // 自动删除同步后的卡片
   bulkCreateLimit?: number;           // 批量创建限制
   showBulkCreateButton?: boolean;     // 是否显示批量创建按钮
+  audioVolume?: number;               // 音频音量
 }
 
 // 默认版本号
@@ -28,6 +29,7 @@ const PROJECT_RECORD_VERSION = "1.2.0";
  * @param autoDeleteSynced 自动删除同步后的卡片
  * @param bulkCreateLimit 批量创建限制
  * @param showBulkCreateButton 是否显示批量创建按钮
+ * @param audioVolume 音频音量
  * @returns 项目记录对象
  */
 export const createProjectRecord = (appState: {
@@ -37,7 +39,7 @@ export const createProjectRecord = (appState: {
   subtitleLines: SubtitleLine[];
   ankiConfig: AnkiNoteType;
   ankiConnectUrl: string;
-}, selectedDeck?: string, globalTags?: string[], bulkCreateLimit?: number, autoDeleteSynced?: boolean, showBulkCreateButton?: boolean): ProjectRecord => {
+}, selectedDeck?: string, globalTags?: string[], bulkCreateLimit?: number, autoDeleteSynced?: boolean, showBulkCreateButton?: boolean, audioVolume?: number): ProjectRecord => {
   return {
     version: PROJECT_RECORD_VERSION,
     projectName: appState.projectName,
@@ -51,6 +53,7 @@ export const createProjectRecord = (appState: {
     autoDeleteSynced,
     bulkCreateLimit,
     showBulkCreateButton,
+    audioVolume,
     timestamp: new Date().toISOString()
   };
 };
@@ -188,6 +191,11 @@ const isValidProjectRecord = (record: any): record is ProjectRecord => {
 
   // 验证 showBulkCreateButton（如果存在）
   if (record.showBulkCreateButton !== undefined && typeof record.showBulkCreateButton !== 'boolean') {
+    return false;
+  }
+
+  // 验证 audioVolume（如果存在）
+  if (record.audioVolume !== undefined && (typeof record.audioVolume !== 'number' || record.audioVolume < 0.1 || record.audioVolume > 5)) {
     return false;
   }
 
