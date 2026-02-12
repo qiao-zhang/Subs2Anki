@@ -1,4 +1,5 @@
 import React, { useState, KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface TagInputProps {
   tags: string[];
@@ -6,7 +7,8 @@ interface TagInputProps {
   placeholder?: string;
 }
 
-const TagInput: React.FC<TagInputProps> = ({ tags, onTagsChange, placeholder = "Add a tag..." }) => {
+const TagInput: React.FC<TagInputProps> = ({ tags, onTagsChange, placeholder }) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState<string>('');
 
   const addTag = (tag: string) => {
@@ -53,11 +55,11 @@ const TagInput: React.FC<TagInputProps> = ({ tags, onTagsChange, placeholder = "
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={placeholder || t("modals.addATag", { defaultValue: "Add a tag..." })}
         className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
       />
       <p className="text-xs text-slate-500 mt-1">
-        Press Enter or comma (,) to add a tag
+        {t("modals.pressEnterOrCommaToAddTag", { defaultValue: "Press Enter or comma (,) to add a tag" })}
       </p>
     </div>
   );

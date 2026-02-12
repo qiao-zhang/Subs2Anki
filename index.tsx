@@ -3,10 +3,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import './services/i18n.ts'; // 引入i18n配置
 
 /**
  * Application Entry Point
- * 
+ *
  * This file mounts the React root component into the DOM.
  * It ensures the root element exists before attempting to render.
  */

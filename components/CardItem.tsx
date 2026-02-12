@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import {AnkiCard} from '@/services/types.ts';
 import {getMedia} from '@/services/db.ts';
+import { useTranslation } from 'react-i18next';
 
 interface CardItemProps {
   card: AnkiCard;
@@ -31,6 +32,7 @@ interface CardItemProps {
  * - Audio processing status.
  */
 const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview, onSyncCard, isConnected = false}) => {
+  const { t } = useTranslation();
   const [thumbnailSrc, setThumbnailSrc] = useState<string | null>(null);
 
   // Async load thumbnail from IDB
@@ -108,7 +110,7 @@ const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview, onSyncCar
           )}
 
           {!card.translation && !card.notes && (
-            <p className="text-slate-500 text-xs italic">Double-click to preview</p>
+            <p className="text-slate-500 text-xs italic">{t("modals.doubleClickToPreview", { defaultValue: "Double-click to preview" })}</p>
           )}
         </div>
 
@@ -125,9 +127,9 @@ const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview, onSyncCar
                 ? 'text-indigo-400 hover:text-indigo-300 hover:bg-slate-700/50'
                 : 'text-slate-600'
             }`}
-            title={!isConnected ? 'Not connected to Anki' : card.syncStatus === 'synced' ?
-              'Already synced' : card.syncStatus === 'syncing' ?
-                'Syncing...' : card.audioStatus !== 'done' ? 'Media not ready' : 'Sync to Anki'}
+            title={!isConnected ? t("modals.notConnectedToAnki", { defaultValue: "Not connected to Anki" }) : card.syncStatus === 'synced' ?
+              t("modals.alreadySynced", { defaultValue: "Already synced" }) : card.syncStatus === 'syncing' ?
+                t("modals.syncing", { defaultValue: "Syncing..." }) : card.audioStatus !== 'done' ? t("modals.mediaNotReady", { defaultValue: "Media not ready" }) : t("syncToAnki")}
           >
             {card.syncStatus === 'unsynced' && <CloudUpload size={18}/>}
             {card.syncStatus === 'synced' && <CheckCircle size={18}/>}
@@ -139,7 +141,7 @@ const CardItem: React.FC<CardItemProps> = ({card, onDelete, onPreview, onSyncCar
               onDelete(card.id);
             }}
             className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700/50 rounded transition-colors"
-            title="Delete Card"
+            title={t("deleteCard")}
           >
             <Trash2 size={18}/>
           </button>

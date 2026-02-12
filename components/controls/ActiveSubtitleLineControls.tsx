@@ -6,6 +6,7 @@ import {formatTimestamp} from '@/services/time.ts';
 import {SubtitleLine} from '@/services/types.ts';
 import {formatTimeDifference} from '@/services/time.ts';
 import {BTN_BASE, BTN_SECONDARY, TIMESTAMP_WRAPPER, TIMESTAMP_TEXT} from '@/services/shared-styles.ts';
+import { useTranslation } from 'react-i18next';
 
 interface ActiveSubtitleLineControlsProps {
   subtitleLineId: number,
@@ -18,6 +19,7 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
                                                                                  onDownloadAudio,
                                                                                  onTextChange,
                                                                                }) => {
+  const { t } = useTranslation();
   const getSubtitleLine = useAppStore(state => state.getSubtitleLine);
 
   const [subtitleLine, setSubtitleLine] = useState<SubtitleLine | null>(null);
@@ -64,14 +66,14 @@ const ActiveSubtitleLineControls: React.FC<ActiveSubtitleLineControlsProps> = ({
         <AutoResizeEditableTextArea
           initialValue={localText}
           onSave={handleTextSave}
-          placeholder="Subtitle Line Text..."
+          placeholder={t("modals.subtitlePlaceholder", { defaultValue: "Subtitle Line Text..." })}
         />
         <button
           onClick={onDownloadAudio}
           className={`${BTN_BASE} h-9 ${BTN_SECONDARY}`}
-          title="Download Audio Clip"
+          title={t("downloadAudio")}
         >
-          <Download size={18}/> Clip Audio
+          <Download size={18}/> {t("downloadAudio")}
         </button>
       </div>
     </div>

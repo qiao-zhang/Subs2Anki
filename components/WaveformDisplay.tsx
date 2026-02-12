@@ -6,6 +6,7 @@ import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
 import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
 import {useAppStore} from '@/services/store.ts';
 import {useMergeKeyboardShortcut} from "@/hooks/useKeyboardShortcuts.tsx";
+import { useTranslation } from 'react-i18next';
 
 interface WaveformDisplayProps {
   videoElement: HTMLVideoElement | null;
@@ -34,6 +35,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onSubtitleLineClicked,
                                                            onSubtitleLineRemoved,
                                                          }) => {
+  const { t } = useTranslation();
   // Access store for direct reads in listeners and reactive updates
   const subtitleLines = useAppStore(state => state.subtitleLines);
   const updateSubtitleTime = useAppStore(state => state.updateSubtitleTime);
@@ -136,7 +138,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     regions.enableDragSelection({
       id: TEMP_REGION_ID,
       color: 'rgba(74, 222, 128, 0.4)',
-      content: 'Right-click to dismiss'
+      content: t("modals.rightClickToDismiss", { defaultValue: "Right-click to dismiss" })
     });
 
     ws.on('ready', () => {
@@ -414,7 +416,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         <div
           className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm text-slate-400 text-xs">
           {videoElement && <Activity className="animate-pulse mr-2" size={16}/>}
-          {videoElement === null ? 'No Video Loaded' : 'Loading Audio Track...'}
+          {videoElement === null ? t("modals.noVideoLoaded") : t("modals.loadingAudioTrack", { defaultValue: "Loading Audio Track..." })}
         </div>
       )}
 

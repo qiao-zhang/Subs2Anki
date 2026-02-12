@@ -1,4 +1,5 @@
 import React, {useState, useRef, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {SubtitleLine, AnkiCard} from './services/types.ts';
 import {serializeSubtitles} from './services/parser.ts';
 import {formatTimestamp} from './services/time.ts';
@@ -28,6 +29,9 @@ import {useAnkiConnect} from '@/hooks/useAnkiConnect.ts';
 import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts.tsx";
 
 const App: React.FC = () => {
+  // 初始化i18n翻译
+  const {t} = useTranslation();
+
   // --- Global State from Zustand ---
   const {
     videoSrc, videoName, projectName, videoFile, setVideo, resetVideo,
@@ -360,7 +364,7 @@ const App: React.FC = () => {
     setNotification({visible: true, text});
     setTimeout(() => {
       setNotification({visible: false, text: ''});
-    }, 2000); // 2秒后自动隐藏
+    }, 3000);
   };
 
   const handleSubtitleLineClicked = (id: number, copyText: boolean = true) => {
@@ -370,7 +374,9 @@ const App: React.FC = () => {
       // 复制字幕文本到剪贴板
       navigator.clipboard.writeText(sub.text).then(() => {
         // 显示复制成功的提示
-        showNotification(sub.text);
+        showNotification(t("notification.copiedToClipboard", {
+          defaultValue: '"{{text}}" copied to clipboard',
+          text: sub.text}));
       }).catch(err => {
         console.error('Cannot copy text:', err);
       });
@@ -434,7 +440,8 @@ const App: React.FC = () => {
     const normalSubtitles = subtitleLines.filter(sub => sub.status === 'normal');
 
     if (normalSubtitles.length === 0) {
-      showNotification('No subtitle lines to make cards');
+      showNotification(
+        t("notification.noLines", {defaultValue: 'No subtitle lines to make cards'}));
       return;
     }
 
@@ -451,11 +458,9 @@ const App: React.FC = () => {
 
     setIsBulkCreating(false);
 
-    if (normalSubtitles.length > bulkCreateLimit) {
-      showNotification(`Successfully created ${limitedSubtitles.length} cards! (Limited to ${bulkCreateLimit} per operation)`);
-    } else {
-      showNotification(`Successfully created ${limitedSubtitles.length} cards!`);
-    }
+    showNotification(t("notification.cardCreated", {
+      num: limitedSubtitles.length
+    }));
   };
 
   const deleteScreenshotAndAudioForCard = async (id: string) => {
@@ -514,7 +519,7 @@ const App: React.FC = () => {
       if (autoDeleteSynced) {
         await handleDeleteCard(id);
       }
-      showNotification(`Successfully synced card to Anki!`);
+      showNotification(t("notifications.syncSuccess", {num: "1", deckName}));
     } catch (e) {
       console.error(e);
       alert(`Sync failed: ${(e as Error).message}`);
@@ -555,7 +560,7 @@ const App: React.FC = () => {
         }
       });
 
-      showNotification(`Successfully synced ${unsyncedCards.length} cards to Anki deck: ${selectedDeck}!`);
+      showNotification(t("notifications.syncSuccess", {num: unsyncedCards.length, deckName: selectedDeck}));
     } catch (e) {
       console.error(e);
       alert(`Sync failed: ${(e as Error).message}`);
@@ -626,7 +631,7 @@ const App: React.FC = () => {
       const record = createProjectRecord(appState, selectedDeck, globalTags,
         bulkCreateLimit, autoDeleteSynced, showBulkCreateButton, audioVolume);
       await saveProjectRecord(record);
-      showNotification("Project saved successfully!");
+      showNotification(t("notifications.projectSaved", {defaultValue: "Project saved successfully!"}));
     } catch (error) {
       console.error("Failed to save project:", error);
       alert("Failed to save project: " + (error as Error).message);
@@ -677,7 +682,8 @@ const App: React.FC = () => {
         setShowBulkCreateButton(record.showBulkCreateButton);
       }
 
-      showNotification("Project loaded successfully!");
+      showNotification(t("notifications.projectLoaded", {
+        defaultValue: "Project loaded successfully!"}));
     } catch (error) {
       console.error("Failed to load project:", error);
       alert("Failed to load project: " + (error as Error).message);
@@ -699,7 +705,7 @@ const App: React.FC = () => {
       await handleDeleteCard(card.id);
     }
 
-    showNotification(`Deleted ${syncedCards.length} synced card(s)`);
+    showNotification(t("notifications.cardRemoved", {num: syncedCards.length}));
   };
 
   const handleDownloadAudio = async () => {
@@ -747,7 +753,7 @@ const App: React.FC = () => {
     }
   };
 
-  const resetProject = () => {
+  const handleResetProject = () => {
     // Revoke the current video object URL if it exists to free memory
     if (videoSrc) {
       URL.revokeObjectURL(videoSrc);
@@ -794,7 +800,8 @@ const App: React.FC = () => {
     setSelectedDeck('Subs2Anki Export'); // Default deck name when project is reset
     setGlobalTags([]);
 
-    showNotification("Project has been reset");
+    showNotification(t("notifications.projectReset", {
+      defaultValue: "Project has been reset"}));
   };
 
   return (
@@ -802,24 +809,35 @@ const App: React.FC = () => {
 
       {isSyncing && <ProcessingOverlay
         isInProcess={isSyncing}
-        InProcessMessage="Syncing to Anki..."
+        InProcessMessage={t("modals.syncingToAnki", {defaultValue: "Syncing to Anki..."})}
         Progress={syncProgress}
       >
-        {syncProgress.current} / {syncProgress.total} cards synced
+        {t("modals.cardsSynced", {
+          defaultValue: "{{current}} / {{total}} cards synced",
+          current: syncProgress.current,
+          total: syncProgress.total
+        })}
       </ProcessingOverlay>}
       {isBulkCreating && <ProcessingOverlay
         isInProcess={isBulkCreating}
-        InProcessMessage="Creating Cards..."
+        InProcessMessage={t("modals.creatingCards", {defaultValue: "Creating Cards..."})}
         Progress={bulkCreateProgress}
       >
-        {bulkCreateProgress.current} / {bulkCreateProgress.total} cards created
+        {t("modals.cardsCreated", {
+          defaultValue: "{{current}} / {{total}} cards created",
+          current: bulkCreateProgress.current,
+          total: bulkCreateProgress.total
+        })}
       </ProcessingOverlay>}
       {isExporting && <ProcessingOverlay
         isInProcess={isExporting}
-        InProcessMessage="Preparing Export..."
+        InProcessMessage={t("modals.preparingExport", {defaultValue: "Preparing Export..."})}
         onCancel={() => setIsExporting(false)}
       >
-        Processing media (${ankiCards.filter(c => c.audioStatus !== 'done').length} remaining)
+        {t("modals.processingMedia", {
+          defaultValue: "Processing media ({{count}} remaining)",
+          count: ankiCards.filter(c => c.audioStatus !== 'done').length
+        })}
       </ProcessingOverlay>}
 
       {/* Top Part: 3 Columns */}
@@ -859,7 +877,7 @@ const App: React.FC = () => {
                 onSaveProject={handleSaveProject}
                 onLoadProject={handleLoadProject}
                 onOpenSettings={() => setIsSettingsModalOpen(true)}
-                onResetProject={resetProject}
+                onResetProject={handleResetProject}
                 hasProjectData={hasProjectData}
               />
             </div>
@@ -967,7 +985,7 @@ const App: React.FC = () => {
       {notification.visible && (
         <div
           className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-50 bg-slate-700/80 text-slate-200 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 border border-slate-600">
-          "{notification.text.substring(0, 30)}{notification.text.length > 30 ? '...' : ''}" copied!
+          {notification.text.substring(0, 30)}{notification.text.length > 30 ? '...' : ''}
         </div>
       )}
     </div>

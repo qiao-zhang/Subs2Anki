@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {Check, Clock, Download} from 'lucide-react';
 import {formatTimestamp, formatTimeDifference} from '@/services/time.ts';
 import {BTN_BASE, BTN_PRIMARY, BTN_SECONDARY, KBD_STYLE, TIMESTAMP_WRAPPER, TIMESTAMP_TEXT} from '@/services/shared-styles.ts';
+import { useTranslation } from 'react-i18next';
 
 interface TempSubtitleLineControlsProps {
   start: number;
@@ -16,6 +17,7 @@ const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
                                                                              onDownloadAudio,
                                                                              onCommit,
                                                                            }) => {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
 
   return (
@@ -42,7 +44,7 @@ const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
             value={text}
             onChange={(e) => setText(e.target.value)}
             className="flex-1 bg-transparent border-none text-lg text-white placeholder-slate-600 focus:ring-0 focus:outline-none px-2 h-9"
-            placeholder="Type subtitle text..."
+            placeholder={t("modals.addPlaceholder", { defaultValue: "Type subtitle text..." })}
             autoFocus
           />
           <button
@@ -50,15 +52,15 @@ const TempSubtitleLineControls: React.FC<TempSubtitleLineControlsProps> = ({
             className={`${BTN_BASE} h-9 ${BTN_PRIMARY}`}
           >
             <Check size={16}/>
-            Add
+            {t("modals.add", { defaultValue: "Add" })}
             <kbd className={KBD_STYLE}>Enter</kbd>
           </button>
           <button
             onClick={onDownloadAudio}
             className={`${BTN_BASE} h-9 ${BTN_SECONDARY}`}
-            title="Download Audio Clip"
+            title={t("downloadAudio")}
           >
-            <Download size={18}/> Clip Audio
+            <Download size={18}/> {t("downloadAudio")}
           </button>
         </div>
 

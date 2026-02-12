@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 import React, {useRef, forwardRef, useImperativeHandle} from 'react';
 import { compressImage } from '@/services/image-compression.ts';
+import { useTranslation } from 'react-i18next';
 
 interface VideoPlayerProps {
   src: string;
@@ -34,6 +35,7 @@ export interface VideoPlayerHandle {
  * - Displays current subtitle text overlaid on the video.
  */
 const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTimeUpdate, onLoadedMetadata, currentSubtitle}, ref) => {
+  const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -128,7 +130,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTim
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-slate-500">
-          <p>No video loaded</p>
+          <p>{t("modals.noVideoLoaded", { defaultValue: "No video loaded" })}</p>
         </div>
       )}
 

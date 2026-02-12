@@ -1,4 +1,5 @@
 import React, {useEffect} from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ShortcutsCheatSheetModalProps {
   isOpen: boolean;
@@ -6,20 +7,21 @@ interface ShortcutsCheatSheetModalProps {
 }
 
 const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOpen, onClose}) => {
+  const { t } = useTranslation();
   const shortcuts = [
-    {keys: ['/'], description: 'Show/Hide this cheatsheet'},
-    {keys: ['Space'], description: 'Replay the current region'},
-    {keys: ['P'], description: 'Play/Pause'},
-    {keys: ['↑', 'K'], description: 'Previous subtitle line'},
-    {keys: ['↓', 'J'], description: 'Next subtitle line'},
-    {keys: ['H'], description: 'Hide/Unhide the subtitle regions'},
-    {keys: ['V'], description: 'Turn on/off the video-only mode'},
-    {keys: ['C'], description: 'Create Anki card for current subtitle line'},
-    {keys: ['I'], description: 'Toggle status of current subtitle line'},
-    {keys: ['B'], description: 'Break up current subtitle line into 2 new lines'},
-    {keys: ['M'], description: 'Merge selected subtitle lines'},
-    {keys: ['Ctrl + Z', 'U'], description: 'Undo last action'},
-    {keys: ['Ctrl + Y', 'Ctrl + Shift + Z'], description: 'Redo last undone action'},
+    {keys: ['/'], description: t("shortcuts.showHideCheatsheet", { defaultValue: "Show/Hide this cheatsheet" })},
+    {keys: ['Space'], description: t("shortcuts.replayCurrentRegion", { defaultValue: "Replay the current region" })},
+    {keys: ['P'], description: t("shortcuts.playPause", { defaultValue: "Play/Pause" })},
+    {keys: ['↑', 'K'], description: t("shortcuts.previousSubtitle", { defaultValue: "Previous subtitle line" })},
+    {keys: ['↓', 'J'], description: t("shortcuts.nextSubtitle", { defaultValue: "Next subtitle line" })},
+    {keys: ['H'], description: t("shortcuts.hideUnhideRegions", { defaultValue: "Hide/Unhide the subtitle regions" })},
+    {keys: ['V'], description: t("shortcuts.videoOnlyMode", { defaultValue: "Turn on/off the video-only mode" })},
+    {keys: ['C'], description: t("shortcuts.createAnkiCard", { defaultValue: "Create Anki card for current subtitle line" })},
+    {keys: ['I'], description: t("shortcuts.toggleStatus", { defaultValue: "Toggle status of current subtitle line" })},
+    {keys: ['B'], description: t("shortcuts.breakUpLine", { defaultValue: "Break up current subtitle line into 2 new lines" })},
+    {keys: ['M'], description: t("shortcuts.mergeLines", { defaultValue: "Merge selected subtitle lines" })},
+    {keys: ['Ctrl + Z', 'U'], description: t("shortcuts.undoAction", { defaultValue: "Undo last action" })},
+    {keys: ['Ctrl + Y', 'Ctrl + Shift + Z'], description: t("shortcuts.redoAction", { defaultValue: "Redo last undone action" })},
   ];
 
   // 处理ESC键关闭模态框
@@ -51,11 +53,11 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
       >
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-white">Shortcuts Cheatsheet</h2>
+            <h2 className="text-xl font-bold text-white">{t("shortcuts.title", { defaultValue: "Shortcuts Cheatsheet" })}</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-white transition-colors"
-              aria-label="关闭"
+              aria-label={t("modals.close")}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -73,7 +75,7 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
                         {key}
                       </kbd>
                       {keyIndex < item.keys.length - 1 && (
-                        <span className="mx-1 text-gray-500 dark:text-gray-400">or</span>
+                        <span className="mx-1 text-gray-500 dark:text-gray-400">{t("shortcuts.or")}</span>
                       )}
                     </React.Fragment>
                   ))}

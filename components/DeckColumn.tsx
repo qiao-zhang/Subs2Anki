@@ -3,6 +3,7 @@ import {Layers, Link2, Link2Off, Download, CloudUpload, ChevronDown, NotebookPen
 import CardItem from '@/components/CardItem';
 import {AnkiCard} from '@/services/types.ts';
 import TagInput from '@/components/TagInput';
+import { useTranslation } from 'react-i18next';
 
 interface DeckColumnProps {
   cards: AnkiCard[];
@@ -44,6 +45,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  onGlobalTagsChange,
                                                  className = ''
                                                }) => {
+  const { t } = useTranslation();
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [isTagsExpanded, setIsTagsExpanded] = useState<boolean>(false);
 
@@ -56,7 +58,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
       <div className="h-14 flex items-center px-4 border-b border-slate-800 bg-slate-950 select-none">
         <div className="flex items-center gap-2 text-indigo-400">
           <Layers size={20} className="text-indigo-500"/>
-          <span className="text-lg font-bold tracking-tight text-slate-200">Subs2Anki</span>
+          <span className="text-lg font-bold tracking-tight text-slate-200">{t("appTitle")}</span>
         </div>
       </div>
 
@@ -102,7 +104,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
               </div>
             ) : (
               <div className="flex items-center">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Deck ({cards.length})</span>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t("deck")} ({cards.length})</span>
               </div>
             )}
           </div>
@@ -121,7 +123,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                           key={index}>{tag}</span>
                   ))}
                   {globalTags.length == 0 && (
-                    <span className="text-slate-500 text-xs">No tags specified</span>
+                    <span className="text-slate-500 text-xs">{t("modals.noTagsSpecified", { defaultValue: "No tags specified" })}</span>
                   )}
                 </div>
               )}
@@ -130,7 +132,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
               onClick={() => setIsTagsExpanded(!isTagsExpanded)}
               className="text-xs text-slate-500 hover:text-slate-300 transition"
             >
-              {isTagsExpanded ? 'Collapse' : 'Edit'}
+              {isTagsExpanded ? t("modals.collapse", { defaultValue: "Collapse" }) : t("modals.edit", { defaultValue: "Edit" })}
             </button>
           </div>
 
@@ -139,7 +141,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
               <TagInput
                 tags={globalTags}
                 onTagsChange={onGlobalTagsChange}
-                placeholder="Add global tags..."
+                placeholder={t("modals.addGlobalTags", { defaultValue: "Add global tags..." })}
               />
             </div>
           )}
@@ -155,7 +157,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                   ? 'text-green-400 hover:bg-green-900/50 hover:text-green-300'
                   : 'text-red-400 hover:bg-red-900/50  hover:text-red-300'
               }`}
-              title={isConnected ? "Connected - Click to change settings" : "Disconnected - Click to change settings"}
+              title={isConnected ? t("modals.connectedClickToChange", { defaultValue: "Connected - Click to change settings" }) : t("modals.disconnectedClickToChange", { defaultValue: "Disconnected - Click to change settings" })}
             >
               {isConnected ?
                 <Link2 size={14} className="text-green-400"/> :
@@ -175,7 +177,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
           <button
             onClick={onOpenTemplateSettings}
             className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition"
-            title="Template Settings"
+            title={t("templateEditor")}
           >
             <NotebookPen size={14}/>
           </button>
@@ -187,7 +189,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
               cards.some(card => card.syncStatus === 'syncing') ||
               cards.some(card => card.audioStatus !== 'done')}
             className="p-1.5 hover:bg-indigo-900/50 rounded text-indigo-400 hover:text-indigo-300 transition disabled:opacity-50 disabled:hover:bg-transparent disabled:text-slate-600"
-            title={!isConnected ? "Not connected to Anki" : "Sync to Anki"}
+            title={!isConnected ? t("modals.notConnectedToAnki", { defaultValue: "Not connected to Anki" }) : t("syncToAnki")}
           >
             <CloudUpload size={16}/>
           </button>
@@ -195,7 +197,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
             onClick={onDeleteSynced}
             disabled={cards.filter(card => card.syncStatus === 'synced').length === 0}
             className="p-1.5 hover:bg-red-900/50 rounded text-red-400 hover:text-red-300 transition disabled:opacity-50 disabled:hover:bg-transparent disabled:text-slate-600"
-            title="Delete synced cards"
+            title={t("deleteSyncedCards")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -211,10 +213,10 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
             onClick={onExport}
             disabled={cards.length === 0}
             className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition disabled:opacity-50 disabled:bg-slate-700 flex items-center gap-1"
-            title="Export .apkg"
+            title={t("exportToAnki")}
           >
             <Download size={14}/>
-            <span className="text-xs">Export .apkg</span>
+            <span className="text-xs">{t("exportApkg")}</span>
           </button>
         </div>
       </div>
@@ -222,7 +224,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
       {/* Deck List */}
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
         {cards.length === 0 ? (
-          <div className="text-center py-10 text-slate-600 text-xs">No cards yet</div>
+          <div className="text-center py-10 text-slate-600 text-xs">{t("modals.noCardsYet", { defaultValue: "No cards yet" })}</div>
         ) : (
           cards.map(card => (
             <CardItem

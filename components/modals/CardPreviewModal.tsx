@@ -3,6 +3,7 @@ import {X, Loader2} from 'lucide-react';
 import {AnkiCard, AnkiNoteType} from '@/services/types.ts';
 import {useAppStore} from '@/services/store.ts';
 import {getMedia} from '@/services/db.ts';
+import { useTranslation } from 'react-i18next';
 
 interface CardPreviewModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface CardPreviewModalProps {
 }
 
 const CardPreviewModal: React.FC<CardPreviewModalProps> = ({isOpen, card, onClose}) => {
+  const { t } = useTranslation();
   const ankiConfig = useAppStore(state => state.ankiConfig);
 
   // Loaded Media State
@@ -86,10 +88,10 @@ const CardPreviewModal: React.FC<CardPreviewModalProps> = ({isOpen, card, onClos
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800">
           <div className="flex items-center gap-4">
-            <h2 className="text-lg font-bold text-white">Card Preview</h2>
+            <h2 className="text-lg font-bold text-white">{t("cardPreview")}</h2>
             <div className="flex flex-col gap-1 text-xs text-slate-400">
               {(card.audioStatus === 'processing' || card.audioStatus === 'pending') && (
-                <span className="flex items-center gap-1 text-indigo-400"><Loader2 size={12} className="animate-spin"/> Audio Processing...</span>
+                <span className="flex items-center gap-1 text-indigo-400"><Loader2 size={12} className="animate-spin"/> {t("modals.audioProcessing", { defaultValue: "Audio Processing..." })}</span>
               )}
             </div>
           </div>
@@ -111,13 +113,13 @@ const CardPreviewModal: React.FC<CardPreviewModalProps> = ({isOpen, card, onClos
               onClick={() => setIsBackSide(false)}
               className={`relative z-10 px-8 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md ${!isBackSide ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
             >
-              Front
+              {t("modals.front", { defaultValue: "Front" })}
             </button>
             <button
               onClick={() => setIsBackSide(true)}
               className={`relative z-10 px-8 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md ${isBackSide ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
             >
-              Back
+              {t("modals.back", { defaultValue: "Back" })}
             </button>
           </div>
         </div>

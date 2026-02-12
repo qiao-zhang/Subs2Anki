@@ -17,6 +17,7 @@ import {
 import {parseSubtitles} from '@/services/parser.ts';
 import {SubtitleLine} from '@/services/types.ts';
 import {formatTimestamp} from '@/services/time.ts';
+import { useTranslation } from 'react-i18next';
 
 interface SubtitleColumnProps {
   subtitleLines: SubtitleLine[];
@@ -53,6 +54,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          bulkCreateLimit,
                                                          className = ''
                                                        }) => {
+  const { t } = useTranslation();
   const MIN_SHIFT_MS = 10;
   const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
   const [shiftAmount, setShiftAmount] = useState(MIN_SHIFT_MS);
@@ -311,12 +313,12 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       <div className="flex flex-col px-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
         <div className="h-10 flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-400 text-xs tracking-wider">
-            <FileText size={16}/> <span>{subtitleFileName || 'Subtitle'}</span>
+            <FileText size={16}/> <span>{subtitleFileName || t("subtitles")}</span>
           </div>
 
           {subtitleLines.length <= 0 && <div className="flex items-center gap-1">
             <button onClick={handleOpenSubtitle} className="p-2 hover:bg-slate-700 rounded text-indigo-400 transition"
-                    title="Load Subtitles">
+                    title={t("uploadSubtitles")}>
               <FolderOpen size={16}/>
             </button>
             <input ref={subtitleInputRef} type="file" accept=".srt,.vtt" onChange={handleSubtitleInputChange}
@@ -333,26 +335,26 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                 <button
                   onClick={() => setIsShiftMenuOpen(!isShiftMenuOpen)}
                   className={`w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded ${isShiftMenuOpen ? 'bg-slate-700' : ''}`}
-                  title="Global Time Shift"
+                  title={t("modals.globalTimeShift", { defaultValue: "Global Time Shift" })}
                 >
-                  <MoveHorizontal size={16}/> Global Shift
+                  <MoveHorizontal size={16}/> {t("modals.globalShift", { defaultValue: "Global Shift" })}
                 </button>
 
                 <div className="relative">
                   {canSave && <button onClick={onSave}
                                       className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded">
-                    <Save size={16}/> Save
+                    <Save size={16}/> {t("modals.save", { defaultValue: "Save" })}
                   </button>}
                   {canSave || <button onClick={onDownload}
                                       className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded">
-                    <Download size={16}/> Download
+                    <Download size={16}/> {t("modals.download", { defaultValue: "Download" })}
                   </button>}
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={handleOpenSubtitle}
                         className="p-2 hover:bg-slate-700 rounded text-indigo-400 transition"
-                        title="Load Subtitles">
+                        title={t("uploadSubtitles")}>
                   <FolderOpen size={16}/>
                 </button>
                 <input ref={subtitleInputRef} type="file" accept=".srt,.vtt" onChange={handleSubtitleInputChange}
@@ -400,7 +402,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               type="text"
               value={searchTerm}
               onChange={handleSearch}
-              placeholder="Search subtitles..."
+              placeholder={t("modals.searchSubtitles", { defaultValue: "Search subtitles..." })}
               className="w-full pl-8 pr-8 py-1 text-xs bg-slate-800 border border-slate-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
             {searchTerm && (
@@ -418,7 +420,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               <button
                 onClick={goToPrevSearchResult}
                 className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-slate-200"
-                title="Previous result"
+                title={t("modals.previousResult", { defaultValue: "Previous result" })}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -431,7 +433,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               <button
                 onClick={goToNextSearchResult}
                 className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-slate-200"
-                title="Next result"
+                title={t("modals.nextResult", { defaultValue: "Next result" })}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -453,7 +455,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               onChange={() => handleStatusFilterChange('normal')}
               className="rounded text-indigo-600 focus:ring-indigo-500"
             />
-            <span className="text-slate-400">Normal ({subtitleCounts.normal})</span>
+            <span className="text-slate-400">{t("status.normal")} ({subtitleCounts.normal})</span>
           </label>
           <label className="flex items-center gap-1">
             <input
@@ -462,7 +464,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               onChange={() => handleStatusFilterChange('locked')}
               className="rounded text-indigo-600 focus:ring-indigo-500"
             />
-            <span className="text-red-400">Locked ({subtitleCounts.locked})</span>
+            <span className="text-red-400">{t("status.locked")} ({subtitleCounts.locked})</span>
           </label>
           <label className="flex items-center gap-1">
             <input
@@ -471,7 +473,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               onChange={() => handleStatusFilterChange('ignored')}
               className="rounded text-indigo-600 focus:ring-indigo-500"
             />
-            <span className="text-green-400">Ignored ({subtitleCounts.ignored})</span>
+            <span className="text-green-400">{t("status.ignored")} ({subtitleCounts.ignored})</span>
           </label>
         </div>
       </div>
@@ -487,11 +489,11 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                 ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}
-            title={subtitleCounts.normal === 0 ? 'No normal subtitles to create cards from'
-              : 'Create cards for all normal subtitles'}
+            title={subtitleCounts.normal === 0 ? t("modals.noNormalSubtitlesToCreateCardsFrom", { defaultValue: "No normal subtitles to create cards from" })
+              : t("modals.createCardsForAllNormalSubtitles", { defaultValue: "Create cards for all normal subtitles" })}
           >
             <PlusCircle size={14}/>
-            Create cards for the next {subtitleCounts.normal > bulkCreateLimit ? bulkCreateLimit : subtitleCounts.normal} normal lines
+            {t("modals.createCardsForNext", { defaultValue: "Create cards for the next" })} {subtitleCounts.normal > bulkCreateLimit ? bulkCreateLimit : subtitleCounts.normal} {t("status.normal")} {t("modals.lines", { defaultValue: "lines" })}
           </button>
         </div>
       )}
@@ -500,7 +502,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         {filteredSubtitleLines.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs">
             <AlertCircle size={24} className="mb-2 opacity-50"/>
-            {subtitleLines.length === 0 ? 'No content' : 'No visible subtitles'}
+            {subtitleLines.length === 0 ? t("modals.noContent", { defaultValue: "No content" }) : t("modals.noVisibleSubtitles", { defaultValue: "No visible subtitles" })}
           </div>
         ) : (
           <Virtuoso

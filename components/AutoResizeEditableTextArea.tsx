@@ -1,4 +1,5 @@
 import React, {useState, useRef, useEffect} from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface AutoResizeEditableTextareaProps {
   initialValue: string | null;
@@ -19,6 +20,7 @@ const AutoResizeEditableTextarea: React.FC<AutoResizeEditableTextareaProps> = ({
                                                                                  textareaClassName = '',
                                                                                  minHeight = 40,
                                                                                }) => {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -72,7 +74,7 @@ const AutoResizeEditableTextarea: React.FC<AutoResizeEditableTextareaProps> = ({
             lineHeight: '1.5'
           }}
         >
-          {value || placeholder || 'Double click to edit'}
+          {value || placeholder || t("modals.doubleClickToEdit", { defaultValue: "Double click to edit" })}
         </div>
       ) : (
         <textarea

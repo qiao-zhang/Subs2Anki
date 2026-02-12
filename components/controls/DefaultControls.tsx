@@ -2,6 +2,7 @@ import React from 'react';
 import {Video as VideoIcon, Camera} from 'lucide-react';
 import {formatTimestamp} from '@/services/time.ts';
 import {BTN_BASE, BTN_SECONDARY} from '@/services/shared-styles.ts';
+import { useTranslation } from 'react-i18next';
 
 interface DefaultControlsProps {
   videoName: string;
@@ -16,6 +17,7 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
                                                            onVideoUpload,
                                                            onCaptureFrame,
                                                          }) => {
+  const { t } = useTranslation();
 
   return (
     <div className="flex items-center justify-between w-full relative h-[42px]">
@@ -24,7 +26,7 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
       <div className="flex items-center gap-2 z-10">
         <label className={`${BTN_BASE} h-9 ${BTN_SECONDARY} cursor-pointer max-w-[240px]`}>
           <VideoIcon size={16} className="shrink-0"/>
-          <span className="truncate">{videoName || "Select Video"}</span>
+          <span className="truncate">{videoName || t("uploadVideo")}</span>
           <input type="file" accept="video/*" onChange={onVideoUpload} className="hidden"/>
         </label>
       </div>
@@ -42,10 +44,10 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
         <button
           onClick={onCaptureFrame}
           className={`${BTN_BASE} h-9 ${BTN_SECONDARY} px-2.5 ${videoName === '' ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title="Capture Snapshot"
+          title={t("captureFrame")}
           disabled={videoName === ''}
         >
-          <Camera size={16}/> Capture Frame
+          <Camera size={16}/> {t("captureFrame")}
         </button>
       </div>
 

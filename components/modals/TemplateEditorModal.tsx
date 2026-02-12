@@ -16,6 +16,7 @@ import {
   SortAsc,
   Subtitles
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface TemplateEditorModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ const SOURCES: { type: AnkiFieldSource; label: string; icon: React.ReactNode; co
 ];
 
 const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClose, config, onSave}) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'fields' | 'templates' | 'styling'>('fields');
   const [localConfig, setLocalConfig] = useState<AnkiNoteType>(config);
   const [draggingType, setDraggingType] = useState<AnkiFieldSource | null>(null);
@@ -116,7 +118,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
         <div className="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800">
           <h2 className="text-xl font-bold flex items-center gap-2 text-white">
             <Layout className="text-indigo-400" size={24}/>
-            Note Type Settings
+            {t("modals.noteTypeSettings", { defaultValue: "Note Type Settings" })}
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition">
             <X size={24}/>
@@ -129,19 +131,19 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
             onClick={() => setActiveTab('fields')}
             className={`px-6 py-3 text-sm font-medium flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'fields' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
           >
-            <Type size={16}/> Fields
+            <Type size={16}/> {t("modals.fields", { defaultValue: "Fields" })}
           </button>
           <button
             onClick={() => setActiveTab('templates')}
             className={`px-6 py-3 text-sm font-medium flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'templates' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
           >
-            <Layout size={16}/> Card Types
+            <Layout size={16}/> {t("modals.cardTypes", { defaultValue: "Card Types" })}
           </button>
           <button
             onClick={() => setActiveTab('styling')}
             className={`px-6 py-3 text-sm font-medium flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'styling' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
           >
-            <Palette size={16}/> Styling
+            <Palette size={16}/> {t("modals.styling", { defaultValue: "Styling" })}
           </button>
         </div>
 
@@ -153,7 +155,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
             <div className="flex flex-col h-full">
               <div className="flex-1 space-y-4 max-w-3xl mx-auto w-full overflow-y-auto pb-4">
                 <p className="text-sm text-slate-400 mb-2">
-                  Define your fields and map content by dragging the source blocks from the bottom onto the fields.
+                  {t("modals.defineFieldsAndMapContent", { defaultValue: "Define your fields and map content by dragging the source blocks from the bottom onto the fields." })}
                 </p>
 
                 {localConfig.fields.map((field, idx) => (
@@ -162,20 +164,19 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
 
                     {/* Field Name Input */}
                     <div className="flex-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Field Name</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">{t("modals.fieldName", { defaultValue: "Field Name" })}</label>
                       <input
                         type="text"
                         value={field.name}
                         onChange={(e) => handleFieldNameChange(idx, e.target.value)}
                         className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                        placeholder="Field Name"
+                        placeholder={t("modals.fieldName", { defaultValue: "Field Name" })}
                       />
                     </div>
 
                     {/* Mapping Drop Zone */}
                     <div className="flex-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Mapped
-                        Content</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">{t("modals.mappedContent", { defaultValue: "Mapped Content" })}</label>
                       <div
                         onDragOver={onDragOver}
                         onDrop={(e) => onDrop(e, idx)}
@@ -201,7 +202,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
                           </div>
                         ) : (
                           <span
-                            className="text-slate-600 text-xs italic pl-2 pointer-events-none">Drop content here</span>
+                            className="text-slate-600 text-xs italic pl-2 pointer-events-none">{t("modals.dropContentHere", { defaultValue: "Drop content here" })}</span>
                         )}
                       </div>
                     </div>
@@ -210,7 +211,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
                       onClick={() => handleRemoveField(idx)}
                       disabled={localConfig.fields.length <= 1}
                       className="mt-6 p-2 text-slate-500 hover:text-red-400 disabled:opacity-30 transition-colors"
-                      title="Remove Field"
+                      title={t("modals.removeField", { defaultValue: "Remove Field" })}
                     >
                       <Trash2 size={18}/>
                     </button>
@@ -221,14 +222,14 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
                   onClick={handleAddField}
                   className="mt-2 flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 font-semibold px-2"
                 >
-                  <Plus size={16}/> Add Field
+                  <Plus size={16}/> {t("modals.addField", { defaultValue: "Add Field" })}
                 </button>
               </div>
 
               {/* Source Palette */}
               <div className="mt-4 pt-4 border-t border-slate-700">
                 <h4 className="text-xs uppercase font-bold text-slate-400 mb-3 flex items-center gap-2">
-                  <GripVertical size={14}/> Draggable Content Sources
+                  <GripVertical size={14}/> {t("modals.draggableContentSources", { defaultValue: "Draggable Content Sources" })}
                 </h4>
                 <div className="flex flex-wrap gap-3 select-none">
                   {SOURCES.map((src) => (
@@ -239,7 +240,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-white shadow cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${src.color}`}
                     >
                       {src.icon}
-                      {src.label}
+                      {t(`modals.${src.type.toLowerCase()}`, { defaultValue: src.label })}
                     </div>
                   ))}
                 </div>
@@ -254,7 +255,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
                 <div key={idx} className="flex flex-col gap-4 flex-1">
                   <div className="grid grid-cols-2 gap-4 h-full">
                     <div className="flex flex-col gap-2 h-full">
-                      <label className="text-xs uppercase font-bold text-slate-500">Front Template</label>
+                      <label className="text-xs uppercase font-bold text-slate-500">{t("modals.frontTemplate", { defaultValue: "Front Template" })}</label>
                       <textarea
                         value={tpl.Front}
                         onChange={(e) => handleTemplateChange(idx, 'Front', e.target.value)}
@@ -263,7 +264,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
                       />
                     </div>
                     <div className="flex flex-col gap-2 h-full">
-                      <label className="text-xs uppercase font-bold text-slate-500">Back Template</label>
+                      <label className="text-xs uppercase font-bold text-slate-500">{t("modals.backTemplate", { defaultValue: "Back Template" })}</label>
                       <textarea
                         value={tpl.Back}
                         onChange={(e) => handleTemplateChange(idx, 'Back', e.target.value)}
@@ -273,7 +274,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
                     </div>
                   </div>
                   <div className="bg-slate-800/50 p-3 rounded border border-slate-700 text-xs text-slate-400">
-                    Tip: Use <code className="text-indigo-400">{'{{Field Name}}'}</code> to insert fields.
+                    <span dangerouslySetInnerHTML={{__html: t("modals.useFieldTip", { defaultValue: "Tip: Use {{Field Name}} to insert fields." }).replace('{{Field Name}}', '<code class=\"text-indigo-400\">{{Field Name}}</code>') }} />
                   </div>
                 </div>
               ))}
@@ -283,7 +284,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
           {/* STYLING TAB */}
           {activeTab === 'styling' && (
             <div className="flex flex-col h-full gap-2">
-              <label className="text-xs uppercase font-bold text-slate-500">Card Styling (CSS)</label>
+              <label className="text-xs uppercase font-bold text-slate-500">{t("modals.cardStyling", { defaultValue: "Card Styling (CSS)" })}</label>
               <textarea
                 value={localConfig.css}
                 onChange={(e) => setLocalConfig(prev => ({...prev, css: e.target.value}))}
@@ -301,13 +302,13 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
             onClick={onClose}
             className="px-4 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 transition"
           >
-            Cancel
+            {t("modals.cancel")}
           </button>
           <button
             onClick={handleSave}
             className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20"
           >
-            Save & Close
+            {t("modals.saveAndClose", { defaultValue: "Save & Close" })}
           </button>
         </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface EditableProjectNameProps {
   projectName: string;
@@ -6,11 +7,12 @@ interface EditableProjectNameProps {
   className?: string;
 }
 
-const EditableProjectName: React.FC<EditableProjectNameProps> = ({ 
-  projectName, 
-  onProjectNameChange, 
-  className = '' 
+const EditableProjectName: React.FC<EditableProjectNameProps> = ({
+  projectName,
+  onProjectNameChange,
+  className = ''
 }) => {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(projectName);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -71,9 +73,9 @@ const EditableProjectName: React.FC<EditableProjectNameProps> = ({
         <span
           onDoubleClick={handleDoubleClick}
           className="cursor-pointer hover:bg-slate-800/50 px-2 py-1 rounded text-sm transition-colors"
-          title="双击编辑项目名称"
+          title={t("modals.doubleClickEditProjectName", { defaultValue: "双击编辑项目名称" })}
         >
-          {projectName || '未命名项目'}
+          {projectName || t("modals.unnamedProject", { defaultValue: "未命名项目" })}
         </span>
       )}
     </div>

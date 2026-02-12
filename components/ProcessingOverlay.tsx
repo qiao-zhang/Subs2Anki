@@ -1,5 +1,6 @@
 import React from 'react';
 import {Loader2} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ProcessingOverlayProps {
   isInProcess: boolean;
@@ -11,11 +12,12 @@ interface ProcessingOverlayProps {
 
 const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
                                                                isInProcess,
-                                                               InProcessMessage = 'In Process',
+                                                               InProcessMessage,
                                                                Progress,
                                                                onCancel,
                                                                children,
                                                              }) => {
+  const { t } = useTranslation();
   if (!isInProcess) {
     return null;
   }
@@ -26,18 +28,18 @@ const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
       <Loader2 size={48} className="text-indigo-500 animate-spin mb-4"/>
 
       <div className="text-xl font-bold text-white">
-        {InProcessMessage}
+        {InProcessMessage || t("modals.inProcess", { defaultValue: "In Process" })}
       </div>
       <div className="text-sm text-slate-400 mt-2">
         {children ? children :
-          Progress ? `Item ${Progress.current} of ${Progress.total}` : 'Processing...'}
+          Progress ? t("modals.itemOfTotal", { defaultValue: "Item {{current}} of {{total}}", current: Progress.current, total: Progress.total }) : t("modals.processing", { defaultValue: "Processing..." })}
       </div>
       {onCancel && (
         <button
           onClick={onCancel}
           className="mt-6 px-4 py-2 border border-slate-600 rounded text-slate-400 hover:bg-slate-800 transition"
         >
-          Cancel
+          {t("modals.cancel")}
         </button>
       )}
     </div>
