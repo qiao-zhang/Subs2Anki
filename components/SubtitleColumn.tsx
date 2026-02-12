@@ -493,7 +493,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               : t("modals.createCardsForAllNormalSubtitles", { defaultValue: "Create cards for all normal subtitles" })}
           >
             <PlusCircle size={14}/>
-            {t("modals.createCardsForNext", { defaultValue: "Create cards for the next" })} {subtitleCounts.normal > bulkCreateLimit ? bulkCreateLimit : subtitleCounts.normal} {t("status.normal")} {t("modals.lines", { defaultValue: "lines" })}
+            {t("modals.bulkCreateBtnContent", { defaultValue: "Create cards for the next {{num}} normal subtitle lines", num: subtitleCounts.normal > bulkCreateLimit ? bulkCreateLimit : subtitleCounts.normal })}
           </button>
         </div>
       )}

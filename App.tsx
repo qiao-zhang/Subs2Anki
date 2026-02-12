@@ -956,7 +956,7 @@ const App: React.FC = () => {
 
       {/* Bottom Part: Full-width Waveform */}
       <div
-        className={`h-48 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative ${isVideoOnly ? 'hidden' : ''}`}>
+        className={`h-40 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative ${isVideoOnly ? 'hidden' : ''}`}>
         <WaveformDisplay
           videoElement={videoPlayerRef.current?.getVideoElement() || null}
           videoSrc={videoSrc}
