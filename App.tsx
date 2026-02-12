@@ -800,6 +800,12 @@ const App: React.FC = () => {
     setSelectedDeck('Subs2Anki Export'); // Default deck name when project is reset
     setGlobalTags([]);
 
+    // Reset any temporary modal states
+    setIsTemplateModalOpen(false);
+    setIsSettingsModalOpen(false);
+    setPreviewCard(null);
+    setIsShortcutsModalOpen(false);
+
     showNotification(t("notifications.projectReset", {
       defaultValue: "Project has been reset"}));
   };

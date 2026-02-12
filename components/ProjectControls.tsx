@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { Save, FolderOpen, Settings, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,13 +18,21 @@ const ProjectControls: React.FC<ProjectControlsProps> = ({
   hasProjectData
 }) => {
   const { t } = useTranslation();
-  
+
+  const [inputKey, setInputKey] = useState<number>(Date.now());
+
+  const handleResetProject = (): void => {
+    setInputKey(Date.now());
+    onResetProject();
+  }
+
   return (
     <div className="flex gap-1 ml-auto">
       <input
         type="file"
         id="load-project-input"
         className="hidden"
+        key={inputKey}
         accept=".json,.subs2anki"
         onChange={onLoadProject}
       />
@@ -52,7 +60,7 @@ const ProjectControls: React.FC<ProjectControlsProps> = ({
       </button>
       {hasProjectData && (
         <button
-          onClick={onResetProject}
+          onClick={handleResetProject}
           className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition"
           title={t("resetProject")}
         >
