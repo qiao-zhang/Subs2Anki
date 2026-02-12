@@ -38,7 +38,8 @@ const App: React.FC = () => {
     setProjectName,
     subtitleLines, subtitleFileName, fileHandle,
     setSubtitles, shiftSubtitles,
-    addSubtitleLine, removeSubtitle, getSubtitleLine, breakUpSubtitleLine,
+    addSubtitleLine, removeSubtitle, getSubtitleLine,
+    mergeSubtitleLines, breakUpSubtitleLine,
     updateSubtitleText, toggleSubtitleLineStatus, setSubtitleLineStatus,
     undo, redo, canUndo, canRedo,
     ankiCards, addCard, deleteCard,
@@ -166,6 +167,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handleMergeWithNext = () => {
+    if (activeSubtitleLineId === null) return;
+    const currentLine = getSubtitleLine(activeSubtitleLineId);
+    if (!currentLine) return;
+    const nextLine = subtitleLines.find(s => s.startTime > currentLine.startTime);
+    mergeSubtitleLines([activeSubtitleLineId, nextLine.id]);
+  };
+
   useKeyboardShortcuts({
     setActiveSubtitleLineId,
     setTempSubtitleLine,
@@ -216,6 +225,7 @@ const App: React.FC = () => {
     onOpenOrCloseShortcutsModal: () => setIsShortcutsModalOpen(prev => !prev),
     onOpenOrCloseSettings: () => setIsSettingsModalOpen(prev => !prev),
     onBreakUp: handleBreakUp,
+    onMergeWithNext: handleMergeWithNext,
     onRedo: handleRedo,
     onUndo: handleUndo,
   });
@@ -376,7 +386,8 @@ const App: React.FC = () => {
         // 显示复制成功的提示
         showNotification(t("notification.copiedToClipboard", {
           defaultValue: '"{{text}}" copied to clipboard',
-          text: sub.text}));
+          text: sub.text
+        }));
       }).catch(err => {
         console.error('Cannot copy text:', err);
       });
@@ -683,7 +694,8 @@ const App: React.FC = () => {
       }
 
       showNotification(t("notifications.projectLoaded", {
-        defaultValue: "Project loaded successfully!"}));
+        defaultValue: "Project loaded successfully!"
+      }));
     } catch (error) {
       console.error("Failed to load project:", error);
       alert("Failed to load project: " + (error as Error).message);
@@ -807,7 +819,8 @@ const App: React.FC = () => {
     setIsShortcutsModalOpen(false);
 
     showNotification(t("notifications.projectReset", {
-      defaultValue: "Project has been reset"}));
+      defaultValue: "Project has been reset"
+    }));
   };
 
   return (

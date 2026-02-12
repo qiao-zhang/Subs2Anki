@@ -162,6 +162,7 @@
     "toggleStatus": "切换当前字幕行的状态",
     "breakUpLine": "将当前字幕行拆分为2个新行",
     "mergeLines": "合并选中的字幕行",
+    "mergeWithNext": "合并当前和下一条字幕行",
     "undoAction": "撤销上一操作",
     "redoAction": "重做上一撤销的操作"
   },

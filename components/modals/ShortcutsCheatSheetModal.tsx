@@ -16,10 +16,11 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
     {keys: ['↓', 'J'], description: t("shortcuts.nextSubtitle", { defaultValue: "Next subtitle line" })},
     {keys: ['H'], description: t("shortcuts.hideUnhideRegions", { defaultValue: "Hide/Unhide the subtitle regions" })},
     {keys: ['V'], description: t("shortcuts.videoOnlyMode", { defaultValue: "Turn on/off the video-only mode" })},
-    {keys: ['C'], description: t("shortcuts.createAnkiCard", { defaultValue: "Create Anki card for current subtitle line" })},
+    {keys: ['O'], description: t("shortcuts.createAnkiCard", { defaultValue: "Create Anki card for current subtitle line" })},
     {keys: ['I'], description: t("shortcuts.toggleStatus", { defaultValue: "Toggle status of current subtitle line" })},
     {keys: ['B'], description: t("shortcuts.breakUpLine", { defaultValue: "Break up current subtitle line into 2 new lines" })},
     {keys: ['M'], description: t("shortcuts.mergeLines", { defaultValue: "Merge selected subtitle lines" })},
+    {keys: ['N'], description: t("shortcuts.mergeWithNext", { defaultValue: "Merge current subtitle line with the next one" })},
     {keys: ['Ctrl + Z', 'U'], description: t("shortcuts.undoAction", { defaultValue: "Undo last action" })},
     {keys: ['Ctrl + Y', 'Ctrl + Shift + Z'], description: t("shortcuts.redoAction", { defaultValue: "Redo last undone action" })},
   ];

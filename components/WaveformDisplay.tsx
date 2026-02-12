@@ -294,8 +294,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
   }, [zoom, isReady]);
 
-  // Function to merge selected regions
-  const mergeSelectedRegions = () => {
+  const handleMergeSelectedRegions = () => {
     if (!wsRegions.current || selectedRegionsRef.current.size < 2) return;
 
     const selectedRegionObjects = Array.from(selectedRegionsRef.current)
@@ -405,7 +404,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   }, [subtitleLines, isReady, regionsHidden]);
 
-  useMergeKeyboardShortcut(mergeSelectedRegions);
+  useMergeKeyboardShortcut(handleMergeSelectedRegions);
 
   const handleZoomIn = () => setZoom((prev: number) => Math.min(prev + 20, 500));
   const handleZoomOut = () => setZoom((prev: number) => Math.max(prev - 20, 10));

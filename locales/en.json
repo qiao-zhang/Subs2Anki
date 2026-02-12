@@ -165,6 +165,7 @@
     "toggleStatus": "Toggle status of current subtitle line",
     "breakUpLine": "Break up current subtitle line into 2 new lines",
     "mergeLines": "Merge selected subtitle lines",
+    "mergeWithNext": "Merge current subtitle line with the next one",
     "undoAction": "Undo last action",
     "redoAction": "Redo last undone action"
   },

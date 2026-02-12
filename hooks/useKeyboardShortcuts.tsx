@@ -5,9 +5,10 @@ export const useMergeKeyboardShortcut = (onMerge: () => void) => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
 
-      if (e.key.toLowerCase() === 'm') {
+      if (e.code === 'KeyM') {
         e.preventDefault();
         onMerge();
+        return;
       }
     };
 
@@ -30,6 +31,7 @@ interface KeyboardShortcutsOptions {
   onOpenOrCloseShortcutsModal: () => void;
   onOpenOrCloseSettings: () => void;
   onBreakUp: () => void;
+  onMergeWithNext: () => void;
   onUndo: () => void;
   onRedo: () => void;
 }
@@ -49,6 +51,7 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
     onOpenOrCloseShortcutsModal,
     onOpenOrCloseSettings,
     onBreakUp,
+    onMergeWithNext,
     onUndo,
     onRedo,
   } = options;
@@ -107,7 +110,7 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
           e.preventDefault();
           onJumpNext();
           break;
-        case 'KeyC':
+        case 'KeyO':
           e.preventDefault();
           onCreateCard();
           break;
@@ -126,6 +129,10 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
         case 'KeyB':
           e.preventDefault();
           onBreakUp();
+          break;
+        case 'KeyN':
+          e.preventDefault();
+          onMergeWithNext();
           break;
         case 'Semicolon':
           e.preventDefault();
