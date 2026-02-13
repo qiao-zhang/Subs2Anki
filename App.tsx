@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect, useCallback} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
 import {SubtitleLine, AnkiCard} from './services/types.ts';
 import {serializeSubtitles} from './services/parser.ts';
@@ -118,8 +118,9 @@ const App: React.FC = () => {
   );
 
   // --- Logic Helpers ---
-  const jumpToSubtitleLine = useCallback((direction: 'next' | 'prev') => {
+  const jumpToSubtitleLine = (direction: 'next' | 'prev') => {
     if (subtitleLines.length === 0) return;
+    if (activeSubtitleLineId === null) return;
 
     let nextIndex: number;
     const currentIndex = subtitleLines.findIndex(s => s.id === activeSubtitleLineId);
@@ -144,9 +145,10 @@ const App: React.FC = () => {
 
     const sub = subtitleLines[nextIndex];
     if (sub) {
+      setActiveSubtitleLineId(sub.id);
       playTimeSpan(sub.startTime, sub.endTime);
     }
-  }, [subtitleLines, activeSubtitleLineId, currentTime]);
+  };
 
   // Undo/Redo handler
   const handleUndo = () => {
