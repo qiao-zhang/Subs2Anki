@@ -1,6 +1,6 @@
 [package]
 name = "Subs2Anki"
-version = "1.3.0"
+version = "1.3.1"
 description = "Subs2Anki is a video subtitle processing tool that provides subtitle processing and flashcard creation solutions, designed to help language learners extract useful language materials from video content and automatically generate Anki flashcards."
 authors = ["qiao.zhang.2015@qq.com"]
 license = ""

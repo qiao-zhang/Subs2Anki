@@ -1,12 +1,16 @@
 {
   "name": "subs2anki",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.3.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync-version": "node scripts/sync-version.js",
+    "postversion": "npm run sync-version",
+    "tauri:build": "npm run sync-version && npx tauri build",
+    "tauri:dev": "npm run sync-version && npx tauri dev"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.10",
