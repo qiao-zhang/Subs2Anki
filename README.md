@@ -87,20 +87,22 @@ npm run build
 
 | Shortcut | Function |
 |----------|----------|
-| Space | Replay current segment/Play/Pause |
-| P | Play/Pause |
-| H | Show/Hide subtitle area |
+| / / Tab | Show/Hide shortcut hints |
+| Space | Replay current segment |
+| P / Q | Play/Pause |
+| J / D | Previous subtitle line |
+| K / F | Next subtitle line |
+| H | Show/Hide subtitle regions |
 | V | Toggle video-only mode |
-| ↑ / K | Previous subtitle line |
-| ↓ / J | Next subtitle line |
-| O | Create card for current subtitle line |
-| I | Toggle current subtitle line status (normal/ignore/lock) |
-| B | Split current subtitle line into two lines |
-| N | Merge current subtitle line with next subtitle line (no mouse selection needed) |
-| M | Merge selected subtitle lines (select multiple lines then press M) |
-| / | Show/Hide shortcut hints |
-| Ctrl + Z / U | Undo operation |
-| Ctrl + Y / Ctrl + Shift + Z | Redo operation |
+| C / N | Create card for current subtitle line |
+| I / E | Toggle current subtitle line status (forward) |
+| O / W | Toggle current subtitle line status (backward) |
+| B / S | Split current subtitle line into two lines |
+| A / ; | Merge current subtitle line with next subtitle line |
+| X / , | Delete current subtitle line |
+| U / Z | Undo operation |
+| R / Y | Redo operation |
+| . / Escape | Open/close settings modal |
 
 ## Tech Stack
 
