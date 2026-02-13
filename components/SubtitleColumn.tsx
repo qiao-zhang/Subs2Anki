@@ -334,7 +334,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                 {/* Global Shift Button - placed to the left of Save button */}
                 <button
                   onClick={() => setIsShiftMenuOpen(!isShiftMenuOpen)}
-                  className={`w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded ${isShiftMenuOpen ? 'bg-slate-700' : ''}`}
+                  className={`w-full text-left px-4 py-2 text-xs text-slate-400 hover:bg-slate-700 flex items-center gap-2 transition rounded ${isShiftMenuOpen ? 'bg-slate-700' : ''}`}
                   title={t("modals.globalTimeShift", { defaultValue: "Global Time Shift" })}
                 >
                   <MoveHorizontal size={16}/> {t("modals.globalShift", { defaultValue: "Global Shift" })}
@@ -342,18 +342,18 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
 
                 <div className="relative">
                   {canSave && <button onClick={onSave}
-                                      className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded">
-                    <Save size={16}/> {t("modals.save", { defaultValue: "Save" })}
+                                      className="p-2 text-slate-400 hover:bg-slate-700 flex transition rounded">
+                    <Save size={16}/>
                   </button>}
                   {canSave || <button onClick={onDownload}
-                                      className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 rounded">
-                    <Download size={16}/> {t("modals.download", { defaultValue: "Download" })}
+                                      className="p-2 text-slate-400 hover:bg-slate-700 flex transition rounded">
+                    <Download size={16}/>
                   </button>}
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={handleOpenSubtitle}
-                        className="p-2 hover:bg-slate-700 rounded text-indigo-400 transition"
+                        className="p-2 hover:bg-slate-700 rounded text-slate-400 transition"
                         title={t("uploadSubtitles")}>
                   <FolderOpen size={16}/>
                 </button>
