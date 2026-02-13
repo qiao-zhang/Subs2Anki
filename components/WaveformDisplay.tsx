@@ -6,7 +6,7 @@ import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
 import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
 import {useAppStore} from '@/services/store.ts';
 import {useMergeKeyboardShortcut} from "@/hooks/useKeyboardShortcuts.tsx";
-import { useTranslation } from 'react-i18next';
+import {useTranslation} from 'react-i18next';
 
 interface WaveformDisplayProps {
   videoElement: HTMLVideoElement | null;
@@ -35,7 +35,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onSubtitleLineClicked,
                                                            onSubtitleLineRemoved,
                                                          }) => {
-  const { t } = useTranslation();
+  const {t} = useTranslation();
   // Access store for direct reads in listeners and reactive updates
   const subtitleLines = useAppStore(state => state.subtitleLines);
   const updateSubtitleTime = useAppStore(state => state.updateSubtitleTime);
@@ -52,12 +52,26 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   const isSyncingSubtitles = useRef(false);
 
-  // Multi-selection state
-  const selectedRegionsRef = useRef<Set<string>>(new Set());
-
   // Constants & Refs
   const TEMP_REGION_ID = 'subs2anki-temp-segment';
   const tempRegion = useRef<Region | null>(null);
+
+  // Multi-selection state
+  const selectedRegionsRef = useRef<Map<string, Region>>(new Map());
+  const clearSelectedRegions = () => {
+    selectedRegionsRef.current.forEach((region, regionId) => {
+      region.element.classList.remove("selected");
+      const selectedIdNum = parseInt(regionId);
+      const subtitleLine = getSubtitleLine(selectedIdNum);
+      if (subtitleLine) {
+        const color = subtitleLine.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
+          subtitleLine.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
+            'rgba(99, 102, 241, 0.2)'; // Blue for normal
+        region.setOptions({color});
+      }
+    });
+    selectedRegionsRef.current.clear();
+  }
 
   // Initialize WaveSurfer
   useEffect(() => {
@@ -138,7 +152,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     regions.enableDragSelection({
       id: TEMP_REGION_ID,
       color: 'rgba(74, 222, 128, 0.4)',
-      content: t("modals.rightClickToDismiss", { defaultValue: "Right-click to dismiss" })
+      content: t("modals.rightClickToDismiss", {defaultValue: "Right-click to dismiss"})
     });
 
     ws.on('ready', () => {
@@ -152,7 +166,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       // Remove temp region if clicking elsewhere on timeline
       removeTempRegion();
       // Clear selection when clicking on empty space
-      selectedRegionsRef.current.clear();
+      clearSelectedRegions();
     });
 
     // --- Region Events ---
@@ -224,7 +238,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       // Handle multi-selection with Ctrl/Cmd key
       if (e.ctrlKey || e.metaKey) {
         // Toggle selection
-        const newSelectedRegions = new Set(selectedRegionsRef.current);
+        const newSelectedRegions = new Map(selectedRegionsRef.current);
         if (newSelectedRegions.has(region.id)) {
           newSelectedRegions.delete(region.id);
           const subtitleLine = getSubtitleLine(id);
@@ -236,7 +250,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
             region.setOptions({color});
           }
         } else {
-          newSelectedRegions.add(region.id);
+          newSelectedRegions.set(region.id, region);
           // Highlight selected region
           region.setOptions({color: 'rgba(255, 165, 0, 0.4)'}); // Orange for selected
         }
@@ -246,23 +260,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
 
       // Normal click, need to clear previous selections
-      selectedRegionsRef.current.forEach(selectedId => {
-        if (selectedId !== region.id) {
-          const selectedRegion = wsRegions.current?.getRegions().find(r => r.id === selectedId);
-          if (selectedRegion) {
-            const selectedIdNum = parseInt(selectedId);
-            const subtitleLine = getSubtitleLine(selectedIdNum);
-            if (subtitleLine) {
-              const color = subtitleLine.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
-                subtitleLine.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
-                  'rgba(99, 102, 241, 0.2)'; // Blue for normal
-              selectedRegion.setOptions({color});
-            }
-          }
-        }
-      });
-
-      selectedRegionsRef.current.clear();
+      clearSelectedRegions();
 
       onSubtitleLineClicked(id);
     });
@@ -297,9 +295,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const handleMergeSelectedRegions = () => {
     if (!wsRegions.current || selectedRegionsRef.current.size < 2) return;
 
-    const selectedRegionObjects = Array.from(selectedRegionsRef.current)
-      .map(id => wsRegions.current?.getRegions().find(r => r.id === id))
-      .filter(Boolean) as Region[];
+    const selectedRegionObjects = Array.from(selectedRegionsRef.current.values()) as Region[];
 
     if (selectedRegionObjects.length < 2) return;
 
@@ -415,7 +411,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         <div
           className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm text-slate-400 text-xs">
           {videoElement && <Activity className="animate-pulse mr-2" size={16}/>}
-          {videoElement === null ? t("modals.noVideoLoaded") : t("modals.loadingAudioTrack", { defaultValue: "Loading Audio Track..." })}
+          {videoElement === null ? t("modals.noVideoLoaded") : t("modals.loadingAudioTrack", {defaultValue: "Loading Audio Track..."})}
         </div>
       )}
 
