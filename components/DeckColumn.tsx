@@ -59,6 +59,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
         <div className="flex items-center gap-2 text-indigo-400">
           <Layers size={20} className="text-indigo-500"/>
           <span className="text-lg font-bold tracking-tight text-slate-200">{t("appTitle")}</span>
+          <span className="text-xs font-medium text-slate-500 ml-2">ver {__APP_VERSION__}</span>
         </div>
       </div>
 
