@@ -220,9 +220,18 @@ const App: React.FC = () => {
     },
     onJumpNext: () => jumpToSubtitleLine('next'),
     onJumpPrev: () => jumpToSubtitleLine('prev'),
-    onToggleStatusOfActiveSubtitleLine: () => {
+    onToggleStatusOfActiveSubtitleLine: (order: 'forward' | 'backward') => {
       if (activeSubtitleLineId === null) return;
-      toggleSubtitleLineStatus(activeSubtitleLineId);
+      if (order === 'forward') {
+        toggleSubtitleLineStatus(activeSubtitleLineId);
+      } else {
+        toggleSubtitleLineStatus(activeSubtitleLineId, 'NLI');
+      }
+    },
+    onDeleteActiveSubtitleLine: () => {
+      if (activeSubtitleLineId === null) return;
+      removeSubtitle(activeSubtitleLineId);
+      setActiveSubtitleLineId(null);
     },
     onOpenOrCloseShortcutsModal: () => setIsShortcutsModalOpen(prev => !prev),
     onOpenOrCloseSettings: () => setIsSettingsModalOpen(prev => !prev),

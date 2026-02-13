@@ -47,7 +47,7 @@ interface AppState {
   setSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: any) => void;
   updateSubtitleText: (id: number, text: string) => void;
   updateSubtitleTime: (id: number, start: number, end: number) => void;
-  toggleSubtitleLineStatus: (id: number) => void;
+  toggleSubtitleLineStatus: (id: number, order?: 'NIL' | 'NLI') => void;
   setSubtitleLineStatus: (id: number, status: 'normal' | 'locked' | 'ignored') => void;
   addSubtitleLine: (sub: SubtitleLine) => void;
   getSubtitleLine: (id: number) => SubtitleLine | null;
@@ -94,7 +94,7 @@ const globalUndoRedoManager = new UndoRedoManager();
 
 export const useAppStore = create<AppState>((set, get) => ({
   projectName: '', // 默认项目名称为空
-  setProjectName: (name) => set({ projectName: name }),
+  setProjectName: (name) => set({projectName: name}),
 
   // Video defaults
   videoSrc: '',
@@ -141,7 +141,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       type: 'UPDATE_SUBTITLE_TEXT',
       beforeState,
       afterState,
-      params: { id, text }
+      params: {id, text}
     });
 
     set({
@@ -164,7 +164,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       type: 'UPDATE_SUBTITLE_TIME',
       beforeState,
       afterState,
-      params: { id, start, end }
+      params: {id, start, end}
     });
 
     set({
@@ -173,14 +173,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  toggleSubtitleLineStatus: (id) => set((state) => ({
-    subtitleLines: state.subtitleLines.map(s => s.id === id ? {
-      ...s,
-      status: s.status === 'normal' ? 'ignored' :
-              s.status === 'ignored' ? 'locked' :
-              'normal'
-    } : s)
-  })),
+  toggleSubtitleLineStatus: (id, order) => {
+    if (!order) order = "NIL";
+    const nextStatus = (status: 'normal' | 'ignored' | 'locked') => {
+      if (status === 'normal') {
+        return order === 'NIL' ? 'ignored' : 'locked';
+      }
+      if (status === 'ignored') {
+        return order === 'NIL' ? 'locked' : 'normal';
+      }
+      if (status === 'locked') {
+        return order === 'NIL' ? 'normal' : 'ignored';
+      }
+    };
+    set((state) => ({
+      subtitleLines: state.subtitleLines.map(s => s.id === id ? {
+        ...s,
+        status: nextStatus(s.status)
+      } : s)
+    }))
+  },
 
   setSubtitleLineStatus: (id: number, status: 'normal' | 'locked' | 'ignored') => set((state) => ({
     subtitleLines: state.subtitleLines.map(s => s.id === id ? {
@@ -199,7 +211,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       type: 'ADD_SUBTITLE_LINE',
       beforeState,
       afterState,
-      params: { sub: subLine }
+      params: {sub: subLine}
     });
 
     set({
@@ -254,7 +266,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       type: 'REMOVE_SUBTITLE_LINE',
       beforeState,
       afterState,
-      params: { id, removedSubtitle }
+      params: {id, removedSubtitle}
     });
 
     set({
@@ -278,7 +290,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       type: 'SHIFT_SUBTITLES',
       beforeState,
       afterState,
-      params: { offset }
+      params: {offset}
     });
 
     set({
@@ -318,14 +330,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   breakUpSubtitleLine: (id: number) => {
     const currentState = get().subtitleLines;
     const beforeState = [...currentState];
-    
+
     const subtitleToSplit = currentState.find(s => s.id === id);
     if (!subtitleToSplit) return; // Subtitle line not found
 
     // Find the split point in the text
     let splitIndex = -1;
     const text = subtitleToSplit.text;
-    
+
     // Look for spaces (either half-width or full-width) or newlines to split on
     for (let i = 0; i < text.length; i++) {
       if (/\s/.test(text[i])) { // Matches any whitespace character (space, tab, etc.)
@@ -333,20 +345,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         break;
       }
     }
-    
+
     let firstPart: string, secondPart: string;
     let firstDurationRatio: number;
-    
+
     if (splitIndex > 0) {
       // Split at the first space found
       firstPart = text.substring(0, splitIndex).trim();
       secondPart = text.substring(splitIndex + 1).trim();
-      
+
       // Calculate duration ratios based on text length
       const firstLength = firstPart.length;
       const secondLength = secondPart.length;
       const totalLength = firstLength + secondLength;
-      
+
       firstDurationRatio = totalLength > 0 ? firstLength / totalLength : 0.5;
     } else {
       // No space found, split evenly and keep the same text
@@ -354,11 +366,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       secondPart = text;
       firstDurationRatio = 0.5;
     }
-    
+
     // Calculate new start and end times for the two parts
     const totalTime = subtitleToSplit.endTime - subtitleToSplit.startTime;
     const firstEndTime = subtitleToSplit.startTime + (totalTime * firstDurationRatio);
-    
+
     // Create the two new subtitle lines
     const newSubtitle1: SubtitleLine = {
       ...subtitleToSplit, // Copy all properties including status
@@ -367,7 +379,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       endTime: firstEndTime - 0.05,
       status: 'normal',
     };
-    
+
     const newSubtitle2: SubtitleLine = {
       ...subtitleToSplit, // Copy all properties including status
       id: Math.max(...currentState.map(s => s.id), 0) + 1, // Generate a new ID
@@ -376,7 +388,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       endTime: subtitleToSplit.endTime,
       status: 'normal',
     };
-    
+
     // Create the new subtitle array: replace the original with the two new ones
     const afterState = currentState
       .filter(s => s.id !== id) // Remove the original subtitle
@@ -388,7 +400,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       type: 'SPLIT_SUBTITLE_LINE',
       beforeState,
       afterState,
-      params: { id, originalSubtitle: subtitleToSplit }
+      params: {id, originalSubtitle: subtitleToSplit}
     });
 
     set({
@@ -405,7 +417,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateCardSyncStatus: (id, syncStatus) => set((state) => ({
     ankiCards: state.ankiCards.map(c => c.id === id ? {...c, syncStatus} : c)
   })),
-  updateCardAudioStatus: (id, audioStatus, audioRef? : string | null) => set((state) => ({
+  updateCardAudioStatus: (id, audioStatus, audioRef?: string | null) => set((state) => ({
     ankiCards: state.ankiCards.map(c => c.id === id ? {...c, audioStatus, audioRef} : c)
   })),
   deleteCard: (id) => set((state) => ({ankiCards: state.ankiCards.filter(c => c.id !== id)})),

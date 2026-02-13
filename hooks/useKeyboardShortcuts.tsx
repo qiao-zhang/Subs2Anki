@@ -5,7 +5,7 @@ export const useMergeKeyboardShortcut = (onMerge: () => void) => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
 
-      if (e.code === 'KeyM') {
+      if (e.code === 'KeyM' || e.code === 'KeyG') {
         e.preventDefault();
         onMerge();
         return;
@@ -27,7 +27,8 @@ interface KeyboardShortcutsOptions {
   onCreateCard: () => void;
   onJumpNext: () => void;
   onJumpPrev: () => void;
-  onToggleStatusOfActiveSubtitleLine: () => void;
+  onToggleStatusOfActiveSubtitleLine: (order?: 'forward' | 'backward') => void;
+  onDeleteActiveSubtitleLine: () => void;
   onOpenOrCloseShortcutsModal: () => void;
   onOpenOrCloseSettings: () => void;
   onBreakUp: () => void;
@@ -48,6 +49,7 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
     onJumpNext,
     onJumpPrev,
     onToggleStatusOfActiveSubtitleLine,
+    onDeleteActiveSubtitleLine,
     onOpenOrCloseShortcutsModal,
     onOpenOrCloseSettings,
     onBreakUp,
@@ -61,28 +63,19 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
       // Ignore inputs
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
 
-      // 处理 Ctrl+Z (Undo) 和 Ctrl+Y/Shift+Ctrl+Z (Redo)
-      if (e.ctrlKey && !e.altKey) {
-        if (e.key === 'z' || e.key === 'Z') {
+      switch (e.code) {
+        case 'KeyX':
+        case 'Comma':
           e.preventDefault();
-          if (e.shiftKey) {
-            // Ctrl+Shift+Z 或 Ctrl+Y 用于 Redo
-            onRedo();
-          } else {
-            // Ctrl+Z 用于 Undo
-            onUndo();
-          }
+          onDeleteActiveSubtitleLine();
           return;
-        } else if (e.key === 'y' || e.key === 'Y') {
+        case 'KeyR':
+        case 'KeyY':
           e.preventDefault();
-          // Ctrl+Y 用于 Redo
           onRedo();
           return;
-        }
-      }
-
-      switch (e.code) {
         case 'KeyU':
+        case 'KeyZ':
           e.preventDefault();
           onUndo();
           return;
@@ -91,26 +84,27 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
           onReplay();
           return;
         case 'KeyP':
+        case 'KeyQ':
           e.preventDefault();
           onPlay();
           break;
         case 'Slash':
+        case 'Tab':
           e.preventDefault();
           onOpenOrCloseShortcutsModal();
           break;
-        // case 'KeyH':
-        // case 'KeyL':
-        case 'ArrowUp':
-        case 'KeyK':
+        case 'KeyD':
+        case 'KeyJ':
           e.preventDefault();
           onJumpPrev();
           break;
-        case 'ArrowDown':
-        case 'KeyJ':
+        case 'KeyK':
+        case 'KeyF':
           e.preventDefault();
           onJumpNext();
           break;
-        case 'KeyO':
+        case 'KeyN':
+        case 'KeyC':
           e.preventDefault();
           onCreateCard();
           break;
@@ -123,18 +117,27 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
           onToggleIsVideoOnlyMode();
           break;
         case 'KeyI':
+        case 'KeyE':
           e.preventDefault();
-          onToggleStatusOfActiveSubtitleLine();
+          onToggleStatusOfActiveSubtitleLine('forward');
           break;
+        case 'KeyO':
+        case 'KeyW':
+          e.preventDefault();
+          onToggleStatusOfActiveSubtitleLine('backward');
+          return;
         case 'KeyB':
+        case 'KeyS':
           e.preventDefault();
           onBreakUp();
           break;
-        case 'KeyN':
+        case 'KeyA':
+        case 'Semicolon':
           e.preventDefault();
           onMergeWithNext();
           break;
-        case 'Semicolon':
+        case 'Escape':
+        case 'Period':
           e.preventDefault();
           onOpenOrCloseSettings();
           break;
@@ -153,6 +156,7 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
     onJumpNext,
     onJumpPrev,
     onToggleStatusOfActiveSubtitleLine,
+    onDeleteActiveSubtitleLine,
     onOpenOrCloseShortcutsModal,
     onOpenOrCloseSettings,
     onBreakUp,
