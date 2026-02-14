@@ -21,6 +21,7 @@ interface WaveformDisplayProps {
   onSubtitleLineClicked: (id: number) => void;
   onSubtitleLineRemoved: (id: number) => void;
   onCreateCard: (id: number) => void;
+  numOfNormalRegionsToHighlight?: number;
 }
 
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
@@ -34,6 +35,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onTempSubtitleLineRemoved,
                                                            onSubtitleLineClicked,
                                                            onSubtitleLineRemoved,
+                                                           numOfNormalRegionsToHighlight = 0,
                                                          }) => {
   const {t} = useTranslation();
   // Access store for direct reads in listeners and reactive updates
@@ -333,11 +335,24 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
     const processedIds = new Set<string>();
 
+    // Count normal regions to determine which ones to highlight
+    let normalRegionCount = 0;
+
     subtitleLines.forEach(sub => {
       const idStr = sub.id.toString();
       processedIds.add(idStr);
 
       const r = existingRegions.get(idStr);
+      
+      // Determine if this region should be highlighted
+      let shouldHighlight = false;
+      if (numOfNormalRegionsToHighlight > 0 && sub.status === 'normal') {
+        normalRegionCount++;
+        if (normalRegionCount <= numOfNormalRegionsToHighlight) {
+          shouldHighlight = true;
+        }
+      }
+
       let color = sub.status === 'ignored' ? 'rgba(34, 197, 94, 0.2)' : // Green for ignored
         sub.status === 'locked' ? 'rgba(239, 68, 68, 0.2)' : // Red for locked
           'rgba(99, 102, 241, 0.2)'; // Blue for normal
@@ -345,6 +360,10 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       // Check if this region is selected
       if (selectedRegionsRef.current.has(idStr)) {
         color = 'rgba(255, 165, 0, 0.4)'; // Orange for selected
+      }
+
+      if (shouldHighlight) {
+        color = 'rgba(249, 196, 236, 0.2)';
       }
 
       const content = sub.text;
@@ -398,7 +417,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     isSyncingSubtitles.current = false;
 
-  }, [subtitleLines, isReady, regionsHidden]);
+  }, [subtitleLines, isReady, regionsHidden, numOfNormalRegionsToHighlight]);
 
   useMergeKeyboardShortcut(handleMergeSelectedRegions);
 

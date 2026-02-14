@@ -227,6 +227,20 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     const isActive = sub.id === activeSubtitleLineId;
     const isCurrentSearchResult = searchTerm && filteredIndices.length > 0 &&
       filteredIndices[currentSearchIndex] === index;
+    
+    // Determine if this line should be highlighted for bulk creation
+    // Count how many normal lines come before this one
+    let normalCount = 0;
+    let isBulkCreationCandidate = false;
+    for (let i = 0; i < filteredSubtitleLines.length; i++) {
+      if (filteredSubtitleLines[i].status === 'normal') {
+        normalCount++;
+        if (filteredSubtitleLines[i].id === sub.id && showBulkCreateButton) {
+          isBulkCreationCandidate = normalCount <= bulkCreateLimit;
+          break;
+        }
+      }
+    }
 
     // Highlight search terms in subtitle text
     const highlightText = (text: string, searchTerm: string, isCurrentSearchResult: boolean) => {
@@ -255,7 +269,9 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         className={`group flex items-start gap-2 p-2 mx-2 mb-1 rounded transition-all cursor-pointer border ${
           isActive
             ? 'bg-slate-800 border-indigo-500/50 shadow-md'
-            : 'border-transparent hover:bg-slate-800/50'
+            : isBulkCreationCandidate 
+              ? 'bg-pink-900/20 border-pink-700/30' // Highlight for bulk creation
+              : 'border-transparent hover:bg-slate-800/50'
         }`}
       >
         <button onClick={(e) => {
@@ -284,7 +300,9 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                   ? 'text-slate-500'
                   : isActive
                     ? 'text-white'
-                    : 'text-slate-400 hover:text-slate-300'
+                    : isBulkCreationCandidate
+                      ? 'text-pink-200' // Different text color for bulk creation candidates
+                      : 'text-slate-400 hover:text-slate-300'
               }`}
               style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}
             >

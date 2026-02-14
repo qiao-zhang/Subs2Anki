@@ -981,6 +981,7 @@ const App: React.FC = () => {
           onSubtitleLineClicked={(id) => handleSubtitleLineClicked(id, false)}
           onSubtitleLineRemoved={removeSubtitle}
           onCreateCard={handleCreateCard}
+          numOfNormalRegionsToHighlight={showBulkCreateButton ? bulkCreateLimit : 0}
         />
       </div>
 
