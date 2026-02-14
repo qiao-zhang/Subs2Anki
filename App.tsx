@@ -120,7 +120,6 @@ const App: React.FC = () => {
   // --- Logic Helpers ---
   const jumpToSubtitleLine = (direction: 'next' | 'prev') => {
     if (subtitleLines.length === 0) return;
-    if (activeSubtitleLineId === null) return;
 
     let nextIndex: number;
     const currentIndex = subtitleLines.findIndex(s => s.id === activeSubtitleLineId);
