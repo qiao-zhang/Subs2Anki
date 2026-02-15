@@ -96,7 +96,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   useEffect(() => {
     if (activeSubtitleLineId) {
       setSearchTerm('');
-      const i = subtitleLines.findIndex(line => line.id === activeSubtitleLineId);
+      const i = filteredSubtitleLines.findIndex(line => line.id === activeSubtitleLineId);
       if (i !== -1) {
         virtuosoRef.current?.scrollToIndex({index: i, align: 'center', behavior: 'smooth'});
       }
@@ -128,7 +128,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     if (currentSearchIndex < 0 || currentSearchIndex > filteredIndices.length) return;
     const targetIndex = filteredIndices[currentSearchIndex];
     virtuosoRef.current?.scrollToIndex({index: targetIndex, align: 'center', behavior: 'auto'});
-  }, [filteredIndices, currentSearchIndex, subtitleLines]);
+  }, [filteredIndices, currentSearchIndex, subtitleLines, activeSubtitleLineId]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
