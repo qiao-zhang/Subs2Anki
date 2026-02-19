@@ -3,7 +3,7 @@ import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Minimap from 'wavesurfer.js/dist/plugins/minimap.esm.js';
 import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
-import {ZoomIn, ZoomOut, Activity} from 'lucide-react';
+import {Activity, ZoomIn, ZoomOut} from 'lucide-react';
 import {useAppStore} from '@/services/store.ts';
 import {useMergeKeyboardShortcut} from "@/hooks/useKeyboardShortcuts.tsx";
 import {useTranslation} from 'react-i18next';
@@ -58,6 +58,9 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const TEMP_REGION_ID = 'subs2anki-temp-segment';
   const tempRegion = useRef<Region | null>(null);
 
+  const MARKER_REGION_ID = 'MARKER';
+  const markerRegion = useRef<Region | null>(null);
+
   // Multi-selection state
   const selectedRegionsRef = useRef<Map<string, Region>>(new Map());
   const clearSelectedRegions = () => {
@@ -73,6 +76,13 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
     });
     selectedRegionsRef.current.clear();
+  }
+
+  // Count normal subtitle lines before a given time
+  const countNormalLinesBefore = (time: number): number => {
+    return subtitleLines
+      .filter(sub => sub.status === 'normal' && sub.endTime <= time)
+      .length;
   }
 
   // Initialize WaveSurfer
@@ -171,6 +181,29 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       clearSelectedRegions();
     });
 
+    ws.on('dblclick', (_: number) => {
+      const clickTime = ws.getCurrentTime();
+      const normalCount = countNormalLinesBefore(clickTime);
+      const markerContent = normalCount.toString();
+
+      // Remove existing marker if there is one
+      if (markerRegion.current) {
+        markerRegion.current.remove();
+        markerRegion.current = null;
+      }
+
+      // Create new marker region at click position (single point: start=end)
+      markerRegion.current = regions.addRegion({
+        id: MARKER_REGION_ID,
+        start: clickTime,
+        // end: clickTime,
+        content: markerContent,
+        color: 'rgba(255, 215, 0, 0.4)', // Gold color for marker
+        drag: true,
+        resize: false,
+      });
+    });
+
     // --- Region Events ---
     regions.on('region-created', (region: Region) => {
 
@@ -180,6 +213,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         if (region.id === TEMP_REGION_ID) {
           region.remove();
           removeTempRegion();
+          return;
+        }
+        if (region.id === MARKER_REGION_ID) {
+          region.remove();
+          markerRegion.current = null;
           return;
         }
         const id = parseInt(region.id);
@@ -211,6 +249,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         onTempSubtitleLineUpdated(region.start, region.end);
         return;
       }
+
+      if (region.id === MARKER_REGION_ID) {
+        return;
+      }
+
       const id = parseInt(region.id);
       if (isNaN(id)) return;
       removeTempRegion();
@@ -410,10 +453,20 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     });
 
     existingRegions.forEach((r, id) => {
+      // Don't remove MARKER region or TEMP region
+      if (id === MARKER_REGION_ID || id === TEMP_REGION_ID || selectedRegionsRef.current.has(id)) {
+        return;
+      }
       if (!processedIds.has(id)) {
         r.remove();
       }
     });
+
+    // Update MARKER region content if it exists (normal count may have changed)
+    if (markerRegion.current) {
+      const newNormalCount = countNormalLinesBefore(markerRegion.current.start);
+      markerRegion.current.setOptions({content: newNormalCount.toString()});
+    }
 
     isSyncingSubtitles.current = false;
 
