@@ -104,7 +104,7 @@ const App: React.FC = () => {
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{ start: number, end: number } | null>(null);
 
   // Refs
-  const videoPlayerRef = useRef<VideoPlayerHandle>(null);
+  const videoPlayerRef = useRef<VideoPlayerHandle | null>(null);
 
   // Reset video ready state when src changes
   useEffect(() => {
@@ -808,6 +808,7 @@ const App: React.FC = () => {
     // Reset video player state
     if (videoPlayerRef.current) {
       videoPlayerRef.current.seekTo(0);
+      videoPlayerRef.current = null;
     }
 
     // Reset regions and video-only modes
@@ -827,6 +828,8 @@ const App: React.FC = () => {
     setIsSettingsModalOpen(false);
     setPreviewCard(null);
     setIsShortcutsModalOpen(false);
+
+    window.location.reload();
 
     showNotification(t("notifications.projectReset", {
       defaultValue: "Project has been reset"
