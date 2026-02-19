@@ -387,21 +387,8 @@ const App: React.FC = () => {
     }, 3000);
   };
 
-  const handleSubtitleLineClicked = (id: number, copyText: boolean = true) => {
+  const handleSubtitleLineClicked = (id: number) => {
     const sub = getSubtitleLine(id);
-
-    if (sub && copyText) {
-      // 复制字幕文本到剪贴板
-      navigator.clipboard.writeText(sub.text).then(() => {
-        // 显示复制成功的提示
-        showNotification(t("notification.copiedToClipboard", {
-          defaultValue: '"{{text}}" copied to clipboard',
-          text: sub.text
-        }));
-      }).catch(err => {
-        console.error('Cannot copy text:', err);
-      });
-    }
 
     if (sub && videoPlayerRef.current) {
       setTempSubtitleLine(null);
@@ -409,6 +396,22 @@ const App: React.FC = () => {
       playTimeSpan(sub.startTime, sub.endTime);
     }
   };
+
+  const handleSubtitleLineShiftClicked = (id: number) => {
+    const sub = getSubtitleLine(id);
+
+    if (!sub) return;
+    // 复制字幕文本到剪贴板
+    navigator.clipboard.writeText(sub.text).then(() => {
+      // 显示复制成功的提示
+      showNotification(t("notifications.copiedToClipboard", {
+        defaultValue: '"{{text}}" copied to clipboard',
+        text: sub.text
+      }));
+    }).catch(err => {
+      console.error('Cannot copy text:', err);
+    });
+  }
 
   const handleCreateCard = async (id: number) => {
     const s = getSubtitleLine(id);
@@ -462,7 +465,7 @@ const App: React.FC = () => {
 
     if (normalSubtitles.length === 0) {
       showNotification(
-        t("notification.noLines", {defaultValue: 'No subtitle lines to make cards'}));
+        t("notifications.noLines", {defaultValue: 'No subtitle lines to make cards'}));
       return;
     }
 
@@ -479,7 +482,7 @@ const App: React.FC = () => {
 
     setIsBulkCreating(false);
 
-    showNotification(t("notification.cardCreated", {
+    showNotification(t("notifications.cardCreated", {
       num: limitedSubtitles.length
     }));
   };
@@ -980,9 +983,9 @@ const App: React.FC = () => {
           onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
           onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
           onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
-          onSubtitleLineClicked={(id) => handleSubtitleLineClicked(id, false)}
+          onSubtitleLineClicked={handleSubtitleLineClicked}
+          onSubtitleLineShiftClicked={handleSubtitleLineShiftClicked}
           onSubtitleLineRemoved={removeSubtitle}
-          onCreateCard={handleCreateCard}
           numOfNormalRegionsToHighlight={showBulkCreateButton ? bulkCreateLimit : 0}
         />
       </div>

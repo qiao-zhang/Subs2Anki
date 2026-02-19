@@ -19,8 +19,8 @@ interface WaveformDisplayProps {
   onTempSubtitleLineClicked: () => void;
   onTempSubtitleLineRemoved: () => void;
   onSubtitleLineClicked: (id: number) => void;
+  onSubtitleLineShiftClicked: (id: number) => void;
   onSubtitleLineRemoved: (id: number) => void;
-  onCreateCard: (id: number) => void;
   numOfNormalRegionsToHighlight?: number;
 }
 
@@ -34,6 +34,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onTempSubtitleLineClicked,
                                                            onTempSubtitleLineRemoved,
                                                            onSubtitleLineClicked,
+                                                           onSubtitleLineShiftClicked,
                                                            onSubtitleLineRemoved,
                                                            numOfNormalRegionsToHighlight = 0,
                                                          }) => {
@@ -42,7 +43,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const subtitleLines = useAppStore(state => state.subtitleLines);
   const updateSubtitleTime = useAppStore(state => state.updateSubtitleTime);
   const getSubtitleLine = useAppStore(state => state.getSubtitleLine);
-  const toggleSubtitleLineStatus = useAppStore(state => state.toggleSubtitleLineStatus);
   const breakUpSubtitleLine = useAppStore(state => state.breakUpSubtitleLine);
 
   const waveformContainerRef = useRef<HTMLDivElement>(null);
@@ -228,7 +228,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       if (isNaN(id)) return;
 
       if (e.shiftKey) {
-        toggleSubtitleLineStatus(id);
+        onSubtitleLineShiftClicked(id);
         return;
       }
 
@@ -343,7 +343,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       processedIds.add(idStr);
 
       const r = existingRegions.get(idStr);
-      
+
       // Determine if this region should be highlighted
       let shouldHighlight = false;
       if (numOfNormalRegionsToHighlight > 0 && sub.status === 'normal') {
