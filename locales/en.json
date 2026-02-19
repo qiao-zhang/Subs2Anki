@@ -17,7 +17,6 @@
   "createCard": "Create Card",
   "deleteCard": "Delete Card",
   "syncCard": "Sync Card",
-  "bulkCreateCards": "Bulk Create Cards",
   "deleteSyncedCards": "Delete Synced Cards",
   "exportApkg": "Export .apkg",
   "captureFrame": "Capture Frame",
@@ -56,9 +55,16 @@
     "projectReset": "Project has been reset",
     "projectLoaded": "Project loaded successfully!"
   },
+  "subtitleColumn" : {
+    "forNext": "For the next",
+    "normalSubtitleLines": "normal subtitle lines",
+    "bulkCreateCards": "Bulk Create Cards",
+    "bulkCreateCardsTitle": "Bulk Create Cards"
+  },
   "modals": {
     "close": "Close",
     "save": "Save",
+    "download": "Download",
     "cancel": "Cancel",
     "preview": "Preview",
     "add": "Add",
@@ -124,9 +130,6 @@
     "searchSubtitles": "Search subtitles...",
     "previousResult": "Previous result",
     "nextResult": "Next result",
-    "createCardsForNext": "Create cards for the next {{num}} normal lines",
-    "noNormalSubtitlesToCreateCardsFrom": "No normal subtitles to create cards from",
-    "createCardsForAllNormalSubtitles": "Create cards for all normal subtitles",
     "noContent": "No content",
     "noVisibleSubtitles": "No visible subtitles",
     "addATag": "Add a tag...",

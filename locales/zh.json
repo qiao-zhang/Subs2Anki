@@ -17,7 +17,6 @@
   "createCard": "创建卡片",
   "deleteCard": "删除卡片",
   "syncCard": "同步卡片",
-  "bulkCreateCards": "批量创建卡片",
   "deleteSyncedCards": "删除已同步卡片",
   "exportApkg": "导出.apkg",
   "captureFrame": "截取当前帧",
@@ -52,6 +51,12 @@
     "projectSaved": "项目保存成功！",
     "projectReset": "项目已经重置",
     "projectLoaded": "项目加载成功！"
+  },
+  "subtitleColumn" : {
+    "forNext": "为接下来的",
+    "normalSubtitleLines": "行正常字幕",
+    "bulkCreateCards": "批量创建卡片",
+    "bulkCreateCardsTitle": "批量创建卡片"
   },
   "modals": {
     "close": "关闭",
@@ -122,9 +127,6 @@
     "searchSubtitles": "搜索字幕...",
     "previousResult": "上一个结果",
     "nextResult": "下一个结果",
-    "bulkCreateBtnContent": "为接下来的{{num}}行普通字幕创建卡片",
-    "noNormalSubtitlesToCreateCardsFrom": "没有普通字幕可以用来创建卡片",
-    "createCardsForAllNormalSubtitles": "为所有普通字幕创建卡片",
     "noContent": "无内容",
     "noVisibleSubtitles": "无可见字幕",
     "addATag": "添加标签...",

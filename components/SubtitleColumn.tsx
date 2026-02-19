@@ -34,6 +34,7 @@ interface SubtitleColumnProps {
   onShiftSubtitles: (offset: number) => void;
   showBulkCreateButton?: boolean;
   bulkCreateLimit: number;
+  onBulkCreateLimitChange: (limit: number) => void;
   className?: string;
 }
 
@@ -50,14 +51,21 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          onSave,
                                                          onDownload,
                                                          onShiftSubtitles,
-                                                         showBulkCreateButton = true,
+                                                         showBulkCreateButton = false,
                                                          bulkCreateLimit,
+                                                         onBulkCreateLimitChange,
                                                          className = ''
                                                        }) => {
   const { t } = useTranslation();
   const MIN_SHIFT_MS = 10;
   const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
   const [shiftAmount, setShiftAmount] = useState(MIN_SHIFT_MS);
+  const [localBulkCreateLimit, setLocalBulkCreateLimit] = useState(bulkCreateLimit);
+
+  // 同步 prop 变化
+  useEffect(() => {
+    setLocalBulkCreateLimit(bulkCreateLimit);
+  }, [bulkCreateLimit]);
 
   // 状态过滤
   const [statusFilters, setStatusFilters] = useState<Record<'normal' | 'locked' | 'ignored', boolean>>({
@@ -75,6 +83,17 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     }
   }
 
+  const handleBulkCreateLimitChange = (value: string) => {
+    const num = parseInt(value, 10);
+    if (isNaN(num)) {
+      setLocalBulkCreateLimit(20);
+      onBulkCreateLimitChange(20);
+    } else {
+      const clamped = Math.min(50, Math.max(1, num));
+      setLocalBulkCreateLimit(clamped);
+      onBulkCreateLimitChange(clamped);
+    }
+  };
   const handleStatusFilterChange = (status: 'normal' | 'locked' | 'ignored') => {
     setStatusFilters(prev => ({
       ...prev,
@@ -236,7 +255,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       if (filteredSubtitleLines[i].status === 'normal') {
         normalCount++;
         if (filteredSubtitleLines[i].id === sub.id && showBulkCreateButton) {
-          isBulkCreationCandidate = normalCount <= bulkCreateLimit;
+          isBulkCreationCandidate = normalCount <= localBulkCreateLimit;
           break;
         }
       }
@@ -496,22 +515,34 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         </div>
       </div>
 
-      {/* Bulk Create Button */}
+      {/* Bulk Create Button and Limit Control */}
       {showBulkCreateButton && subtitleCounts.normal > 0 && (
-        <div className="h-10 flex items-center px-4 bg-slate-900/60">
+        <div className="flex gap-3 items-center justify-between px-4 pt-1 pb-2 bg-slate-900/60">
+          {/* Bulk Create Limit Control */}
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <span>{t("subtitleColumn.forNext", {defaultValue: "For the next"})}</span>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={localBulkCreateLimit}
+              onChange={(e) => handleBulkCreateLimitChange(e.target.value)}
+              className="w-12 h-6 bg-slate-900 border border-slate-600 rounded px-1 text-xs text-white focus:border-indigo-500 outline-none text-center font-mono"
+            />
+            <span>{t("subtitleColumn.normalSubtitleLines", {defaultValue: "normal subtitle lines"})}</span>
+          </div>
+
           <button
             onClick={onBulkCreateCards}
-            disabled={subtitleCounts.normal === 0}
-            className={`flex items-center gap-2 px-3 py-1 text-xs rounded ${
-              subtitleCounts.normal === 0
+            disabled={subtitleCounts.normal === 0 || localBulkCreateLimit === 0}
+            className={`flex items-center px-2 py-1 text-xs rounded ${
+              subtitleCounts.normal === 0 || localBulkCreateLimit === 0
                 ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}
-            title={subtitleCounts.normal === 0 ? t("modals.noNormalSubtitlesToCreateCardsFrom", { defaultValue: "No normal subtitles to create cards from" })
-              : t("modals.createCardsForAllNormalSubtitles", { defaultValue: "Create cards for all normal subtitles" })}
+            title={t("subtitleColumn.bulkCreateCardsTitle", { defaultValue: "Create cards in batch" })}
           >
-            <PlusCircle size={14}/>
-            {t("modals.bulkCreateBtnContent", { defaultValue: "Create cards for the next {{num}} normal subtitle lines", num: subtitleCounts.normal > bulkCreateLimit ? bulkCreateLimit : subtitleCounts.normal })}
+            {t("subtitleColumn.bulkCreateCards", { defaultValue: "create cards", num: Math.min(subtitleCounts.normal, localBulkCreateLimit) })}
           </button>
         </div>
       )}

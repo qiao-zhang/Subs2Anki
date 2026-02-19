@@ -102,7 +102,6 @@ export const saveProjectRecord = async (record: ProjectRecord, fileName?: string
     }
   } catch (error) {
     console.error('保存项目记录失败:', error);
-    throw error;
   }
 };
 

@@ -949,6 +949,7 @@ const App: React.FC = () => {
           onShiftSubtitles={shiftSubtitles}
           showBulkCreateButton={showBulkCreateButton}
           bulkCreateLimit={bulkCreateLimit}
+          onBulkCreateLimitChange={setBulkCreateLimit}
         />
       </div>
 

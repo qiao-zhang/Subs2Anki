@@ -44,9 +44,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [localAudioVolume, setLocalAudioVolume] = useState(audioVolume);
   const [localLanguage, setLocalLanguage] = useState(i18n.language);
 
-  // 检查输入的限制值是否有效
-  const isValidLimit = localBulkCreateLimit >= 1 && localBulkCreateLimit <= 50;
-
   const handleCheckConnection = async (targetUrl: string) => {
     setStatus('checking');
     setErrorMsg('');
@@ -70,12 +67,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // 验证输入的有效性
-    if (!isValidLimit) {
-      alert('Bulk create limit must be between 1 and 50');
-      return;
-    }
 
     // 保存所有设置
     onSaveAnkiConnectUrl(localUrl);
@@ -229,28 +220,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                   </label>
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300">{t("modals.maxCardsPerOperation", { defaultValue: "Max Cards Per Bulk Operation" })}</label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="number"
-                      min="1"
-                      max="50"
-                      value={localBulkCreateLimit}
-                      onChange={(e) => setLocalBulkCreateLimit(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
-                      className="w-20 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition text-sm"
-                    />
-                    <span className="text-sm text-slate-400">{t("modals.cardsMax", { defaultValue: "cards (max 50)" })}</span>
-                    {!isValidLimit && (
-                      <span className="text-xs text-red-400">{t("modals.invalid", { defaultValue: "Invalid" })}</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500">{t("modals.limitMemoryIssues", { defaultValue: "Limit to prevent memory issues" })}</p>
-                </div>
-
-
-
               </div>
               <div className="space-y-4">
                 <h3 className="text-md font-bold flex items-center gap-2 text-slate-300">
@@ -314,7 +283,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               type="submit"
               className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 flex items-center gap-2"
-              disabled={!isValidLimit}
             >
               <Save size={16}/> {t("modals.save")}
             </button>
