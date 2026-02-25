@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Minimap from 'wavesurfer.js/dist/plugins/minimap.esm.js';
@@ -44,6 +44,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const updateSubtitleTime = useAppStore(state => state.updateSubtitleTime);
   const getSubtitleLine = useAppStore(state => state.getSubtitleLine);
   const breakUpSubtitleLine = useAppStore(state => state.breakUpSubtitleLine);
+  const countSubtitleLinesBefore = useAppStore(state => state.countSubtitleLinesBefore);
 
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -76,13 +77,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
     });
     selectedRegionsRef.current.clear();
-  }
-
-  // Count normal subtitle lines before a given time
-  const countNormalLinesBefore = (time: number): number => {
-    return subtitleLines
-      .filter(sub => sub.status === 'normal' && sub.endTime <= time)
-      .length;
   }
 
   // Initialize WaveSurfer
@@ -183,7 +177,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     ws.on('dblclick', (_: number) => {
       const clickTime = ws.getCurrentTime();
-      const normalCount = countNormalLinesBefore(clickTime);
+      const normalCount = countSubtitleLinesBefore(clickTime, 'normal');
+      console.log(clickTime, normalCount);
       const markerContent = normalCount.toString();
 
       // Remove existing marker if there is one
@@ -464,7 +459,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // Update MARKER region content if it exists (normal count may have changed)
     if (markerRegion.current) {
-      const newNormalCount = countNormalLinesBefore(markerRegion.current.start);
+      const newNormalCount = countSubtitleLinesBefore(markerRegion.current.start, 'normal');
       markerRegion.current.setOptions({content: newNormalCount.toString()});
     }
 

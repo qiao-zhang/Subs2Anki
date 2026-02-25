@@ -44,6 +44,7 @@ interface AppState {
   subtitleFileName: string;
   fileHandle: any | null;
   hasUnsavedChanges: boolean;
+  countSubtitleLinesBefore: (time: number, status?: 'normal' | 'locked' | 'ignored') => number;
   setSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: any) => void;
   updateSubtitleText: (id: number, text: string) => void;
   updateSubtitleTime: (id: number, start: number, end: number) => void;
@@ -124,6 +125,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   subtitleFileName: '',
   fileHandle: null,
   hasUnsavedChanges: false,
+  countSubtitleLinesBefore: (time: number, status?: 'normal' | 'locked' | 'ignored') => {
+    if (!status) {
+      status = 'normal';
+    }
+    return get().subtitleLines
+      .filter(sub => sub.status === status && sub.endTime <= time)
+      .length;
+  },
   setSubtitles: (lines, fileName, fileHandle = null) =>
     set({subtitleLines: lines, subtitleFileName: fileName, fileHandle, hasUnsavedChanges: false}),
 
@@ -335,15 +344,36 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!subtitleToSplit) return; // Subtitle line not found
 
     // Find the split point in the text
-    let splitIndex = -1;
     const text = subtitleToSplit.text;
+    const mid = Math.ceil(text.length / 2);
+    let largerIndex = -1;
+    let smallerIndex = -1;
 
-    // Look for spaces (either half-width or full-width) or newlines to split on
-    for (let i = 0; i < text.length; i++) {
+    for (let i = mid; i < text.length; i++) {
+      console.log(i, text[i], /\s/.test(text[i]));
       if (/\s/.test(text[i])) { // Matches any whitespace character (space, tab, etc.)
-        splitIndex = i;
+        largerIndex = i;
         break;
       }
+    }
+    for (let i = mid - 1; i >= 0; i--) {
+      console.log(i, text[i], /\s/.test(text[i]));
+      if (/\s/.test(text[i])) { // Matches any whitespace character (space, tab, etc.)
+        smallerIndex = i;
+        break;
+      }
+    }
+
+    let splitIndex = -1;
+    if (largerIndex < 0 && smallerIndex < 0) {
+      // do nothing
+    } else if (largerIndex > 0 && smallerIndex < 0) {
+      splitIndex = largerIndex;
+    } else if (smallerIndex > 0 && largerIndex < 0) {
+      splitIndex = smallerIndex;
+    } else {
+      splitIndex = (largerIndex - mid) < (mid - smallerIndex) ?
+        largerIndex : smallerIndex;
     }
 
     let firstPart: string, secondPart: string;
