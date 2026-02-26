@@ -9,9 +9,10 @@ const ANKI_SEP = '\x1f'; // Unit separator for fields
  */
 export const createAnkiDatabase = async (
   cards: AnkiCard[],
+  tags : string[],
   deckName: string,
   noteType: AnkiNoteType,
-  creationTime: number // New parameter to synchronize filenames
+  creationTime: number
 ): Promise<Uint8Array> => {
   const SQL = await initSqlJs({
     locateFile: (file) => {
@@ -280,8 +281,7 @@ export const createAnkiDatabase = async (
     const noteId = creationTime + index * 100; // Use creationTime for ID generation too
     const guid = generateGUID(noteId.toString());
 
-    const cardTags = card.tags && Array.isArray(card.tags) && card.tags.length > 0 ? [...new Set(card.tags)] : [];
-    const tagsStr = cardTags.join(' ');
+    const tagsStr = tags.join(' ');
 
     noteStmt.run({
       ':id': noteId,

@@ -13,11 +13,13 @@ import { getMedia } from './db.ts';
  * 3. Actual media files referenced in the database.
  * 
  * @param cards - The list of cards to export
+ * @param tags - The tags to add to each card
  * @param deckName - The name to be used for the filename and deck inside Anki
  * @param noteType - The definition of the Note Type (fields, templates)
  */
 export const generateAnkiDeck = async (
-  cards: AnkiCard[], 
+  cards: AnkiCard[],
+  tags: string[],
   deckName: string,
   noteType: AnkiNoteType
 ) => {
@@ -38,7 +40,7 @@ export const generateAnkiDeck = async (
   // Note: createAnkiDatabase logic remains mostly the same, relying on properties of 'card'
   // We need to ensure that the logic there checks refs existence.
   try {
-    const dbData = await createAnkiDatabase(cards, deckName, noteType, creationTime);
+    const dbData = await createAnkiDatabase(cards, tags, deckName, noteType, creationTime);
     zip.file("collection.anki2", dbData);
   } catch (e) {
     console.error("Failed to generate Anki database", e);

@@ -533,7 +533,7 @@ const App: React.FC = () => {
 
       // Sync only this card
       updateCardSyncStatus(id, 'syncing');
-      await syncToAnki(ankiConnectUrl, deckName, ankiConfig, [card], (cur, tot) => {
+      await syncToAnki(ankiConnectUrl, deckName, ankiConfig, [card], globalTags, (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
       });
 
@@ -574,7 +574,7 @@ const App: React.FC = () => {
         updateCardSyncStatus(card.id, 'syncing');
       });
 
-      await syncToAnki(ankiConnectUrl, selectedDeck, ankiConfig, unsyncedCards, (cur, tot) => {
+      await syncToAnki(ankiConnectUrl, selectedDeck, ankiConfig, unsyncedCards, globalTags, (cur, tot) => {
         setSyncProgress({current: cur, total: tot});
       }, async (cardId: string) => {
         if (autoDeleteSynced) {
@@ -596,7 +596,7 @@ const App: React.FC = () => {
 
   const handleExportApkg = async () => {
     setIsExporting(true);
-    await generateAnkiDeck(ankiCards, projectName, ankiConfig);
+    await generateAnkiDeck(ankiCards, globalTags,  projectName, ankiConfig);
     setIsExporting(false);
   }
 

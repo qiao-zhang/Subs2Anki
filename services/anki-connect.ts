@@ -95,6 +95,7 @@ export const syncToAnki = async (
   deckName: string,
   noteType: AnkiNoteType,
   cards: AnkiCard[],
+  tags: string[],
   onProgress: (current: number, total: number) => void,
   onCardSynced?: (id: string) => void,
 ) => {
@@ -180,15 +181,13 @@ export const syncToAnki = async (
 
     // 4. Add Note
     try {
-      // Combine card tags with default tags
-      const cardTags = card.tags && Array.isArray(card.tags) && card.tags.length > 0 ? [...new Set(card.tags)] : [];
 
       await invoke('addNote', {
         note: {
           deckName: deckName,
           modelName: noteType.name,
           fields: fields,
-          tags: cardTags,
+          tags: tags,
           options: {
             allowDuplicate: false,
             duplicateScope: 'deck'
