@@ -21,6 +21,7 @@ interface WaveformDisplayProps {
   onTempSubtitleLineRemoved: () => void;
   onSubtitleLineClicked: (id: number) => void;
   onSubtitleLineShiftClicked: (id: number) => void;
+  onSubtitleLineUpdated: (id: number, start: number, end: number) => void;
   onSubtitleLineRemoved: (id: number) => void;
   numOfNormalRegionsToHighlight?: number;
 }
@@ -37,13 +38,13 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            onTempSubtitleLineRemoved,
                                                            onSubtitleLineClicked,
                                                            onSubtitleLineShiftClicked,
+                                                           onSubtitleLineUpdated,
                                                            onSubtitleLineRemoved,
                                                            numOfNormalRegionsToHighlight = 0,
                                                          }) => {
   const {t} = useTranslation();
   // Access store for direct reads in listeners and reactive updates
   const subtitleLines = useAppStore(state => state.subtitleLines);
-  const updateSubtitleTime = useAppStore(state => state.updateSubtitleTime);
   const getSubtitleLine = useAppStore(state => state.getSubtitleLine);
   const breakUpSubtitleLine = useAppStore(state => state.breakUpSubtitleLine);
   const countSubtitleLinesBefore = useAppStore(state => state.countSubtitleLinesBefore);
@@ -263,7 +264,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       const id = parseInt(region.id);
       if (isNaN(id)) return;
       removeTempRegion();
-      updateSubtitleTime(id, region.start, region.end);
+      onSubtitleLineUpdated(id, region.start, region.end);
     });
 
     regions.on('region-clicked', (region: Region, e: MouseEvent) => {

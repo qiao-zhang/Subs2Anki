@@ -40,7 +40,8 @@ const App: React.FC = () => {
     setSubtitles, shiftSubtitles,
     addSubtitleLine, removeSubtitle, getSubtitleLine,
     mergeSubtitleLines, breakUpSubtitleLine,
-    updateSubtitleText, toggleSubtitleLineStatus, setSubtitleLineStatus,
+    updateSubtitleText,  updateSubtitleTime,
+    toggleSubtitleLineStatus, setSubtitleLineStatus,
     undo, redo, canUndo, canRedo,
     ankiCards, addCard, deleteCard,
     updateCardSyncStatus, clearCards,
@@ -253,14 +254,17 @@ const App: React.FC = () => {
     setTempSubtitleLine({start, end});
   };
 
-  const handleTempSubtitleLineUpdated = (start: number, end: number) => {
+  const handleTempSubtitleLineUpdated = useCallback((start: number, end: number) => {
+    if (!tempSubtitleLine) return;
     setActiveSubtitleLineId(null);
+    const {start: oldStart, end: oldEnd} = tempSubtitleLine;
     setTempSubtitleLine({start, end});
-  };
+    playUpdatedSpan(oldStart, oldEnd, start, end);
+  }, [tempSubtitleLine]);
 
-  const handleTempSubtitleLineRemoved = () => {
+  const handleTempSubtitleLineRemoved = useCallback(() => {
     setTempSubtitleLine(null);
-  }
+  }, []);
 
   const playTimeSpan = (start: number, end: number) => {
     if (videoPlayerRef.current === null) return;
@@ -268,6 +272,34 @@ const App: React.FC = () => {
     videoPlayerRef.current?.seekTo(start);
     videoPlayerRef.current?.play();
   }
+
+  const playEdge = (start: number, end: number, side: 'start' | 'end', maxSpan?: number) => {
+    let duration = end - start;
+    if (!maxSpan) {
+      maxSpan = 1;
+    }
+    if (duration > maxSpan) {
+      duration = maxSpan
+    }
+    if (duration <= 0) return;
+    if (side === 'start') {
+      playTimeSpan(start, start + duration);
+    } else {
+      playTimeSpan(end - duration, end);
+    }
+  }
+
+  const playUpdatedSpan = (oldStart: number, oldEnd: number, newStart: number, newEnd: number) => {
+    const startChanged = Math.abs(newStart - oldStart) > 0.05;
+    const endChanged = Math.abs(newEnd - oldEnd) > 0.05;
+    if (startChanged && endChanged) {
+      playTimeSpan(newStart, newEnd);
+    } else if (startChanged) {
+      playEdge(newStart, newEnd, 'start');
+    } else if (endChanged) {
+      playEdge(newStart, newEnd, 'end');
+    }
+  };
 
   const handleTempSubtitleLineClicked = useCallback(() => {
     if (!tempSubtitleLine) return;
@@ -286,7 +318,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCommitTempSubtitleLine = (text: string) => {
+  const handleCommitTempSubtitleLine = useCallback((text: string) => {
     if (!tempSubtitleLine) return;
     const maxId = subtitleLines.reduce((max, s) => Math.max(max, s.id), 0);
     const newSubLine: SubtitleLine = {
@@ -298,7 +330,7 @@ const App: React.FC = () => {
     };
     addSubtitleLine(newSubLine);
     setTempSubtitleLine(null);
-  };
+  }, [tempSubtitleLine, subtitleLines, addSubtitleLine]);
 
   const handleSaveSubtitles = async () => {
     if (!subtitleFileName) return;
@@ -391,17 +423,17 @@ const App: React.FC = () => {
   const handleSubtitleLineClicked = (id: number) => {
     const sub = getSubtitleLine(id);
 
-    if (sub && videoPlayerRef.current) {
-      setTempSubtitleLine(null);
-      setActiveSubtitleLineId(id);
-      playTimeSpan(sub.startTime, sub.endTime);
-    }
+    if (!sub) return;
+    if (!videoPlayerRef.current) return;
+    setTempSubtitleLine(null);
+    setActiveSubtitleLineId(id);
+    playTimeSpan(sub.startTime, sub.endTime);
   };
 
   const handleSubtitleLineShiftClicked = (id: number) => {
     const sub = getSubtitleLine(id);
-
     if (!sub) return;
+
     // 复制字幕文本到剪贴板
     navigator.clipboard.writeText(sub.text).then(() => {
       // 显示复制成功的提示
@@ -413,6 +445,19 @@ const App: React.FC = () => {
       console.error('Cannot copy text:', err);
     });
   }
+
+  const handleSubtitleLineUpdated = (id: number, start: number, end: number) => {
+    const sub = getSubtitleLine(id);
+    if (!sub) return;
+    if (!videoPlayerRef.current) return;
+
+    setTempSubtitleLine(null);
+    setActiveSubtitleLineId(id);
+
+    const {startTime: oldStart, endTime: oldEnd} = sub;
+    updateSubtitleTime(id, start, end);
+    playUpdatedSpan(oldStart, oldEnd, start, end);
+  };
 
   const handleCreateCard = async (id: number) => {
     const s = getSubtitleLine(id);
@@ -597,7 +642,7 @@ const App: React.FC = () => {
 
   const handleExportApkg = async () => {
     setIsExporting(true);
-    await generateAnkiDeck(ankiCards, globalTags,  projectName, ankiConfig);
+    await generateAnkiDeck(ankiCards, globalTags, projectName, ankiConfig);
     setIsExporting(false);
   }
 
@@ -988,6 +1033,7 @@ const App: React.FC = () => {
           onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
           onSubtitleLineClicked={handleSubtitleLineClicked}
           onSubtitleLineShiftClicked={handleSubtitleLineShiftClicked}
+          onSubtitleLineUpdated={handleSubtitleLineUpdated}
           onSubtitleLineRemoved={removeSubtitle}
           numOfNormalRegionsToHighlight={showBulkCreateButton ? bulkCreateLimit : 0}
         />
