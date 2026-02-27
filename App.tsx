@@ -179,7 +179,6 @@ const App: React.FC = () => {
 
   useKeyboardShortcuts({
     setActiveSubtitleLineId,
-    setTempSubtitleLine,
     onToggleRegionsHidden: () => {
       if (regionsHidden) {
         setRegionsHidden(false);

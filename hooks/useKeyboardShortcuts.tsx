@@ -19,7 +19,6 @@ export const useMergeKeyboardShortcut = (onMerge: () => void) => {
 
 interface KeyboardShortcutsOptions {
   setActiveSubtitleLineId: (id: number | null) => void;
-  setTempSubtitleLine: (line: { start: number; end: number } | null) => void;
   onToggleRegionsHidden: () => void;
   onToggleIsVideoOnlyMode: () => void;
   onReplay: () => void;
@@ -42,7 +41,6 @@ interface KeyboardShortcutsOptions {
 export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
   const {
     setActiveSubtitleLineId,
-    setTempSubtitleLine,
     onToggleRegionsHidden,
     onToggleIsVideoOnlyMode,
     onReplay,
@@ -162,7 +160,6 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     setActiveSubtitleLineId,
-    setTempSubtitleLine,
     onToggleRegionsHidden,
     onToggleIsVideoOnlyMode,
     onReplay,
