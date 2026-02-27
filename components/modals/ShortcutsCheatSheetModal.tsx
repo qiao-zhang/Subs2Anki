@@ -12,9 +12,11 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
     {keys: ['/', 'Tab'], description: t("shortcuts.showHideCheatsheet", {defaultValue: "Show/Hide this cheatsheet"})},
     {keys: ['Space'], description: t("shortcuts.replayCurrentRegion", {defaultValue: "Replay the current region"})},
     {keys: ['P', 'Q'], description: t("shortcuts.playPause", {defaultValue: "Play/Pause"})},
+    {keys: ['H'], description: t("shortcuts.playHead", {defaultValue: "Play the head part of current region"})},
+    {keys: ['T'], description: t("shortcuts.playTail", {defaultValue: "Play the tail part of current region"})},
     {keys: ['K', 'F'], description: t("shortcuts.nextSubtitle", {defaultValue: "Next subtitle line"})},
     {keys: ['J', 'D'], description: t("shortcuts.previousSubtitle", {defaultValue: "Previous subtitle line"})},
-    {keys: ['H'], description: t("shortcuts.hideUnhideRegions", {defaultValue: "Hide/Unhide the subtitle regions"})},
+    {keys: ['S', 'L'], description: t("shortcuts.hideUnhideRegions", {defaultValue: "Hide/Unhide the subtitle regions"})},
     {keys: ['V'], description: t("shortcuts.videoOnlyMode", {defaultValue: "Turn on/off the video-only mode"})},
     {
       keys: ['C', 'N'],
@@ -29,11 +31,11 @@ const ShortcutsCheatSheetModal: React.FC<ShortcutsCheatSheetModalProps> = ({isOp
       description: t("shortcuts.toggleStatusBackward", {defaultValue: "Toggle status of current subtitle line (backward)"})
     },
     {
-      keys: ['S', 'B'],
+      keys: ['B'],
       description: t("shortcuts.breakUpLine", {defaultValue: "Break up current subtitle line into 2 new lines"})
     },
     {
-      keys: [';', 'A'],
+      keys: ['A', 'M'],
       description: t("shortcuts.mergeWithNext", {defaultValue: "Merge current subtitle line with the next one"})
     },
     {

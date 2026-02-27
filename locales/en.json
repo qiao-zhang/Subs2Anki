@@ -163,6 +163,8 @@
     "toggleStatusBackward": "Toggle status of current subtitle line (backward)",
     "replayCurrentRegion": "Replay the current region",
     "playPause": "Play/Pause",
+    "playHead": "Play the head part of current region",
+    "playTail": "Play the tail part of current region",
     "previousSubtitle": "Previous subtitle line",
     "nextSubtitle": "Next subtitle line",
     "hideUnhideRegions": "Hide/Unhide the subtitle regions",

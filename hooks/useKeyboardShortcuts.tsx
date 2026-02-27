@@ -5,7 +5,7 @@ export const useMergeKeyboardShortcut = (onMerge: () => void) => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
 
-      if (e.code === 'KeyM' || e.code === 'KeyG') {
+      if (e.code === 'KeyG') {
         e.preventDefault();
         onMerge();
         return;
@@ -22,8 +22,10 @@ interface KeyboardShortcutsOptions {
   setTempSubtitleLine: (line: { start: number; end: number } | null) => void;
   onToggleRegionsHidden: () => void;
   onToggleIsVideoOnlyMode: () => void;
-  onPlay: () => void;
   onReplay: () => void;
+  onPlay: () => void;
+  onPlayHead: () => void;
+  onPlayTail: () => void;
   onCreateCard: () => void;
   onJumpNext: () => void;
   onJumpPrev: () => void;
@@ -43,8 +45,10 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
     setTempSubtitleLine,
     onToggleRegionsHidden,
     onToggleIsVideoOnlyMode,
-    onPlay,
     onReplay,
+    onPlay,
+    onPlayHead,
+    onPlayTail,
     onCreateCard,
     onJumpNext,
     onJumpPrev,
@@ -64,25 +68,33 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
 
       switch (e.code) {
+        case 'KeyH':
+          e.preventDefault();
+          onPlayHead();
+          break;
+        case 'KeyT':
+          e.preventDefault();
+          onPlayTail();
+          break;
         case 'KeyX':
         case 'Comma':
           e.preventDefault();
           onDeleteActiveSubtitleLine();
-          return;
+          break;
         case 'KeyR':
         case 'KeyY':
           e.preventDefault();
           onRedo();
-          return;
+          break;
         case 'KeyU':
         case 'KeyZ':
           e.preventDefault();
           onUndo();
-          return;
+          break;
         case 'Space':
           e.preventDefault();
           onReplay();
-          return;
+          break;
         case 'KeyP':
         case 'KeyQ':
           e.preventDefault();
@@ -103,12 +115,15 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
           e.preventDefault();
           onJumpNext();
           break;
-        case 'KeyN':
         case 'KeyC':
+          if (e.ctrlKey) break;
+          // fallthrough
+        case 'KeyN':
           e.preventDefault();
           onCreateCard();
           break;
-        case 'KeyH':
+        case 'KeyS':
+        case 'KeyL':
           e.preventDefault();
           onToggleRegionsHidden();
           break;
@@ -127,12 +142,11 @@ export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions) => {
           onToggleStatusOfActiveSubtitleLine('backward');
           return;
         case 'KeyB':
-        case 'KeyS':
           e.preventDefault();
           onBreakUp();
           break;
         case 'KeyA':
-        case 'Semicolon':
+        case 'KeyM':
           e.preventDefault();
           onMergeWithNext();
           break;

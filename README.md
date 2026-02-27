@@ -85,24 +85,26 @@ npm run build
 
 ### Keyboard Shortcuts Reference
 
-| Shortcut | Function |
-|----------|----------|
-| / / Tab | Show/Hide shortcut hints |
-| Space | Replay current segment |
-| P / Q | Play/Pause |
-| J / D | Previous subtitle line |
-| K / F | Next subtitle line |
-| H | Show/Hide subtitle regions |
-| V | Toggle video-only mode |
-| C / N | Create card for current subtitle line |
-| I / E | Toggle current subtitle line status (forward) |
-| O / W | Toggle current subtitle line status (backward) |
-| B / S | Split current subtitle line into two lines |
-| A / ; | Merge current subtitle line with next subtitle line |
-| X / , | Delete current subtitle line |
-| U / Z | Undo operation |
-| R / Y | Redo operation |
-| . / Escape | Open/close settings modal |
+| Shortcut   | Function                                            |
+|------------|-----------------------------------------------------|
+| / / Tab    | Show/Hide shortcut hints                            |
+| Space      | Replay current segment                              |
+| P / Q      | Play/Pause                                          |
+| H          | Play the head part of current region                |
+| T          | Play the tail part of current region                |
+| J / D      | Previous subtitle line                              |
+| K / F      | Next subtitle line                                  |
+| S / L      | Hide/Unhide subtitle regions                        |
+| V          | Toggle video-only mode                              |
+| C / N      | Create card for current subtitle line               |
+| I / E      | Toggle current subtitle line status (forward)       |
+| O / W      | Toggle current subtitle line status (backward)      |
+| B          | Split current subtitle line into two lines          |
+| A / M      | Merge current subtitle line with next subtitle line |
+| X / ,      | Delete current subtitle line                        |
+| U / Z      | Undo operation                                      |
+| R / Y      | Redo operation                                      |
+| . / Escape | Open/close settings modal                           |
 
 ## Tech Stack
 

@@ -198,11 +198,6 @@ const App: React.FC = () => {
       setTempSubtitleLine(null);
       setIsVideoOnlyMode(true);
     },
-    onPlay: () => {
-      setActiveSubtitleLineId(null);
-      setTempSubtitleLine(null);
-      videoPlayerRef.current?.playPause();
-    },
     onReplay(): void {
       if (activeSubtitleLineId !== null) {
         handleSubtitleLineClicked(activeSubtitleLineId);
@@ -212,7 +207,39 @@ const App: React.FC = () => {
         playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
         return;
       }
+      // If no active or temp subtitle line, act as onPlay
       videoPlayerRef.current?.playPause();
+    },
+    onPlay: () => {
+      setActiveSubtitleLineId(null);
+      setTempSubtitleLine(null);
+      videoPlayerRef.current?.playPause();
+    },
+    onPlayHead: () => {
+      if (activeSubtitleLineId !== null) {
+        const sub = getSubtitleLine(activeSubtitleLineId);
+        if (!sub) return;
+        if (!videoPlayerRef.current) return;
+        playEdge(sub.startTime, sub.endTime, "start");
+        return;
+      }
+      if (tempSubtitleLine !== null) {
+        playEdge(tempSubtitleLine.start, tempSubtitleLine.end, "start");
+        return;
+      }
+    },
+    onPlayTail: () => {
+      if (activeSubtitleLineId !== null) {
+        const sub = getSubtitleLine(activeSubtitleLineId);
+        if (!sub) return;
+        if (!videoPlayerRef.current) return;
+        playEdge(sub.startTime, sub.endTime, "end");
+        return;
+      }
+      if (tempSubtitleLine !== null) {
+        playEdge(tempSubtitleLine.start, tempSubtitleLine.end, "end");
+        return;
+      }
     },
     onCreateCard: async () => {
       if (activeSubtitleLineId === null) return;

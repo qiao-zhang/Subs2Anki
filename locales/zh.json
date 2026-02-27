@@ -160,6 +160,8 @@
     "toggleStatusBackward": "切换当前字幕行的状态（倒序）",
     "replayCurrentRegion": "重播当前区域",
     "playPause": "播放/暂停",
+    "playHead": "播放当前区域的开头部分",
+    "playTail": "播放当前区域的末尾部分",
     "previousSubtitle": "上一个字幕行",
     "nextSubtitle": "下一个字幕行",
     "hideUnhideRegions": "隐藏/显示字幕区域",
