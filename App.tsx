@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import {SubtitleLine, AnkiCard} from './services/types.ts';
 import {serializeSubtitles} from './services/parser.ts';
@@ -269,10 +269,11 @@ const App: React.FC = () => {
     videoPlayerRef.current?.play();
   }
 
-  const handleTempSubtitleLineClicked = () => {
+  const handleTempSubtitleLineClicked = useCallback(() => {
     if (!tempSubtitleLine) return;
+    setActiveSubtitleLineId(null);
     playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
-  };
+  }, [tempSubtitleLine]);
 
   const extractAudioSync = async (start: number, end: number): Promise<Blob | null> => {
     if (!videoFile) return null;
