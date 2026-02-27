@@ -980,6 +980,7 @@ const App: React.FC = () => {
           currentTime={currentTime}
           onSeek={handleSeek}
           regionsHidden={regionsHidden}
+          tempSubtitleLine={tempSubtitleLine}
           onTempSubtitleLineCreated={handleTempSubtitleLineCreated}
           onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
           onTempSubtitleLineClicked={handleTempSubtitleLineClicked}

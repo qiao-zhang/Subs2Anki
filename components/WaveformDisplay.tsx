@@ -14,6 +14,7 @@ interface WaveformDisplayProps {
   currentTime: number;
   onSeek: (time: number) => void;
   regionsHidden: boolean;
+  tempSubtitleLine: { start: number, end: number } | null;
   onTempSubtitleLineCreated: (start: number, end: number) => void;
   onTempSubtitleLineUpdated: (start: number, end: number) => void;
   onTempSubtitleLineClicked: () => void;
@@ -29,6 +30,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                                                            videoSrc,
                                                            onSeek,
                                                            regionsHidden,
+                                                           tempSubtitleLine,
                                                            onTempSubtitleLineCreated,
                                                            onTempSubtitleLineUpdated,
                                                            onTempSubtitleLineClicked,
@@ -64,6 +66,23 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   // Multi-selection state
   const selectedRegionsRef = useRef<Map<string, Region>>(new Map());
+
+  // Callback to remove temp region
+  const removeTempRegion = useCallback(() => {
+    if (tempRegion.current) {
+      tempRegion.current.remove();
+      tempRegion.current = null;
+      onTempSubtitleLineRemoved();
+    }
+  }, [onTempSubtitleLineRemoved]);
+
+  // Watch tempSubtitleLine prop changes - remove region when it becomes null (after commit)
+  useEffect(() => {
+    if (tempSubtitleLine === null && tempRegion.current) {
+      removeTempRegion();
+    }
+  }, [tempSubtitleLine, removeTempRegion]);
+
   const clearSelectedRegions = () => {
     selectedRegionsRef.current.forEach((region, regionId) => {
       region.element.classList.remove("selected");
@@ -130,14 +149,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       cursorColor: '#ef4444',
     });
 
-    const removeTempRegion = () => {
-      if (tempRegion.current) {
-        tempRegion.current.remove();
-        tempRegion.current = null;
-        onTempSubtitleLineRemoved();
-      }
-    }
-
     const ws = WaveSurfer.create({
       container: waveformContainerRef.current,
       media: videoElement, // Use the video element directly!
@@ -191,7 +202,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       markerRegion.current = regions.addRegion({
         id: MARKER_REGION_ID,
         start: clickTime,
-        // end: clickTime,
         content: markerContent,
         color: 'rgba(255, 215, 0, 0.4)', // Gold color for marker
         drag: true,
@@ -201,6 +211,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // --- Region Events ---
     regions.on('region-created', (region: Region) => {
+      console.log("test");
 
       region.element.addEventListener('contextmenu', (e) => {
         e.preventDefault();
