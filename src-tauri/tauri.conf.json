@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "subs2anki",
-  "version": "1.5.0",
+  "version": "1.5.3",
   "identifier": "com.zhangqiao.sus2anki",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "npm run sync-version && npm run dev",
-    "beforeBuildCommand": "npm run sync-version && npm run build"
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [

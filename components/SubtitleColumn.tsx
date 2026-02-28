@@ -58,8 +58,9 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                        }) => {
   const { t } = useTranslation();
   const MIN_SHIFT_MS = 10;
+  const DEFAULT_SHIFT_MS = 100;
   const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
-  const [shiftAmount, setShiftAmount] = useState(MIN_SHIFT_MS);
+  const [shiftAmount, setShiftAmount] = useState(DEFAULT_SHIFT_MS);
   const [localBulkCreateLimit, setLocalBulkCreateLimit] = useState(bulkCreateLimit);
 
   // 同步 prop 变化

@@ -278,15 +278,18 @@ const App: React.FC = () => {
   const handleTempSubtitleLineCreated = (start: number, end: number) => {
     setActiveSubtitleLineId(null);
     setTempSubtitleLine({start, end});
+    playTimeSpan(start, end);
   };
 
-  const handleTempSubtitleLineUpdated = useCallback((start: number, end: number) => {
-    if (!tempSubtitleLine) return;
+  const handleTempSubtitleLineUpdated = useCallback((start: number, end: number, side?: 'start' | 'end') => {
     setActiveSubtitleLineId(null);
-    const {start: oldStart, end: oldEnd} = tempSubtitleLine;
     setTempSubtitleLine({start, end});
-    playUpdatedSpan(oldStart, oldEnd, start, end);
-  }, [tempSubtitleLine]);
+    if (side) {
+      playEdge(start, end, side);
+    } else {
+      playTimeSpan(start, end);
+    }
+  }, []);
 
   const handleTempSubtitleLineRemoved = useCallback(() => {
     setTempSubtitleLine(null);
@@ -327,11 +330,10 @@ const App: React.FC = () => {
     }
   };
 
-  const handleTempSubtitleLineClicked = useCallback(() => {
-    if (!tempSubtitleLine) return;
+  const handleTempSubtitleLineClicked = useCallback((start: number, end: number) => {
     setActiveSubtitleLineId(null);
-    playTimeSpan(tempSubtitleLine.start, tempSubtitleLine.end);
-  }, [tempSubtitleLine]);
+    playTimeSpan(start, end);
+  }, []);
 
   const extractAudioSync = async (start: number, end: number): Promise<Blob | null> => {
     if (!videoFile) return null;

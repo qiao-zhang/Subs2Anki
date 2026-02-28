@@ -7,6 +7,7 @@ import {Activity, ZoomIn, ZoomOut} from 'lucide-react';
 import {useAppStore} from '@/services/store.ts';
 import {useMergeKeyboardShortcut} from "@/hooks/useKeyboardShortcuts.tsx";
 import {useTranslation} from 'react-i18next';
+import {UpdateSide} from "wavesurfer.js/plugins/regions";
 
 interface WaveformDisplayProps {
   videoElement: HTMLVideoElement | null;
@@ -16,8 +17,8 @@ interface WaveformDisplayProps {
   regionsHidden: boolean;
   tempSubtitleLine: { start: number, end: number } | null;
   onTempSubtitleLineCreated: (start: number, end: number) => void;
-  onTempSubtitleLineUpdated: (start: number, end: number) => void;
-  onTempSubtitleLineClicked: () => void;
+  onTempSubtitleLineUpdated: (start: number, end: number, side?: 'start' | 'end') => void;
+  onTempSubtitleLineClicked: (start: number, end: number) => void;
   onTempSubtitleLineRemoved: () => void;
   onSubtitleLineClicked: (id: number) => void;
   onSubtitleLineShiftClicked: (id: number) => void;
@@ -190,7 +191,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     ws.on('dblclick', (_: number) => {
       const clickTime = ws.getCurrentTime();
       const normalCount = countSubtitleLinesBefore(clickTime, 'normal');
-      console.log(clickTime, normalCount);
       const markerContent = normalCount.toString();
 
       // Remove existing marker if there is one
@@ -212,8 +212,6 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // --- Region Events ---
     regions.on('region-created', (region: Region) => {
-      console.log("test");
-
       region.element.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -248,12 +246,12 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       onTempSubtitleLineCreated(region.start, region.end);
     });
 
-    regions.on('region-updated', (region: Region) => {
+    regions.on('region-updated', (region: Region, side: UpdateSide) => {
       if (isSyncingSubtitles.current) return;
       videoElement.pause();
 
       if (region.id === TEMP_REGION_ID) {
-        onTempSubtitleLineUpdated(region.start, region.end);
+        onTempSubtitleLineUpdated(region.start, region.end, side);
         return;
       }
 
@@ -270,7 +268,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     regions.on('region-clicked', (region: Region, e: MouseEvent) => {
       e.stopPropagation();
       if (region.id === TEMP_REGION_ID) {
-        onTempSubtitleLineClicked();
+        onTempSubtitleLineClicked(region.start, region.end);
         return;
       }
       removeTempRegion();
