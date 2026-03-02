@@ -284,7 +284,7 @@ const App: React.FC = () => {
   const handleTempSubtitleLineUpdated = useCallback((start: number, end: number, side?: 'start' | 'end') => {
     setActiveSubtitleLineId(null);
     setTempSubtitleLine({start, end});
-    if (side) {
+    if (side && side === 'end') {
       playEdge(start, end, side);
     } else {
       playTimeSpan(start, end);
@@ -321,10 +321,8 @@ const App: React.FC = () => {
   const playUpdatedSpan = (oldStart: number, oldEnd: number, newStart: number, newEnd: number) => {
     const startChanged = Math.abs(newStart - oldStart) > 0.05;
     const endChanged = Math.abs(newEnd - oldEnd) > 0.05;
-    if (startChanged && endChanged) {
+    if (startChanged) {
       playTimeSpan(newStart, newEnd);
-    } else if (startChanged) {
-      playEdge(newStart, newEnd, 'start');
     } else if (endChanged) {
       playEdge(newStart, newEnd, 'end');
     }

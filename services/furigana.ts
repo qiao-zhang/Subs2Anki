@@ -93,10 +93,7 @@ class FuriganaService {
     });
 
     // Clean up extra whitespace that might have been introduced
-    // Replace multiple spaces with single space and trim
-    result = result.trimStart().replace(/\s+/g, ' ').trim();
-
-    return result;
+    return result.trim();
   }
 }
 
