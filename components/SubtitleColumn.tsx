@@ -19,6 +19,12 @@ import {SubtitleLine} from '@/services/types.ts';
 import {formatTimestamp} from '@/services/time.ts';
 import {useTranslation} from 'react-i18next';
 
+declare global {
+  interface Window {
+    showOpenFilePicker?: (options?: any) => Promise<any[]>;
+  }
+}
+
 interface SubtitleColumnProps {
   subtitleLines: SubtitleLine[];
   activeSubtitleLineId: number | null;
@@ -80,12 +86,11 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   const DEFAULT_SHIFT_MS = 100;
   const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
   const [shiftAmount, setShiftAmount] = useState(DEFAULT_SHIFT_MS);
-  // const [localBulkCreateLimit, setLocalBulkCreateLimit] = useState(bulkCreateLimit);
+  const [limitInputVal, setLimitInputVal] = useState(bulkCreateLimit.toString());
 
-  // 同步 prop 变化
-  // useEffect(() => {
-  //   setLocalBulkCreateLimit(bulkCreateLimit);
-  // }, [bulkCreateLimit]);
+  useEffect(() => {
+    setLimitInputVal(bulkCreateLimit.toString());
+  }, [bulkCreateLimit]);
 
   // 状态过滤
   const [statusFilters, setStatusFilters] = useState<Record<'normal' | 'locked' | 'ignored', boolean>>({
@@ -103,17 +108,22 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     }
   }
 
-  const handleBulkCreateLimitChange = (value: string) => {
+  const handleBulkCreateLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLimitInputVal(value);
     const num = parseInt(value, 10);
-    if (isNaN(num)) {
-      // setLocalBulkCreateLimit(20);
-      onBulkCreateLimitChange(20);
-    } else {
-      const clamped = Math.min(50, Math.max(1, num));
-      // setLocalBulkCreateLimit(clamped);
-      onBulkCreateLimitChange(clamped);
+    if (!isNaN(num) && num >= 1 && num <= 50) {
+      onBulkCreateLimitChange(num);
     }
   };
+
+  const handleLimitBlur = () => {
+    if (limitInputVal === '' || isNaN(parseInt(limitInputVal, 10))) {
+      setLimitInputVal('20');
+      onBulkCreateLimitChange(20);
+    }
+  };
+
   const handleStatusFilterChange = (status: 'normal' | 'locked' | 'ignored') => {
     setStatusFilters(prev => ({
       ...prev,
@@ -168,7 +178,6 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
 
   useEffect(() => {
     if (activeSubtitleLineId) {
-      setSearchTerm('');
       const i = filteredSubtitleLines.findIndex(line => line.id === activeSubtitleLineId);
       if (i !== -1) {
         virtuosoRef.current?.scrollToIndex({index: i, align: 'center', behavior: 'smooth'});
@@ -179,10 +188,10 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   // Scroll to active subtitle or current search result
   useEffect(() => {
     if (filteredIndices.length <= 0) return;
-    if (currentSearchIndex < 0 || currentSearchIndex > filteredIndices.length) return;
+    if (currentSearchIndex < 0 || currentSearchIndex >= filteredIndices.length) return;
     const targetIndex = filteredIndices[currentSearchIndex];
     virtuosoRef.current?.scrollToIndex({index: targetIndex, align: 'center', behavior: 'auto'});
-  }, [filteredIndices, currentSearchIndex, subtitleLines, activeSubtitleLineId]);
+  }, [filteredIndices, currentSearchIndex]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -208,9 +217,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
 
   const handleOpenSubtitle = async () => {
     try {
-      // @ts-ignore
       if (window.showOpenFilePicker) {
-        // @ts-ignore
         const [handle] = await window.showOpenFilePicker({
           types: [{description: 'Subtitle Files', accept: {'text/plain': ['.srt', '.vtt']}}],
           multiple: false,
@@ -256,25 +263,6 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       filteredIndices[currentSearchIndex] === index;
 
     const isBulkCreationCandidate = bulkCreationCandidateIds.has(sub.id);
-
-    // Highlight search terms in subtitle text
-    const highlightText = (text: string, searchTerm: string, isCurrentSearchResult: boolean) => {
-      if (!searchTerm.trim()) return <>{text}</>;
-
-      const regex = new RegExp(`(${searchTerm})`, 'gi');
-      const parts = text.split(regex);
-
-      return parts.map((part, i) =>
-        regex.test(part) ? (
-          <span
-            key={i}
-            className={`${isCurrentSearchResult ? 'bg-orange-400 text-slate-900' : 'bg-yellow-300 text-slate-900'} rounded px-0.5`}
-          >
-            {part}
-          </span>
-        ) : part
-      );
-    };
 
     return (
       <div
@@ -521,8 +509,9 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               type="number"
               min="1"
               max="50"
-              value={bulkCreateLimit}
-              onChange={(e) => handleBulkCreateLimitChange(e.target.value)}
+              value={limitInputVal}
+              onChange={handleBulkCreateLimitChange}
+              onBlur={handleLimitBlur}
               className="w-12 h-6 bg-slate-900 border border-slate-600 rounded px-1 text-xs text-white focus:border-indigo-500 outline-none text-center font-mono"
             />
             <span>{t("subtitleColumn.normalSubtitleLines", {defaultValue: "normal subtitle lines"})}</span>
