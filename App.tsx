@@ -61,7 +61,7 @@ const App: React.FC = () => {
     projectName !== '';
 
   // --- AnkiConnect Status ---
-  const {isConnected, decks, refreshDecks} = useAnkiConnect(ankiConnectUrl);
+  const {isConnected, decks, tags, refreshDecks} = useAnkiConnect(ankiConnectUrl);
 
   // --- Selected Deck State ---
   const [selectedDeck, setSelectedDeck] = useState<string>('');
@@ -956,6 +956,7 @@ const App: React.FC = () => {
           onDeleteSynced={handleDeleteSyncedCards}
           isConnected={isConnected}
           decks={decks}
+          ankiTags={tags}
           ankiConnectUrl={ankiConnectUrl}
           projectName={projectName}
           selectedDeck={selectedDeck}

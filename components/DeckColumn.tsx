@@ -17,6 +17,7 @@ interface DeckColumnProps {
   onDeleteSynced: () => void;
   isConnected?: boolean;
   decks?: string[];
+  ankiTags?: string[];
   ankiConnectUrl?: string;
   projectName?: string;
   selectedDeck?: string;
@@ -38,6 +39,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  onDeleteSynced,
                                                  isConnected,
                                                  decks = [],
+                                                 ankiTags = [],
                                                  projectName = 'Subs2Anki Export',
                                                  selectedDeck: propSelectedDeck,
                                                  onDeckChange,
@@ -143,6 +145,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                 tags={globalTags}
                 onTagsChange={onGlobalTagsChange}
                 placeholder={t("modals.addGlobalTags", { defaultValue: "Add global tags..." })}
+                availableTags={isConnected ? ankiTags : []}
               />
             </div>
           )}

@@ -19,8 +19,8 @@
 - [ ] **状态管理混乱**: Zustand store 中混合了太多业务逻辑，应分离到服务层
 
 ### 中优先级 (Medium)
+- [ ] **键盘快捷键冲突**: `useKeyboardShortcuts.tsx` 中部分快捷键定义重复（如 KeyR/KeyY 都用于 Redo）
 - [ ] **国际化不完整**: 部分硬编码字符串未使用 i18n，如 `App.tsx` 中的 alert 消息
-- [ ] **性能优化**: `SubtitleColumn.tsx` 中 `filteredSubtitleLines` 每次渲染都重新计算，应使用 useMemo 优化
 - [ ] **可访问性缺失**: 大部分按钮缺少 aria-label 属性
 - [ ] **配置管理分散**: 配置项分散在 localStorage 和 Zustand 中，应统一管理
 
@@ -47,7 +47,6 @@
 - [ ] 实现统一的错误处理机制
 - [ ] 为第三方库创建更准确的类型声明
 - [ ] 将所有硬编码的 alert 消息替换为 i18n 翻译
-- [ ] 优化 `SubtitleColumn.tsx` 性能，使用 useMemo 缓存过滤结果
 - [ ] 为所有交互按钮添加 aria-label 属性
 - [ ] 创建统一的配置管理器，整合 localStorage 和 Zustand 中的配置
 
@@ -62,7 +61,6 @@
 
 ### 高优先级
 - [ ] 实现 FFmpeg 操作的并发控制，避免资源竞争
-- [ ] 优化 `VideoPlayer` 组件中的视频元素内存管理
 - [ ] 实现 IndexedDB 媒体文件的定期清理机制
 - [ ] 修复 `useMediaProcessing.ts` 中的依赖数组问题，避免不必要的重渲染
 

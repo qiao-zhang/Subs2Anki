@@ -83,6 +83,18 @@ export const getDecks = async (url: string): Promise<string[]> => {
 };
 
 /**
+ * Gets the list of all tags used in Anki.
+ */
+export const getTags = async (url: string): Promise<string[]> => {
+  try {
+    return await invoke<string[]>('getTags', {}, url);
+  } catch (e) {
+    console.debug('Failed to get tags from Anki:', e);
+    return [];
+  }
+};
+
+/**
  * Syncs a list of cards to Anki.
  *
  * 1. Creates/Verifies Deck.

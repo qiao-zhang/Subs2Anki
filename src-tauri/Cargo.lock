@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "Subs2Anki"
-version = "1.5.5"
+version = "1.5.6"
 dependencies = [
  "log",
  "serde",
