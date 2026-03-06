@@ -17,7 +17,7 @@ import {
 import {parseSubtitles} from '@/services/parser.ts';
 import {SubtitleLine} from '@/services/types.ts';
 import {formatTimestamp} from '@/services/time.ts';
-import { useTranslation } from 'react-i18next';
+import {useTranslation} from 'react-i18next';
 
 interface SubtitleColumnProps {
   subtitleLines: SubtitleLine[];
@@ -38,6 +38,25 @@ interface SubtitleColumnProps {
   className?: string;
 }
 
+const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const highlightText = (text: string, searchTerm: string, isCurrentSearchResult: boolean) => {
+  if (!searchTerm.trim()) return <>{text}</>;
+
+  const safeSearchTerm = escapeRegExp(searchTerm);
+  const regex = new RegExp(`(${safeSearchTerm})`, 'gi');
+  const parts = text.split(regex);
+
+  return parts.map((part, i) =>
+    regex.test(part) ? (
+      <span key={i}
+            className={`${isCurrentSearchResult ? 'bg-orange-400 text-slate-900' : 'bg-yellow-300 text-slate-900'} rounded px-0.5`}>
+        {part}
+      </span>
+    ) : part
+  );
+};
+
 const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          subtitleLines,
                                                          activeSubtitleLineId,
@@ -56,17 +75,17 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                                                          onBulkCreateLimitChange,
                                                          className = ''
                                                        }) => {
-  const { t } = useTranslation();
+  const {t} = useTranslation();
   const MIN_SHIFT_MS = 10;
   const DEFAULT_SHIFT_MS = 100;
   const [isShiftMenuOpen, setIsShiftMenuOpen] = useState(false);
   const [shiftAmount, setShiftAmount] = useState(DEFAULT_SHIFT_MS);
-  const [localBulkCreateLimit, setLocalBulkCreateLimit] = useState(bulkCreateLimit);
+  // const [localBulkCreateLimit, setLocalBulkCreateLimit] = useState(bulkCreateLimit);
 
   // 同步 prop 变化
-  useEffect(() => {
-    setLocalBulkCreateLimit(bulkCreateLimit);
-  }, [bulkCreateLimit]);
+  // useEffect(() => {
+  //   setLocalBulkCreateLimit(bulkCreateLimit);
+  // }, [bulkCreateLimit]);
 
   // 状态过滤
   const [statusFilters, setStatusFilters] = useState<Record<'normal' | 'locked' | 'ignored', boolean>>({
@@ -87,11 +106,11 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   const handleBulkCreateLimitChange = (value: string) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
-      setLocalBulkCreateLimit(20);
+      // setLocalBulkCreateLimit(20);
       onBulkCreateLimitChange(20);
     } else {
       const clamped = Math.min(50, Math.max(1, num));
-      setLocalBulkCreateLimit(clamped);
+      // setLocalBulkCreateLimit(clamped);
       onBulkCreateLimitChange(clamped);
     }
   };
@@ -110,8 +129,42 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   const subtitleInputRef = useRef<HTMLInputElement>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filteredIndices, setFilteredIndices] = useState<number[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState<number>(0);
+
+  // 过滤字幕行
+  const filteredSubtitleLines = useMemo(() =>
+    subtitleLines.filter(sub =>
+      statusFilters[sub.status]
+    ), [subtitleLines, statusFilters]
+  );
+
+  const filteredIndices = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    return filteredSubtitleLines
+      .map((line, index) => ({line, index}))
+      .filter(({line}) => line.text.toLowerCase().includes(searchTerm.toLowerCase()))
+      .map(({index}) => index)
+  }, [searchTerm, filteredSubtitleLines]);
+
+  useEffect(() => {
+    setCurrentSearchIndex(0);
+  }, [searchTerm]);
+
+  // 4. 高效计算批量创建的候选 ID 集合
+  const bulkCreationCandidateIds = useMemo(() => {
+    const ids = new Set<number>();
+    if (!showBulkCreateButton || bulkCreateLimit <= 0) return ids;
+
+    let normalCount = 0;
+    for (const sub of filteredSubtitleLines) {
+      if (sub.status === 'normal') {
+        normalCount++;
+        ids.add(sub.id);
+        if (normalCount >= bulkCreateLimit) break;
+      }
+    }
+    return ids;
+  }, [filteredSubtitleLines, showBulkCreateButton, bulkCreateLimit]);
 
   useEffect(() => {
     if (activeSubtitleLineId) {
@@ -122,25 +175,6 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       }
     }
   }, [activeSubtitleLineId]);
-
-  // Filter subtitle lines based on search term
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredIndices([]);
-      setCurrentSearchIndex(0);
-      return;
-    }
-
-    const indices = subtitleLines
-      .map((line, index) => ({line, index}))
-      .filter(({line}) =>
-        line.text.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      .map(({index}) => index);
-
-    setFilteredIndices(indices);
-    setCurrentSearchIndex(0);
-  }, [searchTerm, subtitleLines]);
 
   // Scroll to active subtitle or current search result
   useEffect(() => {
@@ -156,8 +190,6 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
 
   const handleClearSearch = () => {
     setSearchTerm('');
-    setFilteredIndices([]);
-    setCurrentSearchIndex(0);
   };
 
   const goToNextSearchResult = () => {
@@ -216,51 +248,14 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     }, {normal: 0, locked: 0, ignored: 0} as Record<'normal' | 'locked' | 'ignored', number>);
   }, [subtitleLines]);
 
-  // 过滤字幕行
-  const filteredSubtitleLines = useMemo(() =>
-    subtitleLines.filter(sub =>
-      statusFilters[sub.status]
-    ), [subtitleLines, statusFilters]
-  );
-
-  // 更新过滤索引以匹配过滤后的数组
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredIndices([]);
-      setCurrentSearchIndex(0);
-      return;
-    }
-
-    const indices = filteredSubtitleLines
-      .map((line, index) => ({line, index}))
-      .filter(({line}) =>
-        line.text.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      .map(({index}) => index);
-
-    setFilteredIndices(indices);
-    setCurrentSearchIndex(0);
-  }, [searchTerm, filteredSubtitleLines]);
 
   const renderSubtitleRow = (index: number) => {
     const sub = filteredSubtitleLines[index];
     const isActive = sub.id === activeSubtitleLineId;
     const isCurrentSearchResult = searchTerm && filteredIndices.length > 0 &&
       filteredIndices[currentSearchIndex] === index;
-    
-    // Determine if this line should be highlighted for bulk creation
-    // Count how many normal lines come before this one
-    let normalCount = 0;
-    let isBulkCreationCandidate = false;
-    for (let i = 0; i < filteredSubtitleLines.length; i++) {
-      if (filteredSubtitleLines[i].status === 'normal') {
-        normalCount++;
-        if (filteredSubtitleLines[i].id === sub.id && showBulkCreateButton) {
-          isBulkCreationCandidate = normalCount <= localBulkCreateLimit;
-          break;
-        }
-      }
-    }
+
+    const isBulkCreationCandidate = bulkCreationCandidateIds.has(sub.id);
 
     // Highlight search terms in subtitle text
     const highlightText = (text: string, searchTerm: string, isCurrentSearchResult: boolean) => {
@@ -289,7 +284,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         className={`group flex items-start gap-2 p-2 mx-2 mb-1 rounded transition-all cursor-pointer border ${
           isActive
             ? 'bg-slate-800 border-indigo-500/50 shadow-md'
-            : isBulkCreationCandidate 
+            : isBulkCreationCandidate
               ? 'bg-pink-900/20 border-pink-700/30' // Highlight for bulk creation
               : 'border-transparent hover:bg-slate-800/50'
         }`}
@@ -373,9 +368,9 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
                 <button
                   onClick={() => setIsShiftMenuOpen(!isShiftMenuOpen)}
                   className={`w-full text-left px-4 py-2 text-xs text-slate-400 hover:bg-slate-700 flex items-center gap-2 transition rounded ${isShiftMenuOpen ? 'bg-slate-700' : ''}`}
-                  title={t("modals.globalTimeShift", { defaultValue: "Global Time Shift" })}
+                  title={t("modals.globalTimeShift", {defaultValue: "Global Time Shift"})}
                 >
-                  <MoveHorizontal size={16}/> {t("modals.globalShift", { defaultValue: "Global Shift" })}
+                  <MoveHorizontal size={16}/> {t("modals.globalShift", {defaultValue: "Global Shift"})}
                 </button>
 
                 <div className="relative">
@@ -440,7 +435,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               type="text"
               value={searchTerm}
               onChange={handleSearch}
-              placeholder={t("modals.searchSubtitles", { defaultValue: "Search subtitles..." })}
+              placeholder={t("modals.searchSubtitles", {defaultValue: "Search subtitles..."})}
               className="w-full pl-8 pr-8 py-1 text-xs bg-slate-800 border border-slate-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
             {searchTerm && (
@@ -458,7 +453,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               <button
                 onClick={goToPrevSearchResult}
                 className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-slate-200"
-                title={t("modals.previousResult", { defaultValue: "Previous result" })}
+                title={t("modals.previousResult", {defaultValue: "Previous result"})}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -471,7 +466,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               <button
                 onClick={goToNextSearchResult}
                 className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-slate-200"
-                title={t("modals.nextResult", { defaultValue: "Next result" })}
+                title={t("modals.nextResult", {defaultValue: "Next result"})}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -526,7 +521,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               type="number"
               min="1"
               max="50"
-              value={localBulkCreateLimit}
+              value={bulkCreateLimit}
               onChange={(e) => handleBulkCreateLimitChange(e.target.value)}
               className="w-12 h-6 bg-slate-900 border border-slate-600 rounded px-1 text-xs text-white focus:border-indigo-500 outline-none text-center font-mono"
             />
@@ -535,15 +530,18 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
 
           <button
             onClick={onBulkCreateCards}
-            disabled={subtitleCounts.normal === 0 || localBulkCreateLimit === 0}
+            disabled={subtitleCounts.normal === 0 || bulkCreateLimit === 0}
             className={`flex items-center px-2 py-1 text-xs rounded ${
-              subtitleCounts.normal === 0 || localBulkCreateLimit === 0
+              subtitleCounts.normal === 0 || bulkCreateLimit === 0
                 ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}
-            title={t("subtitleColumn.bulkCreateCardsTitle", { defaultValue: "Create cards in batch" })}
+            title={t("subtitleColumn.bulkCreateCardsTitle", {defaultValue: "Create cards in batch"})}
           >
-            {t("subtitleColumn.bulkCreateCards", { defaultValue: "create cards", num: Math.min(subtitleCounts.normal, localBulkCreateLimit) })}
+            {t("subtitleColumn.bulkCreateCards", {
+              defaultValue: "create cards",
+              num: Math.min(subtitleCounts.normal, bulkCreateLimit)
+            })}
           </button>
         </div>
       )}
@@ -552,7 +550,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         {filteredSubtitleLines.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-600 text-xs">
             <AlertCircle size={24} className="mb-2 opacity-50"/>
-            {subtitleLines.length === 0 ? t("modals.noContent", { defaultValue: "No content" }) : t("modals.noVisibleSubtitles", { defaultValue: "No visible subtitles" })}
+            {subtitleLines.length === 0 ? t("modals.noContent", {defaultValue: "No content"}) : t("modals.noVisibleSubtitles", {defaultValue: "No visible subtitles"})}
           </div>
         ) : (
           <Virtuoso
