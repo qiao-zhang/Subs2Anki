@@ -851,15 +851,10 @@ const App: React.FC = () => {
   };
 
   const handleResetProject = () => {
-    // Revoke the current video object URL if it exists to free memory
-    if (videoSrc) {
-      URL.revokeObjectURL(videoSrc);
-    }
-
     // Reset all app state to initial values using the store setters
     setProjectName('');
 
-    // Reset video state to initial values
+    // Reset video state to initial values (resetVideo will clean up the URL)
     resetVideo();
 
     // Also reset subtitles

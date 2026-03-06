@@ -102,6 +102,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   videoName: '',
   videoFile: null,
   resetVideo: () => {
+    // 清理旧的 videoSrc URL 以释放内存
+    const oldVideoSrc = get().videoSrc;
+    if (oldVideoSrc) {
+      URL.revokeObjectURL(oldVideoSrc);
+    }
     set({
       videoSrc: '',
       videoName: '',
@@ -109,6 +114,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
   setVideo: (file) => {
+    // 先清理旧的 videoSrc URL 以释放内存
+    const oldVideoSrc = get().videoSrc;
+    if (oldVideoSrc) {
+      URL.revokeObjectURL(oldVideoSrc);
+    }
+    
     const src = URL.createObjectURL(file);
     // 当设置视频时，如果项目名称为空，则使用视频文件名作为默认项目名称
     const currentProjectName = get().projectName;

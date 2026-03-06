@@ -8,7 +8,6 @@
 ## 0. 新增问题与建议 (2026-03-06 代码审查)
 
 ### 严重问题 (Critical)
-- [ ] **内存泄漏风险**: `App.tsx` 中 `handleVideoUpload` 使用 `URL.createObjectURL` 但未在组件卸载或视频切换时调用 `URL.revokeObjectURL`
 - [ ] **类型安全**: `services/store.ts` 中 `fileHandle: any | null` 应使用 `FileSystemFileHandle | null` 或定义专门接口
 - [ ] **未使用的依赖**: `package.json` 中 `@types/i18next` 是多余的（i18next 自带类型），且版本过旧
 - [ ] **测试覆盖率不足**: 虽然有测试文件，但关键服务（FFmpeg、AnkiConnect、furigana）缺乏测试
@@ -63,7 +62,6 @@
 ## 2. 性能优化
 
 ### 高优先级
-- [ ] 修复 `App.tsx` 中内存泄漏风险，确保 `URL.revokeObjectURL` 在适当时候被调用
 - [ ] 实现 FFmpeg 操作的并发控制，避免资源竞争
 - [ ] 优化 `VideoPlayer` 组件中的视频元素内存管理
 - [ ] 实现 IndexedDB 媒体文件的定期清理机制
