@@ -9,7 +9,6 @@
 
 ### 严重问题 (Critical)
 - [ ] **类型安全**: `services/store.ts` 中 `fileHandle: any | null` 应使用 `FileSystemFileHandle | null` 或定义专门接口
-- [ ] **未使用的依赖**: `package.json` 中 `@types/i18next` 是多余的（i18next 自带类型），且版本过旧
 - [ ] **测试覆盖率不足**: 虽然有测试文件，但关键服务（FFmpeg、AnkiConnect、furigana）缺乏测试
 
 ### 高优先级 (High)
@@ -200,7 +199,6 @@
 ## 8. 构建和配置改进
 
 ### 高优先级
-- [ ] 清理 `package.json` 中的未使用依赖（如 `@types/i18next`）
 - [ ] 修复 `vite.config.ts` 中的类型定义问题，消除 `@ts-ignore`
 - [ ] 配置 ESLint 和 Prettier 以统一代码风格
 
