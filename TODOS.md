@@ -19,7 +19,6 @@
 - [ ] **状态管理混乱**: Zustand store 中混合了太多业务逻辑，应分离到服务层
 
 ### 中优先级 (Medium)
-- [ ] **键盘快捷键冲突**: `useKeyboardShortcuts.tsx` 中部分快捷键定义重复（如 KeyR/KeyY 都用于 Redo）
 - [ ] **国际化不完整**: 部分硬编码字符串未使用 i18n，如 `App.tsx` 中的 alert 消息
 - [ ] **可访问性缺失**: 大部分按钮缺少 aria-label 属性
 - [ ] **配置管理分散**: 配置项分散在 localStorage 和 Zustand 中，应统一管理

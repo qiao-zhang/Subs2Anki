@@ -18,6 +18,7 @@ import {parseSubtitles} from '@/services/parser.ts';
 import {SubtitleLine} from '@/services/types.ts';
 import {formatTimestamp} from '@/services/time.ts';
 import {useTranslation} from 'react-i18next';
+import {useDebounce} from '@/hooks/useDebounce';
 
 declare global {
   interface Window {
@@ -140,6 +141,11 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentSearchIndex, setCurrentSearchIndex] = useState<number>(0);
+  
+  // 使用防抖处理搜索词，延迟 300ms 后再执行过滤
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  // 如果是清空操作，则立刻生效；否则使用防抖值
+  const effectiveSearchTerm = searchTerm === '' ? '' : debouncedSearchTerm;
 
   // 过滤字幕行
   const filteredSubtitleLines = useMemo(() =>
@@ -149,16 +155,16 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   );
 
   const filteredIndices = useMemo(() => {
-    if (!searchTerm.trim()) return [];
+    if (!effectiveSearchTerm.trim()) return [];
     return filteredSubtitleLines
       .map((line, index) => ({line, index}))
-      .filter(({line}) => line.text.toLowerCase().includes(searchTerm.toLowerCase()))
+      .filter(({line}) => line.text.toLowerCase().includes(effectiveSearchTerm.toLowerCase()))
       .map(({index}) => index)
-  }, [searchTerm, filteredSubtitleLines]);
+  }, [effectiveSearchTerm, filteredSubtitleLines]);
 
   useEffect(() => {
     setCurrentSearchIndex(0);
-  }, [searchTerm]);
+  }, [effectiveSearchTerm]);
 
   // 4. 高效计算批量创建的候选 ID 集合
   const bulkCreationCandidateIds = useMemo(() => {
@@ -259,7 +265,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
   const renderSubtitleRow = (index: number) => {
     const sub = filteredSubtitleLines[index];
     const isActive = sub.id === activeSubtitleLineId;
-    const isCurrentSearchResult = searchTerm && filteredIndices.length > 0 &&
+    const isCurrentSearchResult = effectiveSearchTerm && filteredIndices.length > 0 &&
       filteredIndices[currentSearchIndex] === index;
 
     const isBulkCreationCandidate = bulkCreationCandidateIds.has(sub.id);
@@ -309,7 +315,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
               }`}
               style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}
             >
-              {searchTerm ? highlightText(sub.text, searchTerm, isCurrentSearchResult) : sub.text}
+              {effectiveSearchTerm ? highlightText(sub.text, effectiveSearchTerm, isCurrentSearchResult) : sub.text}
             </div>
           </div>
         </div>
@@ -436,7 +442,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
             )}
           </div>
 
-          {searchTerm && filteredIndices.length > 0 && (
+          {effectiveSearchTerm && filteredIndices.length > 0 && (
             <div className="flex items-center gap-1 ml-2">
               <button
                 onClick={goToPrevSearchResult}
