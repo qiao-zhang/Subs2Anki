@@ -8,6 +8,7 @@ interface DefaultControlsProps {
   videoName: string;
   currentTime: number;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onPickVideo: () => void;
   onCaptureFrame: () => void;
 }
 
@@ -15,6 +16,7 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
                                                            videoName,
                                                            currentTime,
                                                            onVideoUpload,
+                                                           onPickVideo,
                                                            onCaptureFrame,
                                                          }) => {
   const { t } = useTranslation();
@@ -24,11 +26,22 @@ const DefaultControls: React.FC<DefaultControlsProps> = ({
 
       {/* Left: Video Selector */}
       <div className="flex items-center gap-2 z-10">
-        <label className={`${BTN_BASE} h-9 ${BTN_SECONDARY} cursor-pointer max-w-[240px]`}>
-          <VideoIcon size={16} className="shrink-0"/>
-          <span className="truncate">{videoName || t("uploadVideo")}</span>
-          <input type="file" accept="video/*" onChange={onVideoUpload} className="hidden"/>
-        </label>
+        {__TAURI_BUILD__ ? (
+          <button
+            type="button"
+            onClick={onPickVideo}
+            className={`${BTN_BASE} h-9 ${BTN_SECONDARY} cursor-pointer max-w-[240px]`}
+          >
+            <VideoIcon size={16} className="shrink-0"/>
+            <span className="truncate">{videoName || t("uploadVideo")}</span>
+          </button>
+        ) : (
+          <label className={`${BTN_BASE} h-9 ${BTN_SECONDARY} cursor-pointer max-w-[240px]`}>
+            <VideoIcon size={16} className="shrink-0"/>
+            <span className="truncate">{videoName || t("uploadVideo")}</span>
+            <input type="file" accept="video/*" onChange={onVideoUpload} className="hidden"/>
+          </label>
+        )}
       </div>
 
       {/* Center: Time Display */}

@@ -11,8 +11,9 @@ import { parseTimestamp, formatTimestamp } from './time.ts';
  * @returns Array of Subtitle objects
  */
 export const parseSubtitles = (content: string): SubtitleLine[] => {
+  const withoutBom = content.replace(/^\uFEFF/, '');
   // Normalize line endings to LF to handle Windows/Linux differences
-  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const normalized = withoutBom.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   // Split by double newlines, which standardly separate subtitle blocks
   const blocks = normalized.split('\n\n');

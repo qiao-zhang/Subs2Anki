@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:tauri": "vite --mode tauri",
     "build": "vite build",
+    "build:tauri": "vite build --mode tauri",
     "preview": "vite preview",
     "sync-version": "node scripts/sync-version.js",
+    "prepare:ffmpeg-sidecar": "node scripts/prepare-ffmpeg-sidecar.js",
     "tauri:build": "npm run sync-version && npx tauri build",
     "tauri:dev": "npm run sync-version && npx tauri dev"
   },
@@ -15,6 +18,7 @@
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
+    "@tauri-apps/api": "^2.8.0",
     "@testing-library/react": "^16.3.1",
     "file-saver": "^2.0.5",
     "i18next": "^25.8.5",

@@ -1,4 +1,5 @@
 import React, {useState, useRef, useEffect, useCallback} from 'react';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import {useTranslation} from 'react-i18next';
 import {SubtitleLine, AnkiCard} from './services/types.ts';
 import {serializeSubtitles} from './services/parser.ts';
@@ -34,9 +35,9 @@ const App: React.FC = () => {
 
   // --- Global State from Zustand ---
   const {
-    videoSrc, videoName, projectName, videoFile, setVideo, resetVideo,
+    videoSrc, videoName, projectName, videoFile, videoPath, setVideo, setTauriVideo, resetVideo,
     setProjectName,
-    subtitleLines, subtitleFileName, fileHandle,
+    subtitleLines, subtitleFileName, fileHandle, subtitlePath,
     setSubtitles, shiftSubtitles,
     addSubtitleLine, removeSubtitle, getSubtitleLine,
     mergeSubtitleLines, breakUpSubtitleLine,
@@ -112,9 +113,15 @@ const App: React.FC = () => {
     setIsVideoReady(false);
   }, [videoSrc]);
 
+  useEffect(() => {
+    ffmpegService.prepareVideoSource({ file: videoFile, path: videoPath }).catch((error) => {
+      console.error('Failed to prepare video for audio extraction', error);
+    });
+  }, [videoFile, videoPath]);
+
   // --- Background Media Processing ---
   useMediaProcessing(
-    videoFile,
+    { file: videoFile, path: videoPath },
     previewCard
   );
 
@@ -275,6 +282,23 @@ const App: React.FC = () => {
     }
   };
 
+  const handlePickVideo = async () => {
+    if (!__TAURI_BUILD__) {
+      return;
+    }
+
+    try {
+      const path = await invoke<string | null>('pick_video_file');
+      if (!path) {
+        return;
+      }
+
+      setTauriVideo(path, convertFileSrc(path));
+    } catch (error) {
+      console.error('Failed to pick Tauri video file', error);
+    }
+  };
+
   const handleTempSubtitleLineCreated = (start: number, end: number) => {
     setActiveSubtitleLineId(null);
     setTempSubtitleLine({start, end});
@@ -334,10 +358,10 @@ const App: React.FC = () => {
   }, []);
 
   const extractAudioSync = async (start: number, end: number): Promise<Blob | null> => {
-    if (!videoFile) return null;
+    if (!videoFile && !videoPath) return null;
     try {
       videoPlayerRef.current?.pause();
-      return await ffmpegService.extractAudioClip(videoFile, start, end);
+      return await ffmpegService.extractAudioClip({ file: videoFile, path: videoPath }, start, end, audioVolume);
     } catch (e) {
       console.error("Audio extraction failed", e);
       return null;
@@ -360,10 +384,17 @@ const App: React.FC = () => {
 
   const handleSaveSubtitles = async () => {
     if (!subtitleFileName) return;
-    if (fileHandle) {
-      try {
-        const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
-        const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
+    try {
+      const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
+      const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
+
+      if (__TAURI_BUILD__ && subtitlePath) {
+        await invoke('write_subtitle_file', { path: subtitlePath, content });
+        setHasUnsavedChanges(false);
+        return;
+      }
+
+      if (fileHandle) {
         // @ts-ignore
         const writable = await fileHandle.createWritable();
         // @ts-ignore
@@ -371,11 +402,12 @@ const App: React.FC = () => {
         // @ts-ignore
         await writable.close();
         setHasUnsavedChanges(false);
-      } catch (err) {
-        alert('Failed to save file.');
+        return;
       }
-    } else {
+
       setHasUnsavedChanges(false);
+    } catch (err) {
+      alert('Failed to save file.');
     }
   };
 
@@ -806,7 +838,7 @@ const App: React.FC = () => {
   };
 
   const handleDownloadAudio = async () => {
-    if (!videoFile) return;
+    if (!videoFile && !videoPath) return;
     if (tempSubtitleLine === null && activeSubtitleLineId === null) return;
     let start: number, end: number;
     let currentSub: SubtitleLine | undefined;
@@ -822,6 +854,7 @@ const App: React.FC = () => {
     }
 
     const blob = await extractAudioSync(start, end);
+    if (!blob) return;
     const startStr = formatTimeForFilename(start);
     const endStr = formatTimeForFilename(end);
     const filename = makeMediaFileName(videoName, '.wav', `${startStr}_${endStr}`, currentSub ? currentSub.text : '');
@@ -858,7 +891,7 @@ const App: React.FC = () => {
     resetVideo();
 
     // Also reset subtitles
-    setSubtitles([], '');
+    setSubtitles([], '', null, null);
     setHasUnsavedChanges(false);
 
     // Reset UI state
@@ -1006,7 +1039,7 @@ const App: React.FC = () => {
           subtitleLines={subtitleLines}
           activeSubtitleLineId={activeSubtitleLineId}
           subtitleFileName={subtitleFileName}
-          canSave={fileHandle !== null}
+          canSave={fileHandle !== null || subtitlePath !== null}
           onSetSubtitles={setSubtitles}
           onSubtitleLineClicked={handleSubtitleLineClicked}
           onToggleLock={toggleSubtitleLineStatus}
@@ -1032,6 +1065,7 @@ const App: React.FC = () => {
             currentTime={currentTime}
             onTempCommit={handleCommitTempSubtitleLine}
             onVideoUpload={handleVideoUpload}
+            onPickVideo={handlePickVideo}
             onCaptureFrame={handleCaptureFrame}
             onDownloadAudio={handleDownloadAudio}
             onUpdateSubtitleText={updateSubtitleText}

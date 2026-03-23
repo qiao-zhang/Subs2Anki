@@ -36,16 +36,19 @@ interface AppState {
   videoSrc: string;
   videoName: string;
   videoFile: File | null; // Added: Raw file object for FFmpeg
+  videoPath: string | null;
   setVideo: (file: File) => void; // Changed: Takes File object
+  setTauriVideo: (path: string, src: string) => void;
   resetVideo: () => void;
 
   // Subtitles
   subtitleLines: SubtitleLine[];
   subtitleFileName: string;
   fileHandle: any | null;
+  subtitlePath: string | null;
   hasUnsavedChanges: boolean;
   countSubtitleLinesBefore: (time: number, status?: 'normal' | 'locked' | 'ignored') => number;
-  setSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: any) => void;
+  setSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: any, subtitlePath?: string | null) => void;
   updateSubtitleText: (id: number, text: string) => void;
   updateSubtitleTime: (id: number, start: number, end: number) => void;
   toggleSubtitleLineStatus: (id: number, order?: 'NIL' | 'NLI') => void;
@@ -101,22 +104,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   videoSrc: '',
   videoName: '',
   videoFile: null,
+  videoPath: null,
   resetVideo: () => {
     // 清理旧的 videoSrc URL 以释放内存
     const oldVideoSrc = get().videoSrc;
-    if (oldVideoSrc) {
+    if (oldVideoSrc && oldVideoSrc.startsWith('blob:')) {
       URL.revokeObjectURL(oldVideoSrc);
     }
     set({
       videoSrc: '',
       videoName: '',
-      videoFile: null
+      videoFile: null,
+      videoPath: null
     });
   },
   setVideo: (file) => {
     // 先清理旧的 videoSrc URL 以释放内存
     const oldVideoSrc = get().videoSrc;
-    if (oldVideoSrc) {
+    if (oldVideoSrc && oldVideoSrc.startsWith('blob:')) {
       URL.revokeObjectURL(oldVideoSrc);
     }
     
@@ -127,7 +132,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       videoSrc: src,
       videoName: file.name,
       projectName: currentProjectName || file.name.replace(/\.[^/.]+$/, ""), // 移除扩展名作为项目名
-      videoFile: file
+      videoFile: file,
+      videoPath: null
+    });
+  },
+  setTauriVideo: (path, src) => {
+    const oldVideoSrc = get().videoSrc;
+    if (oldVideoSrc && oldVideoSrc.startsWith('blob:')) {
+      URL.revokeObjectURL(oldVideoSrc);
+    }
+
+    const fileName = path.split(/[\\/]/).pop() || path;
+    const currentProjectName = get().projectName;
+    set({
+      videoSrc: src,
+      videoName: fileName,
+      projectName: currentProjectName || fileName.replace(/\.[^/.]+$/, ''),
+      videoFile: null,
+      videoPath: path,
     });
   },
 
@@ -135,6 +157,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   subtitleLines: [],
   subtitleFileName: '',
   fileHandle: null,
+  subtitlePath: null,
   hasUnsavedChanges: false,
   countSubtitleLinesBefore: (time: number, status?: 'normal' | 'locked' | 'ignored') => {
     if (!status) {
@@ -144,8 +167,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       .filter(sub => sub.status === status && sub.endTime <= time)
       .length;
   },
-  setSubtitles: (lines, fileName, fileHandle = null) =>
-    set({subtitleLines: lines, subtitleFileName: fileName, fileHandle, hasUnsavedChanges: false}),
+  setSubtitles: (lines, fileName, fileHandle = null, subtitlePath = null) =>
+    set({subtitleLines: lines, subtitleFileName: fileName, fileHandle, subtitlePath, hasUnsavedChanges: false}),
 
   updateSubtitleText: (id, text) => {
     const currentState = get().subtitleLines;

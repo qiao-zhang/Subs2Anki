@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatTime, parseVTTTime } from '../../services/time.ts';
+import { formatTimestamp, parseTimestamp } from '../../services/time.ts';
 
 /**
  * Test Suite for Time Utilities.
@@ -11,41 +11,38 @@ import { formatTime, parseVTTTime } from '../../services/time.ts';
 describe('Time Utilities', () => {
   
   // Test formatting logic (Seconds -> String)
-  describe('formatTime', () => {
-    it('formats seconds into MM:SS', () => {
+  describe('formatTimestamp', () => {
+    it('formats seconds into HH:MM:SS when milliseconds are trimmed', () => {
       // Edge case: 0 seconds
-      expect(formatTime(0)).toBe('00:00');
+      expect(formatTimestamp(0, 'trim')).toBe('00:00:00');
       // Standard case: > 1 minute
-      expect(formatTime(65)).toBe('01:05');
+      expect(formatTimestamp(65, 'trim')).toBe('00:01:05');
       // Boundary case: exactly 59 seconds
-      expect(formatTime(59)).toBe('00:59');
+      expect(formatTimestamp(3665, 'trim', 1)).toBe('1:01:05');
     });
 
-    it('formats seconds into H:MM:SS for longer durations', () => {
-      // Exact hour
-      expect(formatTime(3600)).toBe('1:00:00');
-      // Hour + Minute + Seconds
-      expect(formatTime(3665)).toBe('1:01:05');
+    it('formats seconds into subtitle timestamp strings', () => {
+      // VTT style dot separator
+      expect(formatTimestamp(10.5, 'dot')).toBe('00:00:10.500');
+      // SRT files use commas (,) for milliseconds instead of dots (.)
+      expect(formatTimestamp(5.5, 'comma')).toBe('00:00:05,500');
     });
   });
 
   // Test parsing logic (String -> Seconds)
-  describe('parseVTTTime', () => {
+  describe('parseTimestamp', () => {
     it('parses standard HH:MM:SS.mmm format', () => {
       // VTT style dot separator
-      expect(parseVTTTime('00:00:10.500')).toBe(10.5);
+      expect(parseTimestamp('00:00:10.500')).toBe(10.5);
       // Hours calculation
-      expect(parseVTTTime('01:00:00.000')).toBe(3600);
+      expect(parseTimestamp('01:00:00.000')).toBe(3600);
     });
 
-    it('parses MM:SS.mmm format', () => {
+    it('parses MM:SS.mmm and comma-separated SRT timestamps', () => {
       // Short format often found in VTT or specific players
-      expect(parseVTTTime('01:30.500')).toBe(90.5);
-    });
-
-    it('handles comma separators (SRT style)', () => {
+      expect(parseTimestamp('01:30.500')).toBe(90.5);
       // SRT files use commas (,) for milliseconds instead of dots (.)
-      expect(parseVTTTime('00:00:05,500')).toBe(5.5);
+      expect(parseTimestamp('00:00:05,500')).toBe(5.5);
     });
   });
 });

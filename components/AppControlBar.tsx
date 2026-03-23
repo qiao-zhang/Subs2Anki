@@ -10,6 +10,7 @@ interface AppControlBarProps {
   currentTime: number;
   onTempCommit: (text: string) => void;
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onPickVideo: () => void;
   onCaptureFrame: () => void;
   onDownloadAudio: () => void;
   onUpdateSubtitleText: (id: number, text: string) => void;
@@ -22,6 +23,7 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
                                                        currentTime,
                                                        onTempCommit,
                                                        onVideoUpload,
+                                                       onPickVideo,
                                                        onCaptureFrame,
                                                        onDownloadAudio,
                                                        onUpdateSubtitleText,
@@ -32,6 +34,7 @@ const AppControlBar: React.FC<AppControlBarProps> = ({
         videoName={videoName}
         currentTime={currentTime}
         onVideoUpload={onVideoUpload}
+        onPickVideo={onPickVideo}
         onCaptureFrame={onCaptureFrame}
       />
       {tempSubtitleLine && <TempSubtitleLineControls

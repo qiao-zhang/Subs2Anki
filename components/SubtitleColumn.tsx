@@ -19,6 +19,7 @@ import {SubtitleLine} from '@/services/types.ts';
 import {formatTimestamp} from '@/services/time.ts';
 import {useTranslation} from 'react-i18next';
 import {useDebounce} from '@/hooks/useDebounce';
+import { invoke } from '@tauri-apps/api/core';
 
 declare global {
   interface Window {
@@ -31,7 +32,7 @@ interface SubtitleColumnProps {
   activeSubtitleLineId: number | null;
   subtitleFileName: string;
   canSave: boolean;
-  onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: any) => void;
+  onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: any, subtitlePath?: string | null) => void;
   onSubtitleLineClicked: (id: number) => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (id: number) => void;
@@ -154,13 +155,14 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     ), [subtitleLines, statusFilters]
   );
 
-  const filteredIndices = useMemo(() => {
-    if (!effectiveSearchTerm.trim()) return [];
+  const filteredIndices = (() => {
+    const normalizedSearchTerm = effectiveSearchTerm.trim().toLowerCase();
+    if (!normalizedSearchTerm) return [];
     return filteredSubtitleLines
       .map((line, index) => ({line, index}))
-      .filter(({line}) => line.text.toLowerCase().includes(effectiveSearchTerm.toLowerCase()))
+      .filter(({line}) => line.text.toLowerCase().includes(normalizedSearchTerm))
       .map(({index}) => index)
-  }, [effectiveSearchTerm, filteredSubtitleLines]);
+  })();
 
   useEffect(() => {
     setCurrentSearchIndex(0);
@@ -221,7 +223,28 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
     }
   };
 
+  interface TauriSubtitleFilePayload {
+    path: string;
+    fileName: string;
+    content: string;
+  }
+
   const handleOpenSubtitle = async () => {
+    if (__TAURI_BUILD__) {
+      try {
+        const subtitle = await invoke<TauriSubtitleFilePayload | null>('pick_subtitle_file');
+        if (!subtitle) {
+          return;
+        }
+
+        onSetSubtitles(parseSubtitles(subtitle.content), subtitle.fileName, null, subtitle.path);
+        return;
+      } catch (err) {
+        console.error('Tauri subtitle picker failed', err);
+        return;
+      }
+    }
+
     try {
       if (window.showOpenFilePicker) {
         const [handle] = await window.showOpenFilePicker({
@@ -230,7 +253,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         });
         const file = await handle.getFile();
         const text = await file.text();
-        onSetSubtitles(parseSubtitles(text), file.name, handle);
+        onSetSubtitles(parseSubtitles(text), file.name, handle, null);
         return;
       }
     } catch (err) {
@@ -246,7 +269,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
       const reader = new FileReader();
       reader.onload = (e) => {
         const lines = parseSubtitles(e.target?.result as string);
-        onSetSubtitles(lines, file.name, null);
+        onSetSubtitles(lines, file.name, null, null);
       };
       reader.readAsText(file);
     }

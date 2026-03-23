@@ -3,9 +3,10 @@ import {useAppStore} from '@/services/store.ts';
 import {ffmpegService} from '@/services/ffmpeg.ts';
 import {storeMedia} from '@/services/db.ts';
 import {AnkiCard} from '@/services/types.ts';
+import type { VideoSource } from '@/services/ffmpeg-contract.ts';
 
 export const useMediaProcessing = (
-  videoFile: File | null,
+  source: VideoSource,
   previewCard: AnkiCard | null
 ) => {
   const ankiCards = useAppStore(state => state.ankiCards);
@@ -29,10 +30,10 @@ export const useMediaProcessing = (
     if (nextCard) {
       processCardAudio(nextCard.id, nextCard.subtitleId).then();
     }
-  }, [ankiCards, previewCard, videoFile, lastFinishedIndex]);
+  }, [ankiCards, previewCard, source.file, source.path, lastFinishedIndex]);
 
   const processCardAudio = async (cardId: string, subtitleId: number) => {
-    if (!videoFile) return;
+    if (!source.file && !source.path) return;
 
     const sub = getSubtitleLine(subtitleId);
     if (!sub) {
@@ -44,7 +45,7 @@ export const useMediaProcessing = (
     updateCardAudioStatus(cardId, 'processing');
 
     try {
-      const blob = await ffmpegService.extractAudioClip(videoFile, sub.startTime, sub.endTime, audioVolume);
+      const blob = await ffmpegService.extractAudioClip(source, sub.startTime, sub.endTime, audioVolume);
 
       // Store Blob in IndexedDB
       const audioId = crypto.randomUUID();

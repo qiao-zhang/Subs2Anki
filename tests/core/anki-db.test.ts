@@ -71,8 +71,8 @@ describe('Anki Database Creation with Group Fields', () => {
     const spy = vi.spyOn(originalCreateAnkiDatabase, 'createAnkiDatabase');
     
     try {
-      await createAnkiDatabase(mockCards, 'Test Deck', mockNoteType, creationTime);
-      
+      await createAnkiDatabase(mockCards, ['tag1', 'tag2'], 'Test Deck', mockNoteType, creationTime);
+
       // Verify that the function was called
       expect(createAnkiDatabase).toBeDefined();
     } finally {

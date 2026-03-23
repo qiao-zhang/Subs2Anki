@@ -63,15 +63,31 @@ cd Subs2Anki
 npm install
 ```
 
-3. Start the development server:
+3. Start the web development server:
 ```bash
 npm run dev
 ```
 
-4. Build production version:
+4. Start the Tauri desktop development build:
+```bash
+npm run tauri:dev
+```
+
+5. Build production versions:
 ```bash
 npm run build
+npm run tauri:build
 ```
+
+### Tauri FFmpeg Backend
+
+- Web mode still uses `FFmpeg.wasm` and the static files in `public/ffmpeg`.
+- Tauri mode now routes audio extraction through the Rust backend and keeps the selected video as a local file path instead of copying the whole file into frontend memory first.
+- Desktop video selection now uses a native picker exposed by the Tauri backend, and playback uses Tauri's asset protocol to load the chosen local file.
+- Desktop subtitle selection and save-back now also use native Tauri file paths, while the web app keeps using the browser file picker / File System Access flow.
+- Put target-specific FFmpeg sidecars in `src-tauri/bin/` (see `src-tauri/bin/README.md`), or copy one there with `npm run prepare:ffmpeg-sidecar -- <path-to-ffmpeg-binary> <target-triple>`.
+- When a matching sidecar exists, `src-tauri/build.rs` injects `bundle.externalBin` automatically so `tauri build` bundles FFmpeg into the app/installer.
+- `npm run build` keeps `dist/ffmpeg` for the web app, while `npm run build:tauri` removes `dist/ffmpeg` after bundling so browser-only FFmpeg assets are not packed into the desktop app.
 
 ## Usage Guide
 
@@ -111,7 +127,7 @@ npm run build
 - **Frontend Framework**: React 19
 - **UI Library**: Tailwind CSS, Lucide React
 - **State Management**: Zustand
-- **Audio Processing**: FFmpeg.wasm
+- **Audio Processing**: FFmpeg.wasm (web), native FFmpeg command via Tauri backend (desktop)
 - **Database**: IndexedDB
 - **Build Tool**: Vite
 - **Type Checking**: TypeScript
