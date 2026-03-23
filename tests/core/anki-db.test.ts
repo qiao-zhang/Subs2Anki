@@ -2,17 +2,19 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createAnkiDatabase } from '../../services/anki-db.ts';
 import { AnkiCard, AnkiNoteType } from '../../services/types.ts';
 
+class MockDatabase {
+  run = vi.fn();
+  prepare = vi.fn(() => ({
+    run: vi.fn(),
+    free: vi.fn(),
+  }));
+  export = vi.fn(() => new Uint8Array());
+}
+
 // Mock sql.js
 vi.mock('sql.js', () => ({
-  default: vi.fn(() => ({
-    Database: vi.fn(() => ({
-      run: vi.fn(),
-      prepare: vi.fn(() => ({
-        run: vi.fn(),
-        free: vi.fn(),
-      })),
-      export: vi.fn(() => new Uint8Array()),
-    })),
+  default: vi.fn(async () => ({
+    Database: MockDatabase,
   })),
 }));
 

@@ -65,4 +65,22 @@ describe('Type Definitions', () => {
     expect(ankiCard.nextText).toBeUndefined();
     expect(ankiCard.nextAudio).toBeUndefined();
   });
+
+  it('allows optional audio error reasons on AnkiCard', () => {
+    const ankiCard: AnkiCard = {
+      id: 'card-audio-error',
+      subtitleId: 1,
+      text: 'Test subtitle',
+      translation: 'Translation',
+      notes: 'Notes',
+      screenshotRef: null,
+      audioRef: null,
+      timestampStr: '00:01',
+      audioStatus: 'error',
+      audioErrorReason: 'ffmpeg_unavailable',
+      syncStatus: 'unsynced',
+    };
+
+    expect(ankiCard.audioErrorReason).toBe('ffmpeg_unavailable');
+  });
 });

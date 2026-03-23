@@ -4,6 +4,26 @@ import { AnkiCard, AnkiNoteType } from './types.ts';
 import { createAnkiDatabase } from './anki-db.ts';
 import { getMedia } from './db.ts';
 
+export type ExportDeckErrorCode =
+  | 'NO_CARDS'
+  | 'DATABASE_CREATION_FAILED'
+  | 'PACKAGE_GENERATION_FAILED';
+
+export class ExportDeckError extends Error {
+  code: ExportDeckErrorCode;
+  cause?: unknown;
+
+  constructor(code: ExportDeckErrorCode, message: string, cause?: unknown) {
+    super(message);
+    this.name = 'ExportDeckError';
+    this.code = code;
+    this.cause = cause;
+  }
+}
+
+export const isExportDeckError = (error: unknown): error is ExportDeckError =>
+  error instanceof ExportDeckError;
+
 /**
  * Generates an Anki-compatible .apkg file.
  * 
@@ -24,8 +44,7 @@ export const generateAnkiDeck = async (
   noteType: AnkiNoteType
 ) => {
   if (cards.length === 0) {
-    alert("No cards to export!");
-    return;
+    throw new ExportDeckError('NO_CARDS', 'Deck export requires at least one card.');
   }
 
   const zip = new JSZip();
@@ -43,9 +62,12 @@ export const generateAnkiDeck = async (
     const dbData = await createAnkiDatabase(cards, tags, deckName, noteType, creationTime);
     zip.file("collection.anki2", dbData);
   } catch (e) {
-    console.error("Failed to generate Anki database", e);
-    alert("Error creating Anki database. Please ensure your browser supports WASM.");
-    return;
+    console.debug('[export] Failed to generate Anki database', e);
+    throw new ExportDeckError(
+      'DATABASE_CREATION_FAILED',
+      'Failed to create collection database for deck export.',
+      e,
+    );
   }
 
   // 2. Process Media (Async loop)
@@ -89,6 +111,14 @@ export const generateAnkiDeck = async (
   zip.file("media", JSON.stringify(mediaMap));
 
   // 4. Generate and Download
-  const content = await zip.generateAsync({ type: "blob" });
-  saveAs(content, `${deckName || 'Subs2Anki_Export'}.apkg`);
+  try {
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, `${deckName || 'Subs2Anki_Export'}.apkg`);
+  } catch (e) {
+    throw new ExportDeckError(
+      'PACKAGE_GENERATION_FAILED',
+      'Failed to package deck export file.',
+      e,
+    );
+  }
 };

@@ -21,18 +21,12 @@ import {useTranslation} from 'react-i18next';
 import {useDebounce} from '@/hooks/useDebounce';
 import { invoke } from '@tauri-apps/api/core';
 
-declare global {
-  interface Window {
-    showOpenFilePicker?: (options?: any) => Promise<any[]>;
-  }
-}
-
 interface SubtitleColumnProps {
   subtitleLines: SubtitleLine[];
   activeSubtitleLineId: number | null;
   subtitleFileName: string;
   canSave: boolean;
-  onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: any, subtitlePath?: string | null) => void;
+  onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: BrowserFileHandle | null, subtitlePath?: string | null) => void;
   onSubtitleLineClicked: (id: number) => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (id: number) => void;
@@ -240,7 +234,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         onSetSubtitles(parseSubtitles(subtitle.content), subtitle.fileName, null, subtitle.path);
         return;
       } catch (err) {
-        console.error('Tauri subtitle picker failed', err);
+        console.debug('[SubtitleColumn] Tauri subtitle picker failed', err);
         return;
       }
     }
@@ -257,7 +251,7 @@ const SubtitleColumn: React.FC<SubtitleColumnProps> = ({
         return;
       }
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') console.error("File picker failed", err);
+      if ((err as Error).name !== 'AbortError') console.debug('[SubtitleColumn] Browser file picker failed', err);
       else return;
     }
     subtitleInputRef.current?.click();

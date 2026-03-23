@@ -109,7 +109,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({src, onTim
         return canvas.toDataURL('image/jpeg', 0.85);
       }
     } catch (e) {
-      console.error("Frame capture failed", e);
+      console.debug('[VideoPlayer] Frame capture failed', e);
     }
     return null;
   };

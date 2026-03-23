@@ -27,6 +27,7 @@ export interface AnkiCard {
 
   timestampStr: string;     // Formatted timestamp string for display (e.g., "01:23")
   audioStatus?: 'pending' | 'processing' | 'done' | 'error'; // Tracking background audio extraction
+  audioErrorReason?: AudioErrorReason; // Reason for audio error, if any
 
   // Sync status
   syncStatus?: 'unsynced' | 'syncing' | 'synced';       // Whether the card has been synced to Anki
@@ -73,3 +74,8 @@ export interface AnkiNoteType {
   fields: AnkiField[];
   templates: AnkiCardTemplate[];
 }
+
+/**
+ * Audio error reasons.
+ */
+export type AudioErrorReason = 'ffmpeg_unavailable';

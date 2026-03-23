@@ -1,6 +1,6 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL, fetchFile } from '@ffmpeg/util';
-import type { MediaProcessingService, VideoSource } from './ffmpeg-contract.ts';
+import type { FfmpegAvailability, MediaProcessingService, VideoSource } from './ffmpeg-contract.ts';
 
 class WebFFmpegService implements MediaProcessingService {
   private ffmpeg: FFmpeg | null = null;
@@ -32,13 +32,22 @@ class WebFFmpegService implements MediaProcessingService {
         this.ffmpeg = ffmpeg;
         this.loaded = true;
       } catch (e) {
-        console.error('Failed to load FFmpeg', e);
+        console.debug('[ffmpeg-web] Failed to load FFmpeg', e);
         this.loadPromise = null;
         throw e;
       }
     })();
 
     return this.loadPromise;
+  }
+
+  async getAvailability(_forceRefresh: boolean = false): Promise<FfmpegAvailability> {
+    return {
+      available: true,
+      message: 'Web mode uses FFmpeg.wasm.',
+      binaryPath: null,
+      targetTriple: undefined,
+    };
   }
 
   async extractAudioClip(source: VideoSource, start: number, end: number, volume: number = 1.5): Promise<Blob> {

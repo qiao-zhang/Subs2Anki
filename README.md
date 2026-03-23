@@ -86,8 +86,12 @@ npm run tauri:build
 - Desktop video selection now uses a native picker exposed by the Tauri backend, and playback uses Tauri's asset protocol to load the chosen local file.
 - Desktop subtitle selection and save-back now also use native Tauri file paths, while the web app keeps using the browser file picker / File System Access flow.
 - Put target-specific FFmpeg sidecars in `src-tauri/bin/` (see `src-tauri/bin/README.md`), or copy one there with `npm run prepare:ffmpeg-sidecar -- <path-to-ffmpeg-binary> <target-triple>`.
-- When a matching sidecar exists, `src-tauri/build.rs` injects `bundle.externalBin` automatically so `tauri build` bundles FFmpeg into the app/installer.
-- `npm run build` keeps `dist/ffmpeg` for the web app, while `npm run build:tauri` removes `dist/ffmpeg` after bundling so browser-only FFmpeg assets are not packed into the desktop app.
+- Desktop startup now probes FFmpeg immediately. If the sidecar or fallback binary is missing, the UI shows a persistent warning banner instead of waiting for the first audio extraction to fail.
+- The Settings modal now shows the current desktop FFmpeg status, resolved binary path, a manual `Re-check FFmpeg` action, and step-by-step recovery instructions when the check fails.
+- When a re-check succeeds, cards whose audio generation previously failed only because desktop FFmpeg was unavailable are automatically moved back to the pending queue.
+- `src-tauri/build.rs` now prints a warning in debug builds and fails desktop release builds with a target-specific message if the expected sidecar file is missing.
+- Use `npm run validate:ffmpeg-sidecars` to verify the expected source sidecar inventory, and `npm run validate:ffmpeg-bundle` after a native `tauri build` to confirm the built bundle contains FFmpeg.
+- The release workflow `.github/workflows/ffmpeg-sidecar-validation.yml` now runs on native Windows/macOS/Linux runners, prepares a host-specific placeholder sidecar, performs a real `tauri build`, and then verifies the resulting bundle still contains the packaged sidecar.
 
 ## Usage Guide
 

@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import {AnkiCard, AnkiNoteType, ProcessingState, SubtitleLine} from './types.ts';
+import {AnkiCard, AnkiNoteType, AudioErrorReason, ProcessingState, SubtitleLine} from './types.ts';
 import {UndoRedoManager} from './undo-redo-service.ts';
 
 // Default constants
@@ -44,11 +44,11 @@ interface AppState {
   // Subtitles
   subtitleLines: SubtitleLine[];
   subtitleFileName: string;
-  fileHandle: any | null;
+  fileHandle: BrowserFileHandle | null;
   subtitlePath: string | null;
   hasUnsavedChanges: boolean;
   countSubtitleLinesBefore: (time: number, status?: 'normal' | 'locked' | 'ignored') => number;
-  setSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: any, subtitlePath?: string | null) => void;
+  setSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: BrowserFileHandle | null, subtitlePath?: string | null) => void;
   updateSubtitleText: (id: number, text: string) => void;
   updateSubtitleTime: (id: number, start: number, end: number) => void;
   toggleSubtitleLineStatus: (id: number, order?: 'NIL' | 'NLI') => void;
@@ -72,7 +72,8 @@ interface AppState {
   processing: ProcessingState;
   addCard: (card: AnkiCard) => void;
   updateCardSyncStatus: (id: string, status: 'unsynced' | 'syncing' | 'synced') => void;
-  updateCardAudioStatus: (id: string, status: 'pending' | 'processing' | 'done' | 'error', audioRef?: string) => void;
+  updateCardAudioStatus: (id: string, status: 'pending' | 'processing' | 'done' | 'error', audioRef?: string, audioErrorReason?: AudioErrorReason) => void;
+  retryCardsBlockedByFfmpeg: () => void;
   deleteCard: (id: string) => void;
   clearCards: () => void;
   ankiConfig: AnkiNoteType;
@@ -95,6 +96,25 @@ interface AppState {
 
 // 创建全局的 undo/redo 管理器实例
 const globalUndoRedoManager = new UndoRedoManager();
+
+const safeStorage = {
+  getItem(key: string): string | null {
+    try {
+      return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem(key: string, value: string) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, value);
+      }
+    } catch {
+      // Ignore storage writes in non-browser or restricted environments.
+    }
+  }
+};
 
 export const useAppStore = create<AppState>((set, get) => ({
   projectName: '', // 默认项目名称为空
@@ -124,7 +144,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (oldVideoSrc && oldVideoSrc.startsWith('blob:')) {
       URL.revokeObjectURL(oldVideoSrc);
     }
-    
+
     const src = URL.createObjectURL(file);
     // 当设置视频时，如果项目名称为空，则使用视频文件名作为默认项目名称
     const currentProjectName = get().projectName;
@@ -384,14 +404,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     let smallerIndex = -1;
 
     for (let i = mid; i < text.length; i++) {
-      console.log(i, text[i], /\s/.test(text[i]));
       if (/\s/.test(text[i])) { // Matches any whitespace character (space, tab, etc.)
         largerIndex = i;
         break;
       }
     }
     for (let i = mid - 1; i >= 0; i--) {
-      console.log(i, text[i], /\s/.test(text[i]));
       if (/\s/.test(text[i])) { // Matches any whitespace character (space, tab, etc.)
         smallerIndex = i;
         break;
@@ -481,39 +499,51 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateCardSyncStatus: (id, syncStatus) => set((state) => ({
     ankiCards: state.ankiCards.map(c => c.id === id ? {...c, syncStatus} : c)
   })),
-  updateCardAudioStatus: (id, audioStatus, audioRef?: string | null) => set((state) => ({
-    ankiCards: state.ankiCards.map(c => c.id === id ? {...c, audioStatus, audioRef} : c)
+  updateCardAudioStatus: (id, audioStatus, audioRef?: string | null, audioErrorReason?: AudioErrorReason) => set((state) => ({
+    ankiCards: state.ankiCards.map(c => c.id === id ? {
+      ...c,
+      audioStatus,
+      audioRef,
+      audioErrorReason: audioStatus === 'error' ? audioErrorReason : undefined,
+    } : c)
+  })),
+  retryCardsBlockedByFfmpeg: () => set((state) => ({
+    ankiCards: state.ankiCards.map(c =>
+      c.audioStatus === 'error' && c.audioErrorReason === 'ffmpeg_unavailable' && !c.audioRef
+        ? { ...c, audioStatus: 'pending', audioErrorReason: undefined }
+        : c
+    )
   })),
   deleteCard: (id) => set((state) => ({ankiCards: state.ankiCards.filter(c => c.id !== id)})),
   clearCards: () => set((_) => ({ankiCards: []})),
   setAnkiConfig: (config) => set({ankiConfig: config}),
 
   // Anki Connect
-  ankiConnectUrl: localStorage.getItem('subs2anki_anki_url') || 'http://127.0.0.1:8765',
+  ankiConnectUrl: safeStorage.getItem('subs2anki_anki_url') || 'http://127.0.0.1:8765',
   setAnkiConnectUrl: (url) => {
-    localStorage.setItem('subs2anki_anki_url', url);
+    safeStorage.setItem('subs2anki_anki_url', url);
     set({ankiConnectUrl: url});
   },
 
   // Settings
-  bulkCreateLimit: parseInt(localStorage.getItem('subs2anki_bulk_create_limit') || '10'),
+  bulkCreateLimit: parseInt(safeStorage.getItem('subs2anki_bulk_create_limit') || '10'),
   setBulkCreateLimit: (limit) => {
-    localStorage.setItem('subs2anki_bulk_create_limit', limit.toString());
+    safeStorage.setItem('subs2anki_bulk_create_limit', limit.toString());
     set({bulkCreateLimit: limit});
   },
-  autoDeleteSynced: localStorage.getItem('subs2anki_auto_delete_synced') === 'true',
+  autoDeleteSynced: safeStorage.getItem('subs2anki_auto_delete_synced') === 'true',
   setAutoDeleteSynced: (enabled) => {
-    localStorage.setItem('subs2anki_auto_delete_synced', enabled.toString());
+    safeStorage.setItem('subs2anki_auto_delete_synced', enabled.toString());
     set({autoDeleteSynced: enabled});
   },
-  showBulkCreateButton: localStorage.getItem('subs2anki_show_bulk_create_button') !== 'false', // 默认为true
+  showBulkCreateButton: safeStorage.getItem('subs2anki_show_bulk_create_button') !== 'false', // 默认为true
   setShowBulkCreateButton: (show) => {
-    localStorage.setItem('subs2anki_show_bulk_create_button', show.toString());
+    safeStorage.setItem('subs2anki_show_bulk_create_button', show.toString());
     set({showBulkCreateButton: show});
   },
-  audioVolume: parseFloat(localStorage.getItem('subs2anki_audio_volume') || '1.5'),
+  audioVolume: parseFloat(safeStorage.getItem('subs2anki_audio_volume') || '1.5'),
   setAudioVolume: (volume) => {
-    localStorage.setItem('subs2anki_audio_volume', volume.toString());
+    safeStorage.setItem('subs2anki_audio_volume', volume.toString());
     set({audioVolume: volume});
   }
 }));

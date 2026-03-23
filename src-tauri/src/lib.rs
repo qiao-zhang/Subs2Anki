@@ -7,6 +7,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       ffmpeg::pick_video_file,
       ffmpeg::pick_subtitle_file,
+      ffmpeg::get_ffmpeg_status,
       ffmpeg::set_video_source_path,
       ffmpeg::clear_video_source_path,
       ffmpeg::write_subtitle_file,

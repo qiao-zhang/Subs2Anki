@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { MediaProcessingService, VideoSource } from './ffmpeg-contract.ts';
+import type { FfmpegAvailability, MediaProcessingService, VideoSource } from './ffmpeg-contract.ts';
 
 interface ExtractAudioClipRequest {
   start: number;
@@ -10,6 +10,7 @@ interface ExtractAudioClipRequest {
 class TauriFFmpegService implements MediaProcessingService {
   private cachedPath: string | null = null;
   private preparePromise: Promise<void> | null = null;
+  private availabilityPromise: Promise<FfmpegAvailability> | null = null;
 
   async prepareVideoSource(source: VideoSource) {
     if (!source.path) {
@@ -36,6 +37,21 @@ class TauriFFmpegService implements MediaProcessingService {
     } finally {
       this.preparePromise = null;
     }
+  }
+
+  async getAvailability(forceRefresh: boolean = false): Promise<FfmpegAvailability> {
+    if (forceRefresh) {
+      this.availabilityPromise = null;
+    }
+
+    if (!this.availabilityPromise) {
+      this.availabilityPromise = invoke<FfmpegAvailability>('get_ffmpeg_status').catch((error) => {
+        this.availabilityPromise = null;
+        throw error;
+      });
+    }
+
+    return this.availabilityPromise;
   }
 
   async extractAudioClip(source: VideoSource, start: number, end: number, volume: number = 1.5): Promise<Blob> {

@@ -73,10 +73,8 @@ export const saveProjectRecord = async (record: ProjectRecord, fileName?: string
     const blob = new Blob([jsonString], { type: 'application/json' });
     
     // 检查是否支持File System Access API
-    // @ts-ignore
     if (window.showSaveFilePicker) {
       // 使用现代浏览器API
-      // @ts-ignore
       const handle = await window.showSaveFilePicker({
         suggestedName: suggestedFileName,
         types: [{
@@ -85,7 +83,6 @@ export const saveProjectRecord = async (record: ProjectRecord, fileName?: string
         }]
       });
       
-      // @ts-ignore
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
@@ -101,7 +98,8 @@ export const saveProjectRecord = async (record: ProjectRecord, fileName?: string
       URL.revokeObjectURL(downloadUrl);
     }
   } catch (error) {
-    console.error('保存项目记录失败:', error);
+    console.debug('[project-record] Failed to save project record', error);
+    throw error;
   }
 };
 

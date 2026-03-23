@@ -1,8 +1,12 @@
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
-import { defineConfig, loadEnv, Plugin } from 'vite'
+import { defineConfig, Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+
+const require = createRequire(import.meta.url);
+const packageJson = require('./package.json') as { version: string };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,9 +26,7 @@ const tauriBuildCleanupPlugin = (isTauriBuild: boolean): Plugin => ({
 });
 
 // https://vitejs.dev/config/
-// @ts-ignore
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
   const isTauriBuild = mode === 'tauri';
   const externalChunkLibraries = ['react', 'react-dom', 'react-virtuoso', 'lucide-react', 'file-saver'];
 
@@ -44,9 +46,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react(), tauriBuildCleanupPlugin(isTauriBuild)],
     define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      '__APP_VERSION__': JSON.stringify(require('./package.json').version),
+      '__APP_VERSION__': JSON.stringify(packageJson.version),
       '__TAURI_BUILD__': JSON.stringify(isTauriBuild),
     },
     resolve: {

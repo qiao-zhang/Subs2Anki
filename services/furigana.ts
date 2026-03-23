@@ -13,7 +13,7 @@ class FuriganaService {
     try {
       this.kuroshiro = new Kuroshiro();
     } catch (e) {
-      console.error("Failed to instantiate Kuroshiro", e);
+      console.debug('[furigana] Failed to instantiate Kuroshiro', e);
     }
   }
 
@@ -35,7 +35,7 @@ class FuriganaService {
         await this.kuroshiro.init(analyzer);
         this.isInitialized = true;
       } catch (e) {
-        console.error("Failed to initialize Kuroshiro:", e);
+        console.debug('[furigana] Failed to initialize Kuroshiro', e);
         this.initPromise = null;
       }
     })();

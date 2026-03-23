@@ -1,6 +1,7 @@
+/* @vitest-environment jsdom */
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CardItem from '../../components/CardItem.tsx';
 import { AnkiCard } from '../../services/types.ts';
 
@@ -41,6 +42,10 @@ describe('CardItem Component', () => {
     mockDelete.mockReset();
     mockPreview.mockReset();
     mockSync.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('renders card content correctly', async () => {

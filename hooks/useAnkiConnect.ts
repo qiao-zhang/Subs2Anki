@@ -32,7 +32,7 @@ export const useAnkiConnect = (ankiConnectUrl: string): UseAnkiConnectResult => 
         setTags([]);
       }
     } catch (error) {
-      console.error('Error checking AnkiConnect connection or fetching decks:', error);
+      console.debug('[useAnkiConnect] Failed to check connection or fetch decks', error);
       setIsConnected(false);
       setDecks([]);
       setTags([]);
@@ -49,7 +49,7 @@ export const useAnkiConnect = (ankiConnectUrl: string): UseAnkiConnectResult => 
         setTags(tagList);
       }
     } catch (error) {
-      console.error('Error refreshing tags:', error);
+      console.debug('[useAnkiConnect] Failed to refresh tags', error);
     }
   };
 

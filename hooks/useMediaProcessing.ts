@@ -7,7 +7,8 @@ import type { VideoSource } from '@/services/ffmpeg-contract.ts';
 
 export const useMediaProcessing = (
   source: VideoSource,
-  previewCard: AnkiCard | null
+  previewCard: AnkiCard | null,
+  isAudioExtractionEnabled: boolean = true,
 ) => {
   const ankiCards = useAppStore(state => state.ankiCards);
   const updateCardAudioStatus = useAppStore(state => state.updateCardAudioStatus);
@@ -19,6 +20,7 @@ export const useMediaProcessing = (
 
   // --- Background Audio Extraction Queue ---
   useEffect(() => {
+    if (!isAudioExtractionEnabled) return;
     if (backgroundProcessingId) return;
 
     let nextCard = previewCard && ankiCards.find(c => c.id === previewCard.id && c.audioStatus === 'pending');
@@ -30,9 +32,10 @@ export const useMediaProcessing = (
     if (nextCard) {
       processCardAudio(nextCard.id, nextCard.subtitleId).then();
     }
-  }, [ankiCards, previewCard, source.file, source.path, lastFinishedIndex]);
+  }, [ankiCards, previewCard, source.file, source.path, lastFinishedIndex, isAudioExtractionEnabled]);
 
   const processCardAudio = async (cardId: string, subtitleId: number) => {
+    if (!isAudioExtractionEnabled) return;
     if (!source.file && !source.path) return;
 
     const sub = getSubtitleLine(subtitleId);
@@ -56,7 +59,7 @@ export const useMediaProcessing = (
         updateCardAudioStatus(cardId, 'done', audioId);
       }
     } catch (e) {
-      console.error("Audio extraction failed", e);
+      console.debug('[useMediaProcessing] Audio extraction failed', e);
       updateCardAudioStatus(cardId, 'error');
     } finally {
       setBackgroundProcessingId(null);

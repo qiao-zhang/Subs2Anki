@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {X, Save, Wifi, AlertCircle, CheckCircle2, Globe} from 'lucide-react';
+import {X, Save, Wifi, AlertCircle, CheckCircle2, Globe, HardDrive} from 'lucide-react';
 import {checkConnection} from '@/services/anki-connect.ts';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +16,14 @@ interface SettingsModalProps {
   onShowBulkCreateButtonChange: (checked: boolean) => void;
   audioVolume: number;
   onAudioVolumeChange: (volume: number) => void;
+  ffmpegStatus?: {
+    available: boolean;
+    message: string;
+    binaryPath: string | null;
+    targetTriple?: string;
+  } | null;
+  isFfmpegCheckPending?: boolean;
+  onRecheckFfmpeg?: () => void;
   onTestSuccess?: () => void; // 回调函数，在测试连接成功时调用
 }
 
@@ -32,17 +40,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                        onShowBulkCreateButtonChange,
   audioVolume,
   onAudioVolumeChange,
+  ffmpegStatus = null,
+  isFfmpegCheckPending = false,
+  onRecheckFfmpeg,
                                                        onTestSuccess
                                                      }) => {
   const { t, i18n } = useTranslation();
   const [localUrl, setLocalUrl] = useState(ankiConnectUrl);
   const [status, setStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [localBulkCreateLimit, setLocalBulkCreateLimit] = useState(bulkCreateLimit);
+  const localBulkCreateLimit = bulkCreateLimit;
   const [localAutoDeleteSynced, setLocalAutoDeleteSynced] = useState(autoDeleteSynced);
   const [localShowBulkCreateButton, setLocalShowBulkCreateButton] = useState(showBulkCreateButton);
   const [localAudioVolume, setLocalAudioVolume] = useState(audioVolume);
   const [localLanguage, setLocalLanguage] = useState(i18n.language);
+
+  const currentDesktopTarget = ffmpegStatus?.targetTriple || 'current desktop target';
+  const expectedSidecarName = currentDesktopTarget.includes('windows')
+    ? `ffmpeg-${currentDesktopTarget}.exe`
+    : `ffmpeg-${currentDesktopTarget}`;
 
   const handleCheckConnection = async (targetUrl: string) => {
     setStatus('checking');
@@ -248,8 +264,106 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <p className="text-xs text-slate-500">{t("modals.adjustVolume", { defaultValue: "Adjust volume of generated audio clips (1.0 = normal)" })}</p>
                 </div>
               </div>
-              
-              {/* Language Settings Section */}
+
+              {__TAURI_BUILD__ && (
+                <div className="space-y-4">
+                  <h3 className="text-md font-bold flex items-center gap-2 text-slate-300">
+                    <HardDrive size={16} />
+                    {t("modals.desktopFfmpegStatus", { defaultValue: "Desktop FFmpeg" })}
+                  </h3>
+
+                  <div className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
+                    isFfmpegCheckPending
+                      ? 'bg-slate-800 border-slate-700 text-slate-300'
+                      : ffmpegStatus?.available
+                        ? 'bg-emerald-950/30 border-emerald-800 text-emerald-300'
+                        : 'bg-amber-950/30 border-amber-800 text-amber-200'
+                  }`}>
+                    {isFfmpegCheckPending && <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-500 border-t-transparent mt-0.5"/>}
+                    {!isFfmpegCheckPending && ffmpegStatus?.available && <CheckCircle2 size={14} className="mt-0.5"/>}
+                    {!isFfmpegCheckPending && !ffmpegStatus?.available && <AlertCircle size={14} className="mt-0.5"/>}
+
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold">
+                        {isFfmpegCheckPending
+                          ? t("modals.checkingDesktopFfmpeg", { defaultValue: "Checking desktop FFmpeg availability..." })
+                          : ffmpegStatus?.available
+                            ? t("modals.desktopFfmpegReady", { defaultValue: "Desktop FFmpeg is ready" })
+                            : t("modals.desktopFfmpegUnavailable", { defaultValue: "Desktop FFmpeg is unavailable" })}
+                      </div>
+                      <div className="mt-1 break-words">
+                        {isFfmpegCheckPending
+                          ? t("modals.desktopFfmpegCheckDescription", { defaultValue: "Audio extraction will be enabled automatically once the desktop FFmpeg check completes." })
+                          : ffmpegStatus?.message || t("modals.desktopFfmpegStatusUnknown", { defaultValue: "Status is unavailable." })}
+                      </div>
+                      {ffmpegStatus?.binaryPath && (
+                        <div className="mt-2 break-all text-[11px] text-slate-400">
+                          <span className="font-semibold text-slate-300">{t("modals.desktopFfmpegPath", { defaultValue: "Resolved path" })}:</span> {ffmpegStatus.binaryPath}
+                        </div>
+                      )}
+                      {ffmpegStatus?.targetTriple && (
+                        <div className="mt-1 break-all text-[11px] text-slate-400">
+                          <span className="font-semibold text-slate-300">{t("modals.desktopFfmpegTarget", { defaultValue: "Target triple" })}:</span> {ffmpegStatus.targetTriple}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={onRecheckFfmpeg}
+                      disabled={isFfmpegCheckPending}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold transition border ${
+                        isFfmpegCheckPending
+                          ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
+                          : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                      }`}
+                    >
+                      {isFfmpegCheckPending
+                        ? t("modals.recheckingDesktopFfmpeg", { defaultValue: "Re-checking FFmpeg..." })
+                        : t("modals.recheckDesktopFfmpeg", { defaultValue: "Re-check FFmpeg" })}
+                    </button>
+                  </div>
+
+                  {!isFfmpegCheckPending && ffmpegStatus && !ffmpegStatus.available && (
+                    <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4 text-xs text-slate-300 space-y-3">
+                      <div className="font-semibold text-slate-100">{t("modals.desktopFfmpegFixTitle", { defaultValue: "How to fix it" })}</div>
+                      <ol className="list-decimal pl-5 space-y-2 text-slate-300">
+                        <li>
+                          {t("modals.desktopFfmpegFixStepPrepare", {
+                            defaultValue: "Prepare a real FFmpeg executable for your current desktop target ({{target}}).",
+                            target: currentDesktopTarget,
+                          })}
+                        </li>
+                        <li>
+                          <div>{t("modals.desktopFfmpegFixStepSidecar", {
+                            defaultValue: "If you are running from source, place it in src-tauri/bin with this filename:",
+                          })}</div>
+                          <div className="mt-1 rounded bg-slate-900 px-2 py-1 font-mono text-[11px] break-all text-slate-200">{expectedSidecarName}</div>
+                        </li>
+                        <li>
+                          <div>{t("modals.desktopFfmpegFixStepCommand", {
+                            defaultValue: "Or copy it into place with this command:",
+                          })}</div>
+                          <div className="mt-1 rounded bg-slate-900 px-2 py-1 font-mono text-[11px] break-all text-slate-200">{`npm run prepare:ffmpeg-sidecar -- <path-to-ffmpeg-binary> ${currentDesktopTarget}`}</div>
+                        </li>
+                        <li>
+                          <div>{t("modals.desktopFfmpegFixStepEnv", {
+                            defaultValue: "If you prefer a system binary, point SUBS2ANKI_FFMPEG_PATH at a working ffmpeg executable, or add ffmpeg to PATH.",
+                          })}</div>
+                          <div className="mt-1 rounded bg-slate-900 px-2 py-1 font-mono text-[11px] break-all text-slate-200">SUBS2ANKI_FFMPEG_PATH=&lt;absolute-path-to-ffmpeg&gt;</div>
+                        </li>
+                        <li>{t("modals.desktopFfmpegFixStepBuild", {
+                          defaultValue: "If you are testing a packaged app, rebuild or reinstall a desktop build that bundles FFmpeg, then click 'Re-check FFmpeg'.",
+                        })}</li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              )}
+
+               {/* Language Settings Section */}
               <div className="space-y-4">
                 <h3 className="text-md font-bold flex items-center gap-2 text-slate-300">
                   <Globe size={16} />
@@ -294,3 +408,4 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 };
 
 export default SettingsModal;
+

@@ -1,0 +1,58 @@
+name: ffmpeg-sidecar-validation
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  native-bundle-validation:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            sidecar-source: C:\\Windows\\System32\\where.exe
+          - os: macos-latest
+            sidecar-source: /bin/echo
+          - os: ubuntu-24.04
+            sidecar-source: /bin/echo
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Prepare placeholder FFmpeg sidecar
+        run: npm run prepare:ffmpeg-sidecar -- "${{ matrix.sidecar-source }}"
+
+      - name: Validate source sidecar for current target
+        run: node scripts/validate-ffmpeg-sidecar.js
+
+      - name: Build Tauri app
+        run: npm run tauri:build
+
+      - name: Validate bundled FFmpeg sidecar
+        run: npm run validate:ffmpeg-bundle

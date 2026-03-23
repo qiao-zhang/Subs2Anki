@@ -36,6 +36,15 @@ pub struct PickedSubtitleFile {
   content: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FfmpegStatus {
+  available: bool,
+  message: String,
+  binary_path: Option<String>,
+  target_triple: String,
+}
+
 #[tauri::command]
 pub fn pick_video_file() -> Result<Option<String>, String> {
   let selected = pick_video_file_impl()?;
@@ -72,6 +81,11 @@ pub fn clear_video_source_path(state: State<'_, FfmpegState>) -> Result<(), Stri
 }
 
 #[tauri::command]
+pub fn get_ffmpeg_status(app: AppHandle) -> FfmpegStatus {
+  probe_ffmpeg_status(&app)
+}
+
+#[tauri::command]
 pub fn extract_audio_clip(
   app: AppHandle,
   state: State<'_, FfmpegState>,
@@ -100,7 +114,7 @@ pub fn extract_audio_clip(
   let volume = normalized_volume(request.volume);
   let cache_dir = ensure_cache_dir()?;
   let output_path = cache_dir.join(format!("clip-{}.wav", unique_suffix()));
-  let ffmpeg_binary = resolve_ffmpeg_binary(&app)?;
+  let ffmpeg_binary = ensure_ffmpeg_available(&app)?;
 
   let output = Command::new(&ffmpeg_binary)
     .arg("-ss")
@@ -209,6 +223,78 @@ fn read_subtitle_payload(path: PathBuf) -> Result<PickedSubtitleFile, String> {
     file_name,
     content,
   })
+}
+
+fn probe_ffmpeg_status(app: &AppHandle) -> FfmpegStatus {
+  let target_triple = option_env!("TAURI_ENV_TARGET_TRIPLE")
+    .unwrap_or("unknown-target")
+    .to_string();
+
+  match resolve_ffmpeg_binary(app) {
+    Ok(binary_path) => match run_ffmpeg_version_check(&binary_path) {
+      Ok(message) => FfmpegStatus {
+        available: true,
+        message,
+        binary_path: Some(binary_path.display().to_string()),
+        target_triple,
+      },
+      Err(error) => FfmpegStatus {
+        available: false,
+        message: error,
+        binary_path: Some(binary_path.display().to_string()),
+        target_triple,
+      },
+    },
+    Err(error) => FfmpegStatus {
+      available: false,
+      message: error,
+      binary_path: None,
+      target_triple,
+    },
+  }
+}
+
+fn ensure_ffmpeg_available(app: &AppHandle) -> Result<PathBuf, String> {
+  let binary_path = resolve_ffmpeg_binary(app)?;
+  run_ffmpeg_version_check(&binary_path)?;
+  Ok(binary_path)
+}
+
+fn run_ffmpeg_version_check(binary_path: &Path) -> Result<String, String> {
+  let output = Command::new(binary_path)
+    .arg("-version")
+    .output()
+    .map_err(|error| {
+      format!(
+        "FFmpeg is not available. Tried `{}` but failed to launch it: {error}",
+        binary_path.display()
+      )
+    })?;
+
+  if !output.status.success() {
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    return Err(if stderr.is_empty() {
+      format!(
+        "FFmpeg is not available. `{}` exited with status {} while checking `-version`.",
+        binary_path.display(),
+        output.status
+      )
+    } else {
+      format!(
+        "FFmpeg is not available. `{}` reported: {stderr}",
+        binary_path.display()
+      )
+    });
+  }
+
+  let version_line = String::from_utf8_lossy(&output.stdout)
+    .lines()
+    .next()
+    .map(|line| line.trim().to_string())
+    .filter(|line| !line.is_empty())
+    .unwrap_or_else(|| format!("FFmpeg is available at {}", binary_path.display()));
+
+  Ok(version_line)
 }
 
 fn pick_video_file_impl() -> Result<Option<PathBuf>, String> {
@@ -370,11 +456,8 @@ fn resolve_ffmpeg_binary(app: &AppHandle) -> Result<PathBuf, String> {
   let binary_names = ffmpeg_binary_names(target_triple);
   let mut candidates: Vec<PathBuf> = Vec::new();
 
-  let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-  for binary_name in &binary_names {
-    candidates.push(manifest_dir.join("bin").join(binary_name));
-  }
-
+  // Prefer runtime deployment locations first (packaged app resources / exe dir),
+  // then fall back to development-time source locations.
   if let Ok(resource_dir) = app.path().resource_dir() {
     for binary_name in &binary_names {
       candidates.push(resource_dir.join(binary_name));
@@ -388,6 +471,11 @@ fn resolve_ffmpeg_binary(app: &AppHandle) -> Result<PathBuf, String> {
         candidates.push(exe_dir.join(binary_name));
       }
     }
+  }
+
+  let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+  for binary_name in &binary_names {
+    candidates.push(manifest_dir.join("bin").join(binary_name));
   }
 
   if let Some(existing_binary) = candidates.into_iter().find(|candidate| candidate.is_file()) {
@@ -421,7 +509,8 @@ fn unique_suffix() -> u128 {
 
 #[cfg(test)]
 mod tests {
-  use super::{clip_duration, ffmpeg_binary_names, normalized_volume};
+  use std::path::Path;
+  use super::{clip_duration, ffmpeg_binary_names, normalized_volume, run_ffmpeg_version_check};
 
   #[test]
   fn clip_duration_rejects_invalid_ranges() {
@@ -442,6 +531,13 @@ mod tests {
     let names = ffmpeg_binary_names("x86_64-pc-windows-msvc");
     assert!(names.iter().any(|name| name.starts_with("ffmpeg-")));
     assert!(names.iter().any(|name| name == "ffmpeg.exe" || name == "ffmpeg"));
+  }
+
+  #[test]
+  fn missing_binary_reports_a_clear_error() {
+    let result = run_ffmpeg_version_check(Path::new("definitely-not-a-real-ffmpeg-binary"));
+    assert!(result.is_err());
+    assert!(result.err().unwrap().contains("FFmpeg is not available"));
   }
 }
 

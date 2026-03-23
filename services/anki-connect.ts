@@ -94,6 +94,17 @@ export const getTags = async (url: string): Promise<string[]> => {
   }
 };
 
+export interface SyncFailure {
+  id: string;
+  reason: string;
+}
+
+export interface SyncToAnkiResult {
+  attempted: number;
+  succeededIds: string[];
+  failed: SyncFailure[];
+}
+
 /**
  * Syncs a list of cards to Anki.
  *
@@ -110,7 +121,7 @@ export const syncToAnki = async (
   tags: string[],
   onProgress: (current: number, total: number) => void,
   onCardSynced?: (id: string) => void,
-) => {
+): Promise<SyncToAnkiResult> => {
   // 1. Create Deck
   await invoke('createDeck', {deck: deckName}, url);
 
@@ -129,70 +140,67 @@ export const syncToAnki = async (
     }, url);
   }
 
+  const succeededIds: string[] = [];
+  const failed: SyncFailure[] = [];
+
   // 3. Process Cards
   const total = cards.length;
   for (let i = 0; i < total; i++) {
     const card = cards[i];
     onProgress(i + 1, total);
 
-    const fields: Record<string, string> = {};
-
-    // Prepare Fields and Media
-    for (const field of noteType.fields) {
-      let value = '';
-      if (field.source) {
-        switch (field.source) {
-          case 'Text':
-            value = card.text;
-            break;
-          case 'Translation':
-            value = card.translation;
-            break;
-          case 'Notes':
-            value = card.notes;
-            break;
-          case 'Furigana':
-            value = card.furigana || card.text;
-            break;
-          case 'Time':
-            value = card.timestampStr;
-            break;
-          case 'Sequence':
-            value = card.id;
-            break;
-          case 'Image':
-            // Handle Image
-            if (card.screenshotRef) {
-              const data = await getMedia(card.screenshotRef);
-              if (data && typeof data === 'string') {
-                const filename = `${card.id}.jpg`;
-                const base64 = stringToBase64(data);
-
-                // We upload manually via storeMediaFile instead of addNote params for better control
-                await invoke('storeMediaFile', {filename, data: base64}, url);
-                value = `<img src="${filename}" alt="${card.text}">`;
-              }
-            }
-            break;
-          case 'Audio':
-            if (card.audioRef) {
-              const blob = await getMedia(card.audioRef);
-              if (blob && blob instanceof Blob) {
-                const filename = `${card.id}.wav`;
-                const base64 = await blobToBase64(blob);
-
-                await invoke('storeMediaFile', {filename, data: base64}, url);
-                value = `[sound:${filename}]`;
-              }
-            }
-            break;
-        }
-      }
-      fields[field.name] = value;
-    }
-
-    // 4. Add Note
     try {
+      const fields: Record<string, string> = {};
+
+      // Prepare Fields and Media
+      for (const field of noteType.fields) {
+        let value = '';
+        if (field.source) {
+          switch (field.source) {
+            case 'Text':
+              value = card.text;
+              break;
+            case 'Translation':
+              value = card.translation;
+              break;
+            case 'Notes':
+              value = card.notes;
+              break;
+            case 'Furigana':
+              value = card.furigana || card.text;
+              break;
+            case 'Time':
+              value = card.timestampStr;
+              break;
+            case 'Sequence':
+              value = card.id;
+              break;
+            case 'Image':
+              if (card.screenshotRef) {
+                const data = await getMedia(card.screenshotRef);
+                if (data && typeof data === 'string') {
+                  const filename = `${card.id}.jpg`;
+                  const base64 = stringToBase64(data);
+                  await invoke('storeMediaFile', {filename, data: base64}, url);
+                  value = `<img src="${filename}" alt="${card.text}">`;
+                }
+              }
+              break;
+            case 'Audio':
+              if (card.audioRef) {
+                const blob = await getMedia(card.audioRef);
+                if (blob && blob instanceof Blob) {
+                  const filename = `${card.id}.wav`;
+                  const base64 = await blobToBase64(blob);
+                  await invoke('storeMediaFile', {filename, data: base64}, url);
+                  value = `[sound:${filename}]`;
+                }
+              }
+              break;
+          }
+        }
+        fields[field.name] = value;
+      }
 
       await invoke('addNote', {
         note: {
@@ -207,11 +215,18 @@ export const syncToAnki = async (
         }
       }, url);
 
-      onCardSynced && onCardSynced(card.id);
-
+      succeededIds.push(card.id);
+      onCardSynced?.(card.id);
     } catch (e) {
-      console.error(`Failed to add note for card ${card.id}`, e);
-      // Continue to next card
+      const reason = e instanceof Error ? e.message : String(e);
+      console.debug(`[anki-connect] Failed to sync card ${card.id}`, e);
+      failed.push({ id: card.id, reason });
     }
   }
+
+  return {
+    attempted: total,
+    succeededIds,
+    failed,
+  };
 };

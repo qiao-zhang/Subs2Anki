@@ -1,317 +1,94 @@
-# Subs2Anki 项目改进计划
+# Subs2Anki TODOs (Refreshed)
 
-> 最后更新时间：2026-03-06
-> 本次审查范围：全面代码分析
+> Last updated: 2026-03-23  
+> Basis: latest full validation (`npm run typecheck`, `npm run test`, `npm run build`)
 
----
+## Current health snapshot
 
-## 0. 新增问题与建议 (2026-03-06 代码审查)
-
-### 严重问题 (Critical)
-- [ ] **类型安全**: `services/store.ts` 中 `fileHandle: any | null` 应使用 `FileSystemFileHandle | null` 或定义专门接口
-- [ ] **测试覆盖率不足**: 虽然有测试文件，但关键服务（FFmpeg、AnkiConnect、furigana）缺乏测试
-
-### 高优先级 (High)
-- [ ] **代码重复**: `App.tsx` 过于臃肿（1100+ 行），应拆分为更小的容器组件
-- [ ] **错误处理不完善**: 多处 `catch` 块只打印日志或简单 alert，缺乏统一的错误处理机制
-- [ ] **XSS 风险**: `services/anki-connect.ts` 和 `services/anki-db.ts` 中直接将用户输入插入 HTML/SQL，应使用 DOMPurify 和参数化查询
-- [ ] **@ts-ignore 滥用**: 代码中多处使用 `@ts-ignore` 绕过类型检查，应修复根本问题
-- [ ] **状态管理混乱**: Zustand store 中混合了太多业务逻辑，应分离到服务层
-
-### 中优先级 (Medium)
-- [ ] **国际化不完整**: 部分硬编码字符串未使用 i18n，如 `App.tsx` 中的 alert 消息
-- [ ] **可访问性缺失**: 大部分按钮缺少 aria-label 属性
-- [ ] **配置管理分散**: 配置项分散在 localStorage 和 Zustand 中，应统一管理
-
-### 低优先级 (Low)
-- [ ] **代码风格不一致**: 部分函数使用箭头函数，部分使用普通函数
-- [ ] **注释不足**: 关键算法（如字幕分割逻辑）缺少注释说明
-- [ ] **依赖版本过旧**: 部分依赖版本锁定较旧，可考虑升级
+- Type check: pass
+- Tests: pass (19 files / 66 tests)
+- Build: pass
+- Architecture: `App.tsx` orchestration has been significantly reduced into hooks/components
 
 ---
 
-## 1. 代码质量改进
+## P0 - Reliability and correctness (next focus)
 
-### 高优先级
-- [ ] 修复 `services/store.ts` 中的 `fileHandle: any | null` 类型定义，替换为具体类型
-- [ ] 消除所有 `@ts-ignore` 注释并解决相应的类型问题
-- [ ] 为 `services/types.ts` 中的所有接口添加 JSDoc 注释
-- [ ] 修复 `services/anki-connect.ts` 中的潜在 XSS 风险
-- [ ] 为所有函数添加明确的返回类型注解
+- [ ] Fix async cleanup race in project reset flow
+  - File: `hooks/useProjectReset.ts`
+  - Issue: `ankiCards.forEach(async ...)` is not awaited; cleanup may not complete before `clearCards()`/reload
+  - Expected outcome: use awaited sequencing (`for...of` or `Promise.all`) so media deletion is deterministic
 
-### 中优先级
-- [ ] 重构 `App.tsx` 组件，将其拆分为更小的子组件
-- [ ] 创建专门的容器组件来管理状态（VideoContainer、SubtitleContainer、CardContainer）
-- [ ] 将复杂的事件处理逻辑提取到自定义 Hook 中
-- [ ] 实现统一的错误处理机制
-- [ ] 为第三方库创建更准确的类型声明
-- [ ] 将所有硬编码的 alert 消息替换为 i18n 翻译
-- [ ] 为所有交互按钮添加 aria-label 属性
-- [ ] 创建统一的配置管理器，整合 localStorage 和 Zustand 中的配置
-
-### 低优先级
-- [ ] 为所有组件添加 PropTypes 或更详细的 TypeScript 类型
-- [ ] 实现代码风格指南并配置 ESLint 和 Prettier
-- [ ] 添加代码审查流程
+- [ ] Ensure reset completion notification is actually visible
+  - File: `hooks/useProjectReset.ts`
+  - Issue: `showNotification(...)` is called after `reloadPage()` and may never render
+  - Expected outcome: either notify before reload or persist/show notification post-reload via reliable mechanism
 
 ---
 
-## 2. 性能优化
+## P1 - Architecture and maintainability
 
-### 高优先级
-- [ ] 实现 FFmpeg 操作的并发控制，避免资源竞争
-- [ ] 实现 IndexedDB 媒体文件的定期清理机制
-- [ ] 修复 `useMediaProcessing.ts` 中的依赖数组问题，避免不必要的重渲染
+- [x] Continue splitting `App.tsx` orchestration responsibilities
+  - Extracted:
+    - `hooks/useCardMediaDeletion.ts`
+    - `hooks/useSubtitleTimelineHandlers.ts`
+    - `hooks/useProjectUiState.ts`
 
-### 中优先级
-- [ ] 优化 `react-virtuoso` 配置以提高大量字幕行时的性能
-- [ ] 实现音频提取的批处理和进度指示
-- [ ] 优化图像压缩算法，根据屏幕尺寸动态调整质量
-- [ ] 实现视频帧捕获的节流机制
-- [ ] 优化 `SubtitleColumn.tsx` 中的搜索功能，添加防抖处理
-- [ ] 缓存 furigana 转换结果，避免重复计算
+- [x] Standardize hook boundaries
+  - Rule: UI-only state in component; domain workflow in hooks/services
+  - Added short docs in complex hooks
 
-### 低优先级
-- [ ] 实现大文件的分块处理机制
-- [ ] 添加上传/下载进度指示器
-- [ ] 优化文件解析算法性能
-- [ ] 实现更智能的缓存策略
+- [x] Reduce service/UI coupling in export path
+  - `services/export.ts` now returns structured domain errors
+  - UI layer decides user messaging
 
----
-
-## 3. 安全增强
-
-### 高优先级
-- [ ] 实现对用户上传文件的严格验证（类型、大小、内容）
-- [ ] 使用 DOMPurify 库净化所有 HTML 内容
-- [ ] 为 AnkiConnect API 调用添加请求验证和超时机制
-- [ ] 实现对 AnkiConnect 返回数据的验证
-- [ ] 修复 `services/anki-connect.ts` 和 `services/anki-db.ts` 中的 XSS 风险，对用户输入进行转义
-
-### 中优先级
-- [ ] 实现敏感数据的加密存储
-- [ ] 添加数据传输加密机制
-- [ ] 实现安全的本地存储方案
-- [ ] 添加恶意内容检测机制
-
-### 低优先级
-- [ ] 实现访问控制机制
-- [ ] 实现安全的文件访问权限管理
-- [ ] 添加安全审计日志
+- [ ] Extract remaining video source selection workflow from `App.tsx`
+  - File: `App.tsx` (`handleVideoUpload`, `handlePickVideo`)
+  - Expected outcome: move to dedicated hook (e.g., `useVideoSourceActions`) for cleaner orchestration
 
 ---
 
-## 4. 用户体验改进
+## P1 - i18n and UX consistency
 
-### 高优先级
-- [ ] 添加加载状态指示器（特别是在 FFmpeg 加载和音频提取时）
-- [ ] 改进错误消息的用户友好性
-- [ ] 为长时间操作添加进度条
-- [ ] 添加操作确认对话框（如删除卡片）
-- [ ] 将硬编码的 alert 消息替换为友好的 i18n 提示
+- [x] Replace remaining hardcoded English messages with i18n keys
+  - Applied in `useAnkiSync`, `useProjectPersistence`, export notifications, delete-synced prompts
 
-### 中优先级
-- [ ] 实现快捷键自定义功能
-- [ ] 改进键盘导航的可用性
-- [ ] 添加项目自动保存功能
-- [ ] 优化字幕编辑的用户体验
-
-### 低优先级
-- [ ] 实现更灵活的模板系统
-- [ ] 添加项目备份和恢复功能
-- [ ] 支持高对比度模式和屏幕阅读器
-- [ ] 添加用户引导教程
+- [x] Normalize notification style
+  - `showNotification` used consistently for non-confirm user feedback
+  - `confirm(...)` retained only for destructive confirmation
 
 ---
 
-## 5. 测试覆盖
+## P2 - Test depth improvements
 
-### 高优先级
-- [ ] 为核心业务逻辑编写单元测试（字幕解析、时间戳处理等）
-- [ ] 为 FFmpeg 服务编写单元测试
-- [ ] 为状态管理逻辑编写测试
-- [ ] 实现基本的组件渲染测试
-- [ ] 为 `services/furigana.ts` 编写单元测试
-- [ ] 为 `services/anki-connect.ts` 编写单元测试
+- [ ] Add tests for new orchestration hooks introduced in latest refactor
+  - Files:
+    - `hooks/useCardMediaDeletion.ts`
+    - `hooks/useSubtitleTimelineHandlers.ts`
+    - `hooks/useProjectUiState.ts`
+  - Expected outcome: lock behavior after extraction and reduce regression risk
 
-### 中优先级
-- [ ] 实现组件交互的集成测试
-- [ ] 编写 AnkiConnect 服务的集成测试
-- [ ] 实现端到端测试（主要工作流程）
-- [ ] 添加错误处理场景的测试
-- [ ] 为 `hooks/useMediaProcessing.ts` 编写测试
+- [ ] Add focused tests for project reset sequencing
+  - File: `hooks/useProjectReset.ts`
+  - Scope: media cleanup order, async completion, and notification/reload behavior
 
-### 低优先级
-- [ ] 实现性能基准测试
-- [ ] 添加压力测试和负载测试
-- [ ] 建立持续测试流水线
-- [ ] 实现测试覆盖率监控
+- [x] Add tests for `useMediaExportActions`
+- [x] Add regression tests for keyboard workflow hook
+- [x] Add focused tests for store split logic
 
 ---
 
-## 6. 架构改进
+## P2 - Product polish and UX gaps
 
-### 高优先级
-- [ ] 实现更清晰的服务层来处理业务逻辑
-- [ ] 创建配置管理器统一管理应用设置
-- [ ] 实现依赖注入以提高可测试性
-- [ ] 为外部服务（如 AnkiConnect）创建适配器
-- [ ] 将 Zustand store 中的业务逻辑分离到独立的服务层
-
-### 中优先级
-- [ ] 将全局状态按功能域拆分
-- [ ] 实现状态持久化机制
-- [ ] 创建错误边界组件
-- [ ] 实现更灵活的国际化支持
-- [ ] 创建统一的错误处理服务
-
-### 低优先级
-- [ ] 实现插件系统以支持功能扩展
-- [ ] 创建主题系统以支持外观定制
-- [ ] 实现微前端架构以支持模块化开发
+- [ ] Resolve inline product TODO in card item actions
+  - File: `components/CardItem.tsx` (line with `// TODO add a play button to preview the audio`)
+  - Expected outcome: provide audio preview control (or remove dead TODO with explicit decision)
 
 ---
 
-## 7. 文档和维护
+## Suggested execution order
 
-### 高优先级
-- [ ] 为公共 API 添加 JSDoc 注释
-- [ ] 更新 README.md 以反映最新功能和改进
-- [ ] 添加架构图和数据流图
-- [ ] 为关键算法（如字幕分割逻辑）添加详细注释
-
-### 中优先级
-- [ ] 创建开发者文档
-- [ ] 添加部署指南
-- [ ] 创建常见问题解答（FAQ）
-- [ ] 编写代码风格指南
-
-### 低优先级
-- [ ] 创建用户手册
-- [ ] 添加 API 参考文档
-- [ ] 创建贡献指南
-
----
-
-## 8. 构建和配置改进
-
-### 高优先级
-- [ ] 修复 `vite.config.ts` 中的类型定义问题，消除 `@ts-ignore`
-- [ ] 配置 ESLint 和 Prettier 以统一代码风格
-
-### 中优先级
-- [ ] 升级过时的依赖包版本
-- [ ] 配置 TypeScript 严格模式，修复所有类型错误
-- [ ] 添加 Husky pre-commit hooks 进行代码检查
-
-### 低优先级
-- [ ] 优化 Vite 构建配置以减小包体积
-- [ ] 实现代码分割以提高加载性能
-
----
-
-## 9. 可访问性和国际化
-
-### 高优先级
-- [ ] 为所有按钮和交互元素添加 aria-label 属性
-- [ ] 确保所有图片都有适当的 alt 文本
-- [ ] 完成所有硬编码字符串的 i18n 改造
-
-### 中优先级
-- [ ] 实现焦点管理，确保键盘导航可用
-- [ ] 添加颜色对比度检查
-- [ ] 支持屏幕阅读器
-
-### 低优先级
-- [ ] 实现跳过导航链接
-- [ ] 添加字体大小调整功能
-
----
-
-## 10. 技术债务清理
-
-### 高优先级
-- [ ] 移除所有 `@ts-ignore` 注释并修复类型问题
-- [ ] 修复 `App.tsx` 中 `fileHandle` 的 `any` 类型
-- [ ] 修复 `useKeyboardShortcuts.tsx` 中的快捷键冲突
-
-### 中优先级
-- [ ] 重构 `App.tsx` 中超过 200 行的组件
-- [ ] 统一错误处理模式
-- [ ] 清理未使用的导入和变量
-
-### 低优先级
-- [ ] 统一代码风格（箭头函数 vs 普通函数）
-- [ ] 添加代码注释说明复杂逻辑
-
----
-
-## 11. 特定功能改进
-
-### 字幕处理功能
-- [ ] 优化字幕解析算法以支持更多格式变体
-- [ ] 添加字幕搜索和过滤功能
-
-### 音频处理功能
-- [ ] 优化音频提取性能
-- [ ] 添加音频质量调节选项
-- [ ] 实现音频格式转换功能
-- [ ] 添加音频预览功能
-
-### 视频处理功能
-- [ ] 优化视频帧捕获性能
-- [ ] 添加视频质量调节选项
-- [ ] 实现视频格式转换功能
-- [ ] 添加视频预览功能
-
-### Anki 集成功能
-- [ ] 优化 AnkiConnect 同步性能
-- [ ] 添加同步进度指示
-- [ ] 实现批量同步功能
-- [ ] 添加同步错误重试机制
-
----
-
-## 12. 部署和运维
-
-### 高优先级
-- [ ] 添加错误监控和报告机制
-- [ ] 实现性能监控
-
-### 中优先级
-- [ ] 优化构建配置以减小包体积
-- [ ] 实现代码分割以提高加载性能
-
-### 低优先级
-- [ ] 建立 CI/CD 流水线
-- [ ] 实现自动化部署
-
----
-
-## 13. 未来功能规划
-
-- [ ] 集成 AI 翻译和注释功能
-- [ ] 支持更多字幕格式（ASS/SSA）
-- [ ] 实现视频播放速度控制
-- [ ] 添加字幕时间轴可视化编辑器
-- [ ] 支持多轨道字幕处理
-- [ ] 实现与 AnkiWeb 的直接同步
-
----
-
-## 附录：技术栈概览
-
-| 类别 | 技术 | 版本 |
-|------|------|------|
-| 前端框架 | React | 19.2.3 |
-| 状态管理 | Zustand | 5.0.3 |
-| 构建工具 | Vite | 6.2.0 |
-| TypeScript | TypeScript | 5.8.2 |
-| UI 库 | Tailwind CSS | 3.4.1 |
-| 图标库 | Lucide React | 0.562.0 |
-| 音频处理 | FFmpeg.wasm | 0.12.10 |
-| 数据库 | IndexedDB (idb) | 8.0.3 |
-| 国际化 | i18next | 25.8.5 |
-| 表格处理 | JSZip | 3.10.1 |
-| SQLite | sql.js | 1.13.0 |
-| 虚拟列表 | react-virtuoso | 4.18.1 |
+1. P0 project-reset async/notification fixes  
+2. tests for new hooks + reset sequencing  
+3. extract video source actions from `App.tsx`  
+4. card-item audio preview TODO

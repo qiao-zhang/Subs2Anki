@@ -1,4 +1,4 @@
-import type { MediaProcessingService, VideoSource } from './ffmpeg-contract.ts';
+import type { FfmpegAvailability, MediaProcessingService, VideoSource } from './ffmpeg-contract.ts';
 
 let servicePromise: Promise<MediaProcessingService> | null = null;
 
@@ -22,6 +22,11 @@ class FFmpegServiceFacade implements MediaProcessingService {
   async prepareVideoSource(source: VideoSource) {
     const service = await getService();
     await service.prepareVideoSource(source);
+  }
+
+  async getAvailability(forceRefresh: boolean = false): Promise<FfmpegAvailability> {
+    const service = await getService();
+    return service.getAvailability(forceRefresh);
   }
 
   async extractAudioClip(source: VideoSource, start: number, end: number, volume: number = 1.5): Promise<Blob> {
