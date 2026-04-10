@@ -61,22 +61,61 @@ const App: React.FC = () => {
     projectName !== '';
 
   // --- AnkiConnect Status ---
-  const {isConnected, decks, tags, refreshDecks} = useAnkiConnect(ankiConnectUrl);
+  const {isConnectedViaAnkiConnect, decks, tags, isLoadingViaAnkiConnect, refreshDecks, refreshTags} = useAnkiConnect(ankiConnectUrl);
 
   // --- Selected Deck State ---
   const [selectedDeck, setSelectedDeck] = useState<string>('');
+  const lastDeckAutoSwitchNoticeRef = useRef<string>('');
+
+  const getDefaultDeckName = useCallback(() => {
+    return projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
+  }, [projectName]);
 
   // --- Global Tags State ---
   const [globalTags, setGlobalTags] = useState<string[]>([]);
 
-  // Initialize selected deck when project name changes (but only if not already set)
+  // Reconcile selected deck after Anki deck reads/refreshes.
   useEffect(() => {
-    // Only set default if selectedDeck is empty (not loaded from a project file)
-    if (!selectedDeck) {
-      const defaultDeckName = projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
-      setSelectedDeck(defaultDeckName);
+    if (isLoadingViaAnkiConnect) return;
+
+    // No available deck list (disconnected or empty): use project-based default deck name.
+    if (!isConnectedViaAnkiConnect || decks.length === 0) {
+      const defaultDeck = getDefaultDeckName();
+      if (selectedDeck !== defaultDeck) {
+        setSelectedDeck(defaultDeck);
+      }
+      return;
     }
-  }, [projectName]);
+
+    const firstDeck = decks[0];
+
+    // Connected with deck list: select first deck if nothing is selected or selection became invalid.
+    if (!selectedDeck) {
+      if (selectedDeck !== firstDeck) {
+        setSelectedDeck(firstDeck);
+      }
+      return;
+    }
+
+    if (!decks.includes(selectedDeck) && selectedDeck !== firstDeck) {
+      const noticeKey = `${selectedDeck}->${firstDeck}`;
+      if (lastDeckAutoSwitchNoticeRef.current !== noticeKey) {
+        lastDeckAutoSwitchNoticeRef.current = noticeKey;
+        setNotification({
+          visible: true,
+          text: t('notifications.deckAutoSwitched', {
+            defaultValue: 'Deck "{{fromDeck}}" no longer exists. Switched to "{{toDeck}}".',
+            fromDeck: selectedDeck,
+            toDeck: firstDeck,
+          }),
+        });
+        setTimeout(() => {
+          setNotification({visible: false, text: ''});
+        }, 3000);
+      }
+      setSelectedDeck(firstDeck);
+    }
+  }, [isLoadingViaAnkiConnect, isConnectedViaAnkiConnect, decks, selectedDeck, getDefaultDeckName, t]);
 
   // --- Local UI State (Transient) ---
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
@@ -952,9 +991,10 @@ const App: React.FC = () => {
           onSyncCards={handleSyncCards}
           onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
           onExport={handleExportApkg}
+          onRefreshAnkiConnection={async () => {await refreshDecks(); await refreshTags();}}
           onOpenAnkiSettings={() => setIsSettingsModalOpen(true)}
           onDeleteSynced={handleDeleteSyncedCards}
-          isConnected={isConnected}
+          isConnected={isConnectedViaAnkiConnect}
           decks={decks}
           ankiTags={tags}
           ankiConnectUrl={ankiConnectUrl}

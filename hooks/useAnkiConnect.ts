@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { checkConnection, getDecks, getTags } from '@/services/anki-connect.ts';
 
 interface UseAnkiConnectResult {
-  isConnected: boolean;
+  isConnectedViaAnkiConnect: boolean;
   decks: string[];
   tags: string[];
-  isLoading: boolean;
+  isLoadingViaAnkiConnect: boolean;
   refreshDecks: () => Promise<void>;
   refreshTags: () => Promise<void>;
 }
@@ -58,10 +58,10 @@ export const useAnkiConnect = (ankiConnectUrl: string): UseAnkiConnectResult => 
   }, [ankiConnectUrl]);
 
   return {
-    isConnected,
+    isConnectedViaAnkiConnect: isConnected,
     decks,
     tags,
-    isLoading,
+    isLoadingViaAnkiConnect: isLoading,
     refreshDecks: checkAndFetchDecks,
     refreshTags
   };

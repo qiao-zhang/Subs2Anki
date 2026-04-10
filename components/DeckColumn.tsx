@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {Layers, Link2, Link2Off, Download, CloudUpload, ChevronDown, NotebookPen, Tags, Trash2} from 'lucide-react';
+import {Layers, Link2, Link2Off, Download, CloudUpload, ChevronDown, NotebookPen, Tags, Trash2, RefreshCw} from 'lucide-react';
 import CardItem from '@/components/CardItem';
 import {AnkiCard} from '@/services/types.ts';
 import TagInput from '@/components/TagInput';
@@ -14,6 +14,7 @@ interface DeckColumnProps {
   onOpenTemplateSettings: () => void;
   onExport: () => void;
   onOpenAnkiSettings: () => void;
+  onRefreshAnkiConnection?: () => Promise<void> | void;
   onDeleteSynced: () => void;
   isConnected?: boolean;
   decks?: string[];
@@ -36,6 +37,7 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
                                                  onOpenTemplateSettings,
                                                  onExport,
                                                  onOpenAnkiSettings,
+                                                 onRefreshAnkiConnection,
                                                  onDeleteSynced,
                                                  isConnected,
                                                  decks = [],
@@ -50,7 +52,18 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
   const {t} = useTranslation();
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [isTagsExpanded, setIsTagsExpanded] = useState<boolean>(false);
+  const [isRefreshingAnki, setIsRefreshingAnki] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleRefreshAnkiConnection = async () => {
+    if (!onRefreshAnkiConnection || isRefreshingAnki) return;
+    try {
+      setIsRefreshingAnki(true);
+      await onRefreshAnkiConnection();
+    } finally {
+      setIsRefreshingAnki(false);
+    }
+  };
 
   // 点击外部，关闭Deck的下拉菜单
   useEffect(() => {
@@ -195,6 +208,14 @@ const DeckColumn: React.FC<DeckColumnProps> = ({
 
         <div className="flex justify-end items-center">
           <div className="flex gap-1">
+            <button
+              onClick={handleRefreshAnkiConnection}
+              disabled={!onRefreshAnkiConnection || isRefreshingAnki}
+              className="p-1.5 rounded text-slate-400 transition hover:bg-slate-700 hover:text-slate-200 disabled:opacity-50 disabled:hover:bg-transparent disabled:text-slate-600"
+              title={t("modals.refreshAnkiConnection", {defaultValue: "Refresh Anki connection"})}
+            >
+              <RefreshCw size={14} className={isRefreshingAnki ? 'animate-spin' : ''}/>
+            </button>
             <button
               onClick={onOpenAnkiSettings}
               className={`p-1.5 rounded text-slate-400 transition flex items-center ${

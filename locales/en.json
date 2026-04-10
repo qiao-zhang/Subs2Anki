@@ -51,6 +51,7 @@
     "syncSuccess": "Successfully synced {{num}} card to Deck {{deckName}}",
     "syncSuccess_plural": "Successfully synced {{num}} cards to Deck {{deckName}}",
     "syncFailed": "Sync failed: {{error}}",
+    "deckAutoSwitched": "Deck \"{{fromDeck}}\" no longer exists. Switched to \"{{toDeck}}\".",
     "projectSaved": "Project saved successfully!",
     "projectReset": "Project has been reset",
     "projectLoaded": "Project loaded successfully!"
@@ -119,6 +120,7 @@
     "addGlobalTags": "Add global tags...",
     "connectedClickToChange": "Connected - Click to change settings",
     "disconnectedClickToChange": "Disconnected - Click to change settings",
+    "refreshAnkiConnection": "Refresh Anki connection",
     "notConnectedToAnki": "Not connected to Anki",
     "noCardsYet": "No cards yet",
     "alreadySynced": "Already synced",

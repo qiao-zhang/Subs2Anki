@@ -48,6 +48,7 @@
     "cardRemoved": "删除{{num}}张已同步的卡片",
     "syncSuccess": "成功同步{{num}}张卡片到{{deckName}}牌组",
     "syncFailed": "同步失败：{{error}}",
+    "deckAutoSwitched": "牌组“{{fromDeck}}”不存在，已自动切换到“{{toDeck}}”。",
     "projectSaved": "项目保存成功！",
     "projectReset": "项目已经重置",
     "projectLoaded": "项目加载成功！"
@@ -116,6 +117,7 @@
     "addGlobalTags": "添加全局标签...",
     "connectedClickToChange": "已连接 - 点击更改设置",
     "disconnectedClickToChange": "未连接 - 点击更改设置",
+    "refreshAnkiConnection": "刷新 Anki 连接",
     "notConnectedToAnki": "未连接到Anki",
     "noCardsYet": "暂无卡片",
     "alreadySynced": "已同步",
