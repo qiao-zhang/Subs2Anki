@@ -27,6 +27,9 @@ import ShortcutsCheatSheetModal from '@/components/modals/ShortcutsCheatSheetMod
 import {createProjectRecord, saveProjectRecord, loadProjectRecord} from './services/project-record.ts';
 import {useAnkiConnect} from '@/hooks/useAnkiConnect.ts';
 import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts.tsx";
+import {useNotification} from '@/hooks/app/useNotification.ts';
+import {useDeckSelection} from '@/hooks/app/useDeckSelection.ts';
+import {useModalState} from '@/hooks/app/useModalState.ts';
 
 const App: React.FC = () => {
   // 初始化i18n翻译
@@ -63,59 +66,20 @@ const App: React.FC = () => {
   // --- AnkiConnect Status ---
   const {isConnectedViaAnkiConnect, decks, tags, isLoadingViaAnkiConnect, refreshDecks, refreshTags} = useAnkiConnect(ankiConnectUrl);
 
-  // --- Selected Deck State ---
-  const [selectedDeck, setSelectedDeck] = useState<string>('');
-  const lastDeckAutoSwitchNoticeRef = useRef<string>('');
+  const {notification, showNotification} = useNotification();
 
-  const getDefaultDeckName = useCallback(() => {
-    return projectName ? `Subs2Anki::${projectName}` : 'Subs2Anki Export';
-  }, [projectName]);
+  // --- Selected Deck State ---
+  const {selectedDeck, setSelectedDeck} = useDeckSelection({
+    projectName,
+    decks,
+    isConnectedViaAnkiConnect,
+    isLoadingViaAnkiConnect,
+    t,
+    showNotification,
+  });
 
   // --- Global Tags State ---
   const [globalTags, setGlobalTags] = useState<string[]>([]);
-
-  // Reconcile selected deck after Anki deck reads/refreshes.
-  useEffect(() => {
-    if (isLoadingViaAnkiConnect) return;
-
-    // No available deck list (disconnected or empty): use project-based default deck name.
-    if (!isConnectedViaAnkiConnect || decks.length === 0) {
-      const defaultDeck = getDefaultDeckName();
-      if (selectedDeck !== defaultDeck) {
-        setSelectedDeck(defaultDeck);
-      }
-      return;
-    }
-
-    const firstDeck = decks[0];
-
-    // Connected with deck list: select first deck if nothing is selected or selection became invalid.
-    if (!selectedDeck) {
-      if (selectedDeck !== firstDeck) {
-        setSelectedDeck(firstDeck);
-      }
-      return;
-    }
-
-    if (!decks.includes(selectedDeck) && selectedDeck !== firstDeck) {
-      const noticeKey = `${selectedDeck}->${firstDeck}`;
-      if (lastDeckAutoSwitchNoticeRef.current !== noticeKey) {
-        lastDeckAutoSwitchNoticeRef.current = noticeKey;
-        setNotification({
-          visible: true,
-          text: t('notifications.deckAutoSwitched', {
-            defaultValue: 'Deck "{{fromDeck}}" no longer exists. Switched to "{{toDeck}}".',
-            fromDeck: selectedDeck,
-            toDeck: firstDeck,
-          }),
-        });
-        setTimeout(() => {
-          setNotification({visible: false, text: ''});
-        }, 3000);
-      }
-      setSelectedDeck(firstDeck);
-    }
-  }, [isLoadingViaAnkiConnect, isConnectedViaAnkiConnect, decks, selectedDeck, getDefaultDeckName, t]);
 
   // --- Local UI State (Transient) ---
   const [pauseAtTime, setPauseAtTime] = useState<number | null>(null);
@@ -128,7 +92,6 @@ const App: React.FC = () => {
   const [syncProgress, setSyncProgress] = useState({current: 0, total: 0});
   const [isBulkCreating, setIsBulkCreating] = useState<boolean>(false);
   const [bulkCreateProgress, setBulkCreateProgress] = useState({current: 0, total: 0});
-  const [notification, setNotification] = useState<{ visible: boolean; text: string }>({visible: false, text: ''});
 
   // noinspection JSUnusedLocalSymbols
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
@@ -136,10 +99,16 @@ const App: React.FC = () => {
   const [isVideoOnly, setIsVideoOnlyMode] = useState<boolean>(false);
 
   // Modals
-  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
-  const [previewCard, setPreviewCard] = useState<AnkiCard | null>(null);
-  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
+  const {
+    isTemplateModalOpen,
+    setIsTemplateModalOpen,
+    isSettingsModalOpen,
+    setIsSettingsModalOpen,
+    previewCard,
+    setPreviewCard,
+    isShortcutsModalOpen,
+    setIsShortcutsModalOpen,
+  } = useModalState();
 
   const [tempSubtitleLine, setTempSubtitleLine] = useState<{ start: number, end: number } | null>(null);
 
@@ -475,14 +444,6 @@ const App: React.FC = () => {
   const handleSeek = (time: number) => {
     setPauseAtTime(null);
     videoPlayerRef.current?.seekTo(time);
-  };
-
-  // 显示复制通知
-  const showNotification = (text: string) => {
-    setNotification({visible: true, text});
-    setTimeout(() => {
-      setNotification({visible: false, text: ''});
-    }, 3000);
   };
 
   const handleSubtitleLineClicked = (id: number) => {
