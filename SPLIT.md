@@ -375,11 +375,11 @@ App.tsx  # 最终仅做 orchestration/wiring
 - [x] P1-T2: 新建 `hooks/app/useDeckSelection.ts`
 - [x] P1-T3: 新建 `hooks/app/useModalState.ts`
 - [x] P1-T4: `App.tsx` 接入上述 hooks
-- [ ] P2-T1: 新建 `hooks/app/useSubtitlePlayback.ts`
-- [ ] P2-T2: 新建 `hooks/app/useCardActions.ts`
-- [ ] P2-T3: 新建 `hooks/app/useSyncActions.ts`
-- [ ] P2-T4: 新建 `hooks/app/useProjectActions.ts`
-- [ ] P2-T5: `App.tsx` 替换对应流程
+- [x] P2-T1: 新建 `hooks/app/useSubtitlePlayback.ts`
+- [x] P2-T2: 新建 `hooks/app/useCardActions.ts`
+- [x] P2-T3: 新建 `hooks/app/useSyncActions.ts`
+- [x] P2-T4: 新建 `hooks/app/useProjectActions.ts`
+- [x] P2-T5: `App.tsx` 替换对应流程
 - [ ] P3-T1: 新建 `components/app/AppMainLayout.tsx`
 - [ ] P3-T2: 新建 `components/app/AppOverlays.tsx`
 - [ ] P3-T3: 新建 `components/app/AppModals.tsx`
@@ -436,5 +436,6 @@ App.tsx  # 最终仅做 orchestration/wiring
 - 统一错误处理服务（替换分散 alert）
 - 完整 i18n 清理硬编码文本
 - `fileHandle` 类型从 `any` 收敛到显式类型
+
 
 
