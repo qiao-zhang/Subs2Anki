@@ -77,10 +77,8 @@ export const saveProjectRecord = async (record: ProjectRecord, fileName?: string
     const blob = new Blob([jsonString], { type: 'application/json' });
     
     // 检查是否支持File System Access API
-    // @ts-ignore
     if (window.showSaveFilePicker) {
       // 使用现代浏览器API
-      // @ts-ignore
       const handle = await window.showSaveFilePicker({
         suggestedName: suggestedFileName,
         types: [{
@@ -89,7 +87,6 @@ export const saveProjectRecord = async (record: ProjectRecord, fileName?: string
         }]
       });
       
-      // @ts-ignore
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
@@ -200,10 +197,26 @@ const parseProjectRecordContent = (content: string): ProjectRecord => {
  * @param record 项目记录对象
  * @returns boolean
  */
-const isValidProjectRecord = (record: any): record is ProjectRecord => {
+interface LegacySubtitleLine {
+  id: number;
+  startTime: number;
+  endTime: number;
+  text: string;
+  status?: 'normal' | 'locked' | 'ignored';
+  locked?: boolean;
+}
+
+const isRecordObject = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null;
+};
+
+const isValidProjectRecord = (record: unknown): record is ProjectRecord => {
+  if (!isRecordObject(record)) {
+    return false;
+  }
+
   // 首先检查基本结构
   if (
-    typeof record !== 'object' ||
     typeof record.version !== 'string' ||
     typeof record.projectName !== 'string' ||
     typeof record.videoName !== 'string' ||
@@ -255,8 +268,10 @@ const isValidProjectRecord = (record: any): record is ProjectRecord => {
 
   // 验证每个字幕行的结构
   for (const sub of record.subtitleLines) {
+    if (!isRecordObject(sub)) {
+      return false;
+    }
     if (
-      typeof sub !== 'object' ||
       typeof sub.id !== 'number' ||
       typeof sub.startTime !== 'number' ||
       typeof sub.endTime !== 'number' ||
@@ -277,7 +292,7 @@ const isValidProjectRecord = (record: any): record is ProjectRecord => {
  * @param subtitleLines 字幕行数组
  * @returns 转换后的字幕行数组
  */
-const convertSubtitleLinesFromLegacyFormat = (subtitleLines: any[]): SubtitleLine[] => {
+const convertSubtitleLinesFromLegacyFormat = (subtitleLines: LegacySubtitleLine[]): SubtitleLine[] => {
   return subtitleLines.map(sub => {
     // 如果已经是新格式，直接返回
     if (sub.status !== undefined) {

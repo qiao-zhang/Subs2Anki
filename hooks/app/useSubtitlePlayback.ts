@@ -1,4 +1,4 @@
-import {MutableRefObject, useCallback, useState} from 'react';
+import {RefObject, useCallback, useState} from 'react';
 import {SubtitleLine} from '@/services/types.ts';
 import {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
 
@@ -7,7 +7,7 @@ interface UseSubtitlePlaybackParams {
   getSubtitleLine: (id: number) => SubtitleLine | null;
   updateSubtitleTime: (id: number, start: number, end: number) => void;
   addSubtitleLine: (line: SubtitleLine) => void;
-  videoPlayerRef: MutableRefObject<VideoPlayerHandle | null>;
+  videoPlayerRef: RefObject<VideoPlayerHandle | null>;
 }
 
 export const useSubtitlePlayback = ({
@@ -196,4 +196,3 @@ export const useSubtitlePlayback = ({
     handleSubtitleLineUpdated,
   };
 };
-

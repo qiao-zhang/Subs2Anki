@@ -79,8 +79,9 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({isOpen, onClos
 
   const handleTemplateChange = (index: number, key: keyof AnkiCardTemplate, val: string) => {
     const newTemplates = [...localConfig.templates];
-    // @ts-ignore
-    newTemplates[index][key] = val;
+    const template = newTemplates[index];
+    if (!template) return;
+    template[key] = val;
     setLocalConfig(prev => ({...prev, templates: newTemplates}));
   };
 

@@ -50,6 +50,10 @@ class FFmpegService {
     return `${file.name}:${file.size}:${file.lastModified}`;
   }
 
+  private hasTerminate(value: unknown): value is { terminate: () => void } {
+    return typeof value === 'object' && value !== null && 'terminate' in value && typeof (value as { terminate?: unknown }).terminate === 'function';
+  }
+
   private isMemoryLikeError(error: unknown): boolean {
     const msg = (error instanceof Error ? error.message : String(error)).toLowerCase();
     return msg.includes('memory') || msg.includes('out of bounds') || msg.includes('abort') || msg.includes('wasm');
@@ -57,7 +61,9 @@ class FFmpegService {
 
   private async recreateInstance() {
     try {
-      (this.ffmpeg as any)?.terminate?.();
+      if (this.hasTerminate(this.ffmpeg)) {
+        this.ffmpeg.terminate();
+      }
     } catch (e) {
       console.warn('Failed to terminate ffmpeg instance cleanly', e);
     }

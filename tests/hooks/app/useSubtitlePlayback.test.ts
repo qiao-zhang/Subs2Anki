@@ -3,6 +3,22 @@ import {describe, expect, it, vi} from 'vitest';
 import {useRef} from 'react';
 import {useSubtitlePlayback} from '@/hooks/app/useSubtitlePlayback.ts';
 import {SubtitleLine} from '@/services/types.ts';
+import {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
+
+const createVideoPlayerHandle = (
+  seekTo: (time: number) => void,
+  play: () => Promise<void>,
+  pause: () => void,
+): VideoPlayerHandle => ({
+  seekTo,
+  play,
+  pause,
+  playPause: vi.fn(),
+  captureFrame: vi.fn(async () => null),
+  captureFrameAt: vi.fn(async () => null),
+  getCurrentTime: vi.fn(() => 0),
+  getVideoElement: vi.fn(() => null),
+});
 
 describe('useSubtitlePlayback', () => {
   const subtitleLines: SubtitleLine[] = [
@@ -12,10 +28,12 @@ describe('useSubtitlePlayback', () => {
 
   it('playTimeSpan seeks and plays while setting pauseAtTime', () => {
     const seekTo = vi.fn();
-    const play = vi.fn();
+    const play = vi.fn(async () => undefined);
 
     const {result} = renderHook(() => {
-      const videoPlayerRef = useRef({seekTo, play, pause: vi.fn()} as any);
+      const videoPlayerRef = useRef<VideoPlayerHandle | null>(
+        createVideoPlayerHandle(seekTo, play, vi.fn())
+      );
       return useSubtitlePlayback({
         subtitleLines,
         getSubtitleLine: (id) => subtitleLines.find((s) => s.id === id) || null,
@@ -39,7 +57,9 @@ describe('useSubtitlePlayback', () => {
     const seekTo = vi.fn();
 
     const {result} = renderHook(() => {
-      const videoPlayerRef = useRef({seekTo, play: vi.fn(), pause} as any);
+      const videoPlayerRef = useRef<VideoPlayerHandle | null>(
+        createVideoPlayerHandle(seekTo, vi.fn(async () => undefined), pause)
+      );
       return useSubtitlePlayback({
         subtitleLines,
         getSubtitleLine: (id) => subtitleLines.find((s) => s.id === id) || null,
@@ -62,5 +82,3 @@ describe('useSubtitlePlayback', () => {
     expect(result.current.pauseAtTime).toBeNull();
   });
 });
-
-

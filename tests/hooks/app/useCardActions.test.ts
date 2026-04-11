@@ -3,6 +3,18 @@ import {describe, expect, it, vi} from 'vitest';
 import {useRef} from 'react';
 import {SubtitleLine} from '@/services/types.ts';
 import {useCardActions} from '@/hooks/app/useCardActions.ts';
+import {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
+
+const createVideoPlayerHandle = (captureFrameAt: (time: number) => Promise<string | null>): VideoPlayerHandle => ({
+  seekTo: vi.fn(),
+  play: vi.fn(async () => undefined),
+  pause: vi.fn(),
+  playPause: vi.fn(),
+  captureFrame: vi.fn(async () => null),
+  captureFrameAt,
+  getCurrentTime: vi.fn(() => 0),
+  getVideoElement: vi.fn(() => null),
+});
 
 describe('useCardActions', () => {
   it('creates card and locks subtitle line', async () => {
@@ -12,7 +24,7 @@ describe('useCardActions', () => {
     const captureFrameAt = vi.fn(async () => null);
 
     const {result} = renderHook(() => {
-      const videoPlayerRef = useRef({captureFrameAt} as any);
+      const videoPlayerRef = useRef<VideoPlayerHandle | null>(createVideoPlayerHandle(captureFrameAt));
       return useCardActions({
         projectName: 'Proj',
         globalTags: ['tag1'],
@@ -44,7 +56,7 @@ describe('useCardActions', () => {
     const captureFrameAt = vi.fn(async () => null);
 
     const {result} = renderHook(() => {
-      const videoPlayerRef = useRef({captureFrameAt} as any);
+      const videoPlayerRef = useRef<VideoPlayerHandle | null>(createVideoPlayerHandle(captureFrameAt));
       return useCardActions({
         projectName: 'Proj',
         globalTags: [],
@@ -71,9 +83,10 @@ describe('useCardActions', () => {
 
   it('shows notification when bulk create has no normal subtitle lines', async () => {
     const showNotification = vi.fn();
+    const captureFrameAt = vi.fn(async () => null);
 
     const {result} = renderHook(() => {
-      const videoPlayerRef = useRef({captureFrameAt: vi.fn(async () => null)} as any);
+      const videoPlayerRef = useRef<VideoPlayerHandle | null>(createVideoPlayerHandle(captureFrameAt));
       return useCardActions({
         projectName: 'Proj',
         globalTags: [],
@@ -97,5 +110,3 @@ describe('useCardActions', () => {
     expect(showNotification).toHaveBeenCalled();
   });
 });
-
-

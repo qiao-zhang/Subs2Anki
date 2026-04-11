@@ -19,7 +19,7 @@ export interface Operation {
   // 存储执行操作后的状态
   afterState: SubtitleLine[];
   // 操作相关的参数
-  params?: any;
+  params?: unknown;
 }
 
 // Undo/Redo 管理器类

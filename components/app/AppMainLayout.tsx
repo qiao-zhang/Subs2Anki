@@ -1,4 +1,4 @@
-import React, {MutableRefObject} from 'react';
+import React, {RefObject} from 'react';
 import {AnkiCard, SubtitleLine} from '@/services/types.ts';
 import VideoPlayer, {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
 import WaveformDisplay from '@/components/WaveformDisplay.tsx';
@@ -10,7 +10,7 @@ import ProjectControls from '@/components/ProjectControls.tsx';
 
 interface AppMainLayoutProps {
   isVideoOnly: boolean;
-  videoPlayerRef: MutableRefObject<VideoPlayerHandle | null>;
+  videoPlayerRef: RefObject<VideoPlayerHandle | null>;
 
   ankiCards: AnkiCard[];
   onDeleteCard: (id: string) => Promise<void>;
@@ -48,7 +48,7 @@ interface AppMainLayoutProps {
   activeSubtitleLineId: number | null;
   subtitleFileName: string;
   canSave: boolean;
-  onSetSubtitles: (lines: SubtitleLine[], fileName: string) => void;
+  onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: FileSystemFileHandle | null) => void;
   onSubtitleLineClicked: (id: number) => void;
   onToggleLock: (id: number, order?: 'NIL' | 'NLI') => void;
   onCreateCard: (id: number) => Promise<void>;
@@ -264,5 +264,4 @@ const AppMainLayout: React.FC<AppMainLayoutProps> = ({
 };
 
 export default AppMainLayout;
-
 

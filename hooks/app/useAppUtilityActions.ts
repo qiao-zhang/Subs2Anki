@@ -1,4 +1,4 @@
-import React, {MutableRefObject} from 'react';
+import React, {RefObject} from 'react';
 import saveAs from 'file-saver';
 import {serializeSubtitles} from '@/services/parser.ts';
 import {ffmpegService} from '@/services/ffmpeg.ts';
@@ -9,9 +9,9 @@ import {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
 interface UseAppUtilityActionsParams {
   setVideo: (file: File) => void;
   videoFile: File | null;
-  videoPlayerRef: MutableRefObject<VideoPlayerHandle | null>;
+  videoPlayerRef: RefObject<VideoPlayerHandle | null>;
   subtitleFileName: string;
-  fileHandle: any | null;
+  fileHandle: FileSystemFileHandle | null;
   subtitleLines: SubtitleLine[];
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   getSubtitleLine: (id: number) => SubtitleLine | null;
@@ -65,11 +65,8 @@ export const useAppUtilityActions = ({
       try {
         const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
         const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
-        // @ts-ignore
         const writable = await fileHandle.createWritable();
-        // @ts-ignore
         await writable.write(content);
-        // @ts-ignore
         await writable.close();
         setHasUnsavedChanges(false);
       } catch (err) {
@@ -85,18 +82,13 @@ export const useAppUtilityActions = ({
     const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
     const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
     try {
-      // @ts-ignore
       if (window.showSaveFilePicker) {
-        // @ts-ignore
         const handle = await window.showSaveFilePicker({
           suggestedName: subtitleFileName,
           types: [{description: 'Subtitle File', accept: {'text/plain': [isVtt ? '.vtt' : '.srt']}}],
         });
-        // @ts-ignore
         const writable = await handle.createWritable();
-        // @ts-ignore
         await writable.write(content);
-        // @ts-ignore
         await writable.close();
       } else {
         const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
@@ -134,18 +126,13 @@ export const useAppUtilityActions = ({
     const fileName = makeMediaFileName(videoName, '.jpg', timeStr, currentSubtitle ? currentSubtitle.text : '');
 
     try {
-      // @ts-ignore
       if (window.showSaveFilePicker) {
-        // @ts-ignore
         const handle = await window.showSaveFilePicker({
           suggestedName: fileName,
           types: [{description: 'Snapshot'}],
         });
-        // @ts-ignore
         const writable = await handle.createWritable();
-        // @ts-ignore
         await writable.write(blob);
-        // @ts-ignore
         await writable.close();
       } else {
         saveAs(blob, fileName);
@@ -195,18 +182,13 @@ export const useAppUtilityActions = ({
     const filename = makeMediaFileName(videoName, '.wav', `${startStr}_${endStr}`, currentSub ? currentSub.text : '');
 
     try {
-      // @ts-ignore
       if (window.showSaveFilePicker) {
-        // @ts-ignore
         const handle = await window.showSaveFilePicker({
           suggestedName: filename,
           types: [{description: 'Audio File'}],
         });
-        // @ts-ignore
         const writable = await handle.createWritable();
-        // @ts-ignore
         await writable.write(blob);
-        // @ts-ignore
         await writable.close();
       } else {
         saveAs(blob, filename);

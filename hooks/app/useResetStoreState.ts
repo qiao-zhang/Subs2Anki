@@ -1,6 +1,6 @@
-import {MutableRefObject, useCallback} from 'react';
+import {RefObject, useCallback} from 'react';
 import {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
-import {AnkiCard} from '@/services/types.ts';
+import {AnkiCard, SubtitleLine} from '@/services/types.ts';
 
 interface UseResetStoreStateParams {
   ankiCards: AnkiCard[];
@@ -8,7 +8,7 @@ interface UseResetStoreStateParams {
   deleteScreenshotAndAudioForCard: (id: string) => Promise<void>;
   resetVideo: () => void;
   setProjectName: (name: string) => void;
-  setSubtitles: (lines: any[], fileName: string) => void;
+  setSubtitles: (lines: SubtitleLine[], fileName: string) => void;
   setPauseAtTime: (time: number | null) => void;
   setActiveSubtitleLineId: (id: number | null) => void;
   setTempSubtitleLine: (line: { start: number; end: number } | null) => void;
@@ -21,7 +21,7 @@ interface UseResetStoreStateParams {
   setIsSettingsModalOpen: (open: boolean) => void;
   setPreviewCard: (card: AnkiCard | null) => void;
   setIsShortcutsModalOpen: (open: boolean) => void;
-  videoPlayerRef: MutableRefObject<VideoPlayerHandle | null>;
+  videoPlayerRef: RefObject<VideoPlayerHandle | null>;
 }
 
 export const useResetStoreState = ({
@@ -58,7 +58,6 @@ export const useResetStoreState = ({
 
     if (videoPlayerRef.current) {
       videoPlayerRef.current.seekTo(0);
-      videoPlayerRef.current = null;
     }
 
     setRegionsHidden(false);

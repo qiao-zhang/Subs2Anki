@@ -42,10 +42,10 @@ interface AppState {
   // Subtitles
   subtitleLines: SubtitleLine[];
   subtitleFileName: string;
-  fileHandle: any | null;
+  fileHandle: FileSystemFileHandle | null;
   hasUnsavedChanges: boolean;
   countSubtitleLinesBefore: (time: number, status?: 'normal' | 'locked' | 'ignored') => number;
-  setSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: any) => void;
+  setSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle?: FileSystemFileHandle | null) => void;
   updateSubtitleText: (id: number, text: string) => void;
   updateSubtitleTime: (id: number, start: number, end: number) => void;
   toggleSubtitleLineStatus: (id: number, order?: 'NIL' | 'NLI') => void;

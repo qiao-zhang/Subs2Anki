@@ -29,7 +29,7 @@ const stringToBase64 = (dataUrl: string): string => {
   return dataUrl.split(',')[1];
 }
 
-async function invoke<T>(action: string, params: any = {}, url: string): Promise<T> {
+async function invoke<T>(action: string, params: Record<string, unknown> = {}, url: string): Promise<T> {
   let response: Response;
   try {
     response = await fetch(url, {

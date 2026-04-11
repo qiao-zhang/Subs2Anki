@@ -1,4 +1,4 @@
-import {MutableRefObject, useState} from 'react';
+import {RefObject, useState} from 'react';
 import {AnkiCard, SubtitleLine} from '@/services/types.ts';
 import {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
 import {formatTimestamp} from '@/services/time.ts';
@@ -17,7 +17,7 @@ interface UseCardActionsParams {
   deleteCard: (id: string) => void;
   showNotification: (text: string) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
-  videoPlayerRef: MutableRefObject<VideoPlayerHandle | null>;
+  videoPlayerRef: RefObject<VideoPlayerHandle | null>;
   convertToFurigana?: (text: string) => Promise<string> | string;
   storeMediaFn?: typeof storeMedia;
   deleteMediaFn?: typeof deleteMedia;

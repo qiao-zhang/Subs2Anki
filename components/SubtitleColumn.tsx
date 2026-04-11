@@ -20,18 +20,12 @@ import {formatTimestamp} from '@/services/time.ts';
 import {useTranslation} from 'react-i18next';
 import {useDebounce} from '@/hooks/useDebounce';
 
-declare global {
-  interface Window {
-    showOpenFilePicker?: (options?: any) => Promise<any[]>;
-  }
-}
-
 interface SubtitleColumnProps {
   subtitleLines: SubtitleLine[];
   activeSubtitleLineId: number | null;
   subtitleFileName: string;
   canSave: boolean;
-  onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: any) => void;
+  onSetSubtitles: (lines: SubtitleLine[], fileName: string, fileHandle: FileSystemFileHandle | null) => void;
   onSubtitleLineClicked: (id: number) => void;
   onToggleLock: (id: number) => void;
   onCreateCard: (id: number) => void;
