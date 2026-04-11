@@ -109,7 +109,7 @@ export const syncToAnki = async (
   cards: AnkiCard[],
   tags: string[],
   onProgress: (current: number, total: number) => void,
-  onCardSynced?: (id: string) => void,
+  onCardSynced?: (id: string) => void | Promise<void>,
 ) => {
   // 1. Create Deck
   await invoke('createDeck', {deck: deckName}, url);
@@ -207,7 +207,9 @@ export const syncToAnki = async (
         }
       }, url);
 
-      onCardSynced && onCardSynced(card.id);
+      if (onCardSynced) {
+        await onCardSynced(card.id);
+      }
 
     } catch (e) {
       console.error(`Failed to add note for card ${card.id}`, e);

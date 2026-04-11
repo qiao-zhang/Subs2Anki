@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useRef} from 'react';
 import {useAppStore} from '@/services/store.ts';
 import {ffmpegService} from '@/services/ffmpeg.ts';
 import {storeMedia} from '@/services/db.ts';
@@ -15,6 +15,7 @@ export const useMediaProcessing = (
 
   const [backgroundProcessingId, setBackgroundProcessingId] = useState<string | null>(null);
   const [lastFinishedIndex, setLastFinishedIndex] = useState<number>(0);
+  const processedCountRef = useRef<number>(0);
 
   // --- Background Audio Extraction Queue ---
   useEffect(() => {
@@ -58,6 +59,10 @@ export const useMediaProcessing = (
       console.error("Audio extraction failed", e);
       updateCardAudioStatus(cardId, 'error');
     } finally {
+      processedCountRef.current += 1;
+      if (processedCountRef.current % 10 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
       setBackgroundProcessingId(null);
       setLastFinishedIndex(prev => prev + 1);
     }

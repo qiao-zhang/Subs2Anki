@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {X, Loader2} from 'lucide-react';
 import {AnkiCard, AnkiNoteType} from '@/services/types.ts';
 import {useAppStore} from '@/services/store.ts';
@@ -18,6 +18,7 @@ const CardPreviewModal: React.FC<CardPreviewModalProps> = ({isOpen, card, onClos
   // Loaded Media State
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [screenshotData, setScreenshotData] = useState<string | null>(null);
+  const latestAudioUrlRef = useRef<string | null>(null);
 
   const [isBackSide, setIsBackSide] = useState(false);
   const [htmlContent, setHtmlContent] = useState('');
@@ -30,7 +31,12 @@ const CardPreviewModal: React.FC<CardPreviewModalProps> = ({isOpen, card, onClos
       if (card.audioRef) {
         getMedia(card.audioRef).then(blob => {
           if (active && blob && blob instanceof Blob) {
-            setAudioUrl(URL.createObjectURL(blob));
+            const nextUrl = URL.createObjectURL(blob);
+            if (latestAudioUrlRef.current) {
+              URL.revokeObjectURL(latestAudioUrlRef.current);
+            }
+            latestAudioUrlRef.current = nextUrl;
+            setAudioUrl(nextUrl);
           }
         });
       }
@@ -50,7 +56,10 @@ const CardPreviewModal: React.FC<CardPreviewModalProps> = ({isOpen, card, onClos
     }
     return () => {
       active = false;
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      if (latestAudioUrlRef.current) {
+        URL.revokeObjectURL(latestAudioUrlRef.current);
+        latestAudioUrlRef.current = null;
+      }
     };
   }, [isOpen, card?.id, card?.audioRef, card?.screenshotRef]);
 
