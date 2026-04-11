@@ -380,10 +380,10 @@ App.tsx  # 最终仅做 orchestration/wiring
 - [x] P2-T3: 新建 `hooks/app/useSyncActions.ts`
 - [x] P2-T4: 新建 `hooks/app/useProjectActions.ts`
 - [x] P2-T5: `App.tsx` 替换对应流程
-- [ ] P3-T1: 新建 `components/app/AppMainLayout.tsx`
-- [ ] P3-T2: 新建 `components/app/AppOverlays.tsx`
-- [ ] P3-T3: 新建 `components/app/AppModals.tsx`
-- [ ] P3-T4: `App.tsx` 收口并压缩到 `<500` 行
+- [x] P3-T1: 新建 `components/app/AppMainLayout.tsx`
+- [x] P3-T2: 新建 `components/app/AppOverlays.tsx`
+- [x] P3-T3: 新建 `components/app/AppModals.tsx`
+- [x] P3-T4: `App.tsx` 收口并压缩到 `<500` 行
 - [ ] P3-T5: 全量回归并验收签收
 
 ---
@@ -436,6 +436,135 @@ App.tsx  # 最终仅做 orchestration/wiring
 - 统一错误处理服务（替换分散 alert）
 - 完整 i18n 清理硬编码文本
 - `fileHandle` 类型从 `any` 收敛到显式类型
+
+---
+
+## 17. Store Slice 拆分方案（保持现有 API 不破坏）
+
+### 17.1 目标与约束
+
+目标：将 `services/store.ts` 从单文件大状态改造为按领域拆分的 slice 结构，降低维护成本与回归风险。
+
+硬约束（必须满足）：
+
+1. `useAppStore` 的导入路径不变（仍为 `@/services/store.ts`）
+2. `useAppStore` 对外扁平 API 不变（state key + action 名称保持一致）
+3. `useAppStore.getState()` 读取结果保持兼容
+4. 迁移期间 App 与现有组件无需感知 store 内部结构变更
+
+### 17.2 目标目录结构（建议）
+
+```text
+services/
+  store.ts                     # 兼容入口，继续导出 useAppStore
+  store/
+    types.ts                   # AppState / SliceState 类型
+    constants.ts               # DEFAULT_NOTE_TYPE 等常量
+    shared/
+      undoRedo.ts              # UndoRedoManager 单例与辅助函数
+    slices/
+      projectSlice.ts          # projectName
+      videoSlice.ts            # videoSrc/videoFile/resetVideo/setVideo
+      subtitleSlice.ts         # subtitleLines/fileHandle/undo-redo 等
+      ankiSlice.ts             # ankiCards/ankiConfig/sync status
+      settingsSlice.ts         # bulkCreateLimit/autoDelete/audioVolume 等
+      ankiConnectSlice.ts      # ankiConnectUrl
+    createStore.ts             # 组合 slices 并 create()
+```
+
+### 17.3 Slice 归属建议
+
+- `projectSlice`
+  - `projectName`, `setProjectName`
+- `videoSlice`
+  - `videoSrc`, `videoName`, `videoFile`, `setVideo`, `resetVideo`
+- `subtitleSlice`
+  - `subtitleLines`, `subtitleFileName`, `fileHandle`, `hasUnsavedChanges`
+  - `setSubtitles`, `updateSubtitleText`, `updateSubtitleTime`, `merge/remove/shift/breakUp`
+  - `undo`, `redo`, `canUndo`, `canRedo`
+- `ankiSlice`
+  - `ankiCards`, `processing`, `addCard`, `deleteCard`, `clearCards`, `updateCard*`
+  - `ankiConfig`, `setAnkiConfig`
+- `ankiConnectSlice`
+  - `ankiConnectUrl`, `setAnkiConnectUrl`
+- `settingsSlice`
+  - `bulkCreateLimit`, `autoDeleteSynced`, `showBulkCreateButton`, `audioVolume`
+
+### 17.4 非破坏式迁移阶段
+
+#### Stage S0 - 类型与常量外提（低风险）
+
+- 仅移动类型和常量，不移动逻辑
+- 目标：减轻 `store.ts` 体积，建立可组合基础
+
+#### Stage S1 - 先迁移低耦合 slice（settings + ankiConnect + project）
+
+- 这些 slice 依赖最少，适合验证组合模式
+- 保持 `store.ts` 导出字段名完全不变
+
+#### Stage S2 - 迁移 video + anki
+
+- 引入跨 slice 读取（如 `get().projectName`）时，先保留旧逻辑表达式
+- 不改变行为，仅改变代码位置
+
+#### Stage S3 - 迁移 subtitle + undo/redo（高风险）
+
+- `subtitleSlice` 与 `UndoRedoManager` 耦合高，单独阶段处理
+- 每次只迁移一个行为簇（例如先 `updateSubtitleText/updateSubtitleTime`）
+
+#### Stage S4 - 清理与验收
+
+- 删除 `store.ts` 内重复逻辑，保留兼容导出层
+- 跑全量测试 + 手动回归
+
+### 17.5 风险与缓解
+
+| 风险 | 级别 | 说明 | 缓解 |
+|---|---|---|---|
+| 跨 slice 依赖漂移 | 高 | `get()` 读取字段顺序/命名变化 | 先保持扁平字段名不变，再逐步内聚 |
+| undo/redo 行为变化 | 高 | 历史记录逻辑与 subtitle 操作强耦合 | `subtitleSlice` 独立阶段 + 回归用例锁定 |
+| localStorage 初始化时机变化 | 中 | 默认值读取顺序被改动 | 初始化逻辑原样搬迁，先不重构 |
+| 隐式 API 破坏 | 中 | 组件依赖 `useAppStore.getState()` | 增加兼容检查和类型断言测试 |
+
+### 17.6 首批改造 PR 清单（不破坏现有 API）
+
+#### PR-1（结构化准备，零行为变更）
+
+- 新增：`services/store/types.ts`
+- 新增：`services/store/constants.ts`
+- 新增：`services/store/shared/undoRedo.ts`
+- 修改：`services/store.ts`（改为引用上述文件，逻辑不变）
+- 验收：构建通过、现有测试通过
+
+#### PR-2（迁移低耦合 slice）
+
+- 新增：`services/store/slices/projectSlice.ts`
+- 新增：`services/store/slices/ankiConnectSlice.ts`
+- 新增：`services/store/slices/settingsSlice.ts`
+- 新增：`services/store/createStore.ts`（组合 slice）
+- 修改：`services/store.ts`（继续导出 `useAppStore`，API 不变）
+- 验收：`App.tsx` 无调用改动；设置项读写行为一致
+
+#### PR-3（迁移 video + anki）
+
+- 新增：`services/store/slices/videoSlice.ts`
+- 新增：`services/store/slices/ankiSlice.ts`
+- 修改：`services/store.ts`
+- 验收：视频加载/重置、卡片新增删除、同步状态更新无回归
+
+#### PR-4（迁移 subtitle + undo/redo）
+
+- 新增：`services/store/slices/subtitleSlice.ts`
+- 修改：`services/store/shared/undoRedo.ts`
+- 修改：`services/store.ts`
+- 验收：字幕编辑/合并/拆分/撤销重做全链路回归通过
+
+### 17.7 与当前拆分路线关系
+
+- 本节不改变当前 `App.tsx` Phase 2/3 路线，可并行作为“下一条技术债治理流”执行。
+- 建议优先在 Phase 3 后启动 PR-1 和 PR-2，避免与 UI 编排拆分产生高冲突。
+
+
 
 
 

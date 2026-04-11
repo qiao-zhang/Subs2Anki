@@ -1,26 +1,10 @@
 import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
-import {SubtitleLine} from './services/types.ts';
-import {serializeSubtitles} from './services/parser.ts';
 import {generateAnkiDeck} from './services/export.ts';
-import {ffmpegService} from './services/ffmpeg.ts';
 import {furiganaService} from './services/furigana.ts';
-import saveAs from 'file-saver';
-import {makeMediaFileName, formatTimeForFilename} from '@/services/filename-utils.ts';
-import VideoPlayer, {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
-import WaveformDisplay from '@/components/WaveformDisplay.tsx';
-import DeckColumn from '@/components/DeckColumn.tsx';
-import SubtitleColumn from '@/components/SubtitleColumn.tsx';
-import AppControlBar from '@/components/AppControlBar.tsx';
-import EditableProjectName from './components/EditableProjectName.tsx';
-import ProjectControls from '@/components/ProjectControls.tsx';
-import TemplateEditorModal from '@/components/modals/TemplateEditorModal.tsx';
-import CardPreviewModal from '@/components/modals/CardPreviewModal.tsx';
-import SettingsModal from '@/components/modals/SettingsModal.tsx';
+import {VideoPlayerHandle} from '@/components/VideoPlayer.tsx';
 import {useAppStore} from '@/services/store.ts';
 import {useMediaProcessing} from '@/hooks/useMediaProcessing.ts';
-import ProcessingOverlay from '@/components/ProcessingOverlay.tsx';
-import ShortcutsCheatSheetModal from '@/components/modals/ShortcutsCheatSheetModal.tsx';
 import {useAnkiConnect} from '@/hooks/useAnkiConnect.ts';
 import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts.tsx";
 import {useNotification} from '@/hooks/app/useNotification.ts';
@@ -30,6 +14,11 @@ import {useSubtitlePlayback} from '@/hooks/app/useSubtitlePlayback.ts';
 import {useCardActions} from '@/hooks/app/useCardActions.ts';
 import {useSyncActions} from '@/hooks/app/useSyncActions.ts';
 import {useProjectActions} from '@/hooks/app/useProjectActions.ts';
+import {useAppUtilityActions} from '@/hooks/app/useAppUtilityActions.ts';
+import {useResetStoreState} from '@/hooks/app/useResetStoreState.ts';
+import AppOverlays from '@/components/app/AppOverlays.tsx';
+import AppMainLayout from '@/components/app/AppMainLayout.tsx';
+import AppModals from '@/components/app/AppModals.tsx';
 
 const App: React.FC = () => {
   // 初始化i18n翻译
@@ -187,7 +176,6 @@ const App: React.FC = () => {
     previewCard
   );
 
-  // --- Logic Helpers ---
   // Undo/Redo handler
   const handleUndo = () => {
     if (canUndo()) {
@@ -305,88 +293,31 @@ const App: React.FC = () => {
     onUndo: handleUndo,
   });
 
-  // --- Handlers ---
-  const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setVideo(file);
-    }
-  };
-
-  const extractAudioSync = async (start: number, end: number): Promise<Blob | null> => {
-    if (!videoFile) return null;
-    try {
-      videoPlayerRef.current?.pause();
-      return await ffmpegService.extractAudioClip(videoFile, start, end);
-    } catch (e) {
-      console.error("Audio extraction failed", e);
-      return null;
-    }
-  };
-
-  const handleSaveSubtitles = async () => {
-    if (!subtitleFileName) return;
-    if (fileHandle) {
-      try {
-        const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
-        const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
-        // @ts-ignore
-        const writable = await fileHandle.createWritable();
-        // @ts-ignore
-        await writable.write(content);
-        // @ts-ignore
-        await writable.close();
-        setHasUnsavedChanges(false);
-      } catch (err) {
-        alert('Failed to save file.');
-      }
-    } else {
-      setHasUnsavedChanges(false);
-    }
-  };
-
-  const handleDownloadSubtitles = async () => {
-    if (!subtitleFileName) return;
-    const isVtt = subtitleFileName.toLowerCase().endsWith('.vtt');
-    const content = serializeSubtitles(subtitleLines, isVtt ? 'vtt' : 'srt');
-    try {
-      // @ts-ignore
-      if (window.showSaveFilePicker) {
-        // @ts-ignore
-        const handle = await window.showSaveFilePicker({
-          suggestedName: subtitleFileName,
-          types: [{description: 'Subtitle File', accept: {'text/plain': [isVtt ? '.vtt' : '.srt']}}]
-        });
-        // @ts-ignore
-        const writable = await handle.createWritable();
-        // @ts-ignore
-        await writable.write(content);
-        // @ts-ignore
-        await writable.close();
-      } else {
-        const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
-        saveAs(blob, subtitleFileName);
-        setHasUnsavedChanges(false);
-      }
-    } catch (err) {
-    }
-  };
-
-  const handleSubtitleLineShiftClicked = (id: number) => {
-    const sub = getSubtitleLine(id);
-    if (!sub) return;
-
-    // 复制字幕文本到剪贴板
-    navigator.clipboard.writeText(sub.text).then(() => {
-      // 显示复制成功的提示
-      showNotification(t("notifications.copiedToClipboard", {
-        defaultValue: '"{{text}}" copied to clipboard',
-        text: sub.text
-      }));
-    }).catch(err => {
-      console.error('Cannot copy text:', err);
-    });
-  }
+  const {
+    handleVideoUpload,
+    handleSaveSubtitles,
+    handleDownloadSubtitles,
+    handleSubtitleLineShiftClicked,
+    handleCaptureFrame,
+    handleDeleteSyncedCards,
+    handleDownloadAudio,
+  } = useAppUtilityActions({
+    setVideo,
+    videoFile,
+    videoPlayerRef,
+    subtitleFileName,
+    fileHandle,
+    subtitleLines,
+    setHasUnsavedChanges,
+    getSubtitleLine,
+    showNotification,
+    t,
+    ankiCards,
+    handleDeleteCard,
+    tempSubtitleLine,
+    activeSubtitleLineId,
+    videoName,
+  });
 
   const handleExportApkg = async () => {
     setIsExporting(true);
@@ -394,155 +325,27 @@ const App: React.FC = () => {
     setIsExporting(false);
   }
 
-  const handleCaptureFrame = async () => {
-    if (!videoPlayerRef.current) return;
-    const dataUrl = await videoPlayerRef.current.captureFrame();
-    if (!dataUrl) return;
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
-    const currentTime = videoPlayerRef.current?.getCurrentTime() || 0;
-
-    // 查找当前时间对应的字幕行
-    const currentSubtitle = subtitleLines.find(sub =>
-      currentTime >= sub.startTime && currentTime <= sub.endTime
-    );
-
-    // 使用共享的工具函数生成文件名
-    const timeStr = formatTimeForFilename(currentTime);
-    const fileName = makeMediaFileName(videoName, '.jpg', timeStr, currentSubtitle ? currentSubtitle.text : '');
-
-    try {
-      // @ts-ignore
-      if (window.showSaveFilePicker) {
-        // @ts-ignore
-        const handle = await window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{
-            description: 'Snapshot',
-            // accept: "*.wav"
-          }]
-        });
-        // @ts-ignore
-        const writable = await handle.createWritable();
-        // @ts-ignore
-        await writable.write(blob);
-        // @ts-ignore
-        await writable.close();
-      } else {
-        saveAs(blob, fileName);
-      }
-    } catch (err) {
-    }
-  };
-
-  const handleDeleteSyncedCards = async () => {
-    const syncedCards = ankiCards.filter(card => card.syncStatus === 'synced');
-
-    if (syncedCards.length === 0) {
-      alert('No synced cards to delete.');
-      return;
-    }
-
-    const confirmDeletion = confirm(`Are you sure you want to delete ${syncedCards.length} synced card(s)?`);
-    if (!confirmDeletion) return;
-
-    for (const card of syncedCards) {
-      await handleDeleteCard(card.id);
-    }
-
-    showNotification(t("notifications.cardRemoved", {num: syncedCards.length}));
-  };
-
-  const handleDownloadAudio = async () => {
-    if (!videoFile) return;
-    if (tempSubtitleLine === null && activeSubtitleLineId === null) return;
-    let start: number, end: number;
-    let currentSub: SubtitleLine | undefined;
-
-    if (tempSubtitleLine !== null) {
-      start = tempSubtitleLine.start;
-      end = tempSubtitleLine.end;
-    } else {
-      currentSub = subtitleLines.find(s => s.id === activeSubtitleLineId);
-      if (currentSub == null) return;
-      start = currentSub.startTime;
-      end = currentSub.endTime;
-    }
-
-    const blob = await extractAudioSync(start, end);
-    const startStr = formatTimeForFilename(start);
-    const endStr = formatTimeForFilename(end);
-    const filename = makeMediaFileName(videoName, '.wav', `${startStr}_${endStr}`, currentSub ? currentSub.text : '');
-
-    try {
-      // @ts-ignore
-      if (window.showSaveFilePicker) {
-        // @ts-ignore
-        const handle = await window.showSaveFilePicker({
-          suggestedName: filename,
-          types: [{
-            description: 'Audio File',
-            // accept: "*.wav"
-          }]
-        });
-        // @ts-ignore
-        const writable = await handle.createWritable();
-        // @ts-ignore
-        await writable.write(blob);
-        // @ts-ignore
-        await writable.close();
-      } else {
-        saveAs(blob, filename);
-      }
-    } catch (err) {
-    }
-  };
-
-  const resetStoreState = useCallback(() => {
-    setProjectName('');
-    resetVideo();
-    setSubtitles([], '');
-
-    setPauseAtTime(null);
-    setActiveSubtitleLineId(null);
-    setTempSubtitleLine(null);
-
-    setIsExporting(false);
-
-    if (videoPlayerRef.current) {
-      videoPlayerRef.current.seekTo(0);
-      videoPlayerRef.current = null;
-    }
-
-    setRegionsHidden(false);
-    setIsVideoOnlyMode(false);
-
-    ankiCards.forEach(async card => await deleteScreenshotAndAudioForCard(card.id));
-    clearCards();
-
-    setSelectedDeck('Subs2Anki Export');
-    setGlobalTags([]);
-
-    setIsTemplateModalOpen(false);
-    setIsSettingsModalOpen(false);
-    setPreviewCard(null);
-    setIsShortcutsModalOpen(false);
-  }, [
+  const resetStoreState = useResetStoreState({
     ankiCards,
     clearCards,
     deleteScreenshotAndAudioForCard,
     resetVideo,
-    setActiveSubtitleLineId,
-    setIsSettingsModalOpen,
-    setIsShortcutsModalOpen,
-    setIsTemplateModalOpen,
-    setPauseAtTime,
-    setPreviewCard,
     setProjectName,
-    setSelectedDeck,
     setSubtitles,
+    setPauseAtTime,
+    setActiveSubtitleLineId,
     setTempSubtitleLine,
-  ]);
+    setIsExporting,
+    setRegionsHidden,
+    setIsVideoOnlyMode,
+    setSelectedDeck,
+    setGlobalTags,
+    setIsTemplateModalOpen,
+    setIsSettingsModalOpen,
+    setPreviewCard,
+    setIsShortcutsModalOpen,
+    videoPlayerRef,
+  });
 
   const {
     handleSaveProject,
@@ -576,168 +379,95 @@ const App: React.FC = () => {
     resetStoreState,
   });
 
-  return (
-    <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
+  const handleRefreshAnkiConnection = useCallback(async () => {
+    await refreshDecks();
+    await refreshTags();
+  }, [refreshDecks, refreshTags]);
 
-      {isSyncing && <ProcessingOverlay
-        isInProcess={isSyncing}
-        InProcessMessage={t("modals.syncingToAnki", {defaultValue: "Syncing to Anki..."})}
-        Progress={syncProgress}
-      >
-        {t("modals.cardsSynced", {
-          defaultValue: "{{current}} / {{total}} cards synced",
-          current: syncProgress.current,
-          total: syncProgress.total
-        })}
-      </ProcessingOverlay>}
-      {isBulkCreating && <ProcessingOverlay
-        isInProcess={isBulkCreating}
-        InProcessMessage={t("modals.creatingCards", {defaultValue: "Creating Cards..."})}
-        Progress={bulkCreateProgress}
-      >
-        {t("modals.cardsCreated", {
-          defaultValue: "{{current}} / {{total}} cards created",
-          current: bulkCreateProgress.current,
-          total: bulkCreateProgress.total
-        })}
-      </ProcessingOverlay>}
-      {isExporting && <ProcessingOverlay
-        isInProcess={isExporting}
-        InProcessMessage={t("modals.preparingExport", {defaultValue: "Preparing Export..."})}
-        onCancel={() => setIsExporting(false)}
-      >
-        {t("modals.processingMedia", {
-          defaultValue: "Processing media ({{count}} remaining)",
-          count: ankiCards.filter(c => c.audioStatus !== 'done').length
-        })}
-      </ProcessingOverlay>}
+  return <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
+      <AppOverlays
+        isSyncing={isSyncing}
+        syncProgress={syncProgress}
+        isBulkCreating={isBulkCreating}
+        bulkCreateProgress={bulkCreateProgress}
+        isExporting={isExporting}
+        pendingMediaCount={ankiCards.filter(c => c.audioStatus !== 'done').length}
+        onCancelExport={() => setIsExporting(false)}
+      />
 
-      {/* Top Part: 3 Columns */}
-      <div className="flex flex-1 min-h-0 w-full">
-        <DeckColumn
-          cards={ankiCards}
-          onDelete={handleDeleteCard}
-          onPreview={(c) => setPreviewCard(c)}
-          onSyncCard={(id) => handleSyncCard(id, selectedDeck)}
-          onSyncCards={handleSyncCards}
-          onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
-          onExport={handleExportApkg}
-          onRefreshAnkiConnection={async () => {await refreshDecks(); await refreshTags();}}
-          onOpenAnkiSettings={() => setIsSettingsModalOpen(true)}
-          onDeleteSynced={handleDeleteSyncedCards}
-          isConnected={isConnectedViaAnkiConnect}
-          decks={decks}
-          ankiTags={tags}
-          ankiConnectUrl={ankiConnectUrl}
-          projectName={projectName}
-          selectedDeck={selectedDeck}
-          onDeckChange={setSelectedDeck}
-          globalTags={globalTags}
-          onGlobalTagsChange={setGlobalTags}
-          className={`${isVideoOnly ? 'hidden' : ''}`}
-        />
+      <AppMainLayout
+        isVideoOnly={isVideoOnly}
+        videoPlayerRef={videoPlayerRef}
+        ankiCards={ankiCards}
+        onDeleteCard={handleDeleteCard}
+        onPreviewCard={setPreviewCard}
+        onSyncCard={(id) => handleSyncCard(id, selectedDeck)}
+        onSyncCards={handleSyncCards}
+        onOpenTemplateSettings={() => setIsTemplateModalOpen(true)}
+        onExport={handleExportApkg}
+        onRefreshAnkiConnection={handleRefreshAnkiConnection}
+        onOpenAnkiSettings={() => setIsSettingsModalOpen(true)}
+        onDeleteSynced={handleDeleteSyncedCards}
+        isConnected={isConnectedViaAnkiConnect}
+        decks={decks}
+        ankiTags={tags}
+        ankiConnectUrl={ankiConnectUrl}
+        projectName={projectName}
+        selectedDeck={selectedDeck}
+        onDeckChange={setSelectedDeck}
+        globalTags={globalTags}
+        onGlobalTagsChange={setGlobalTags}
+        onProjectNameChange={setProjectName}
+        onSaveProject={handleSaveProject}
+        onLoadProject={handleLoadProject}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onResetProject={handleResetProject}
+        hasProjectData={hasProjectData}
+        videoSrc={videoSrc}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={() => setIsVideoReady(true)}
+        currentSubtitleText={currentSubtitleText}
+        subtitleLines={subtitleLines}
+        activeSubtitleLineId={activeSubtitleLineId}
+        subtitleFileName={subtitleFileName}
+        canSave={fileHandle !== null}
+        onSetSubtitles={setSubtitles}
+        onSubtitleLineClicked={handleSubtitleLineClicked}
+        onToggleLock={toggleSubtitleLineStatus}
+        onCreateCard={handleCreateCard}
+        onBulkCreateCards={handleBulkCreateCards}
+        onSaveSubtitles={handleSaveSubtitles}
+        onDownloadSubtitles={handleDownloadSubtitles}
+        onShiftSubtitles={shiftSubtitles}
+        showBulkCreateButton={showBulkCreateButton}
+        bulkCreateLimit={bulkCreateLimit}
+        onBulkCreateLimitChange={setBulkCreateLimit}
+        tempSubtitleLine={tempSubtitleLine}
+        currentTime={currentTime}
+        onTempCommit={handleCommitTempSubtitleLine}
+        videoName={videoName}
+        onVideoUpload={handleVideoUpload}
+        onCaptureFrame={handleCaptureFrame}
+        onDownloadAudio={handleDownloadAudio}
+        onUpdateSubtitleText={updateSubtitleText}
+        onSeek={handleSeek}
+        regionsHidden={regionsHidden}
+        onTempSubtitleLineCreated={handleTempSubtitleLineCreated}
+        onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
+        onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
+        onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
+        onSubtitleLineShiftClicked={handleSubtitleLineShiftClicked}
+        onSubtitleLineUpdated={handleSubtitleLineUpdated}
+        onSubtitleLineRemoved={removeSubtitle}
+      />
 
-        {/* COL 2: VIDEO (Center) */}
-        <main className="flex-1 flex flex-col bg-slate-950 relative min-w-0">
-          {/* Project Controls Above Video Player */}
-          {!isVideoOnly &&
-            <div className="p-4 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
-              <EditableProjectName
-                projectName={projectName}
-                onProjectNameChange={setProjectName}
-                className="text-lg font-semibold"
-              />
-              <ProjectControls
-                onSaveProject={handleSaveProject}
-                onLoadProject={handleLoadProject}
-                onOpenSettings={() => setIsSettingsModalOpen(true)}
-                onResetProject={handleResetProject}
-                hasProjectData={hasProjectData}
-              />
-            </div>
-          }
-
-          {/* Video Player Area */}
-          <div className="flex-1 flex flex-col items-center justify-center p-2 bg-black/20 min-h-0">
-            <div className="w-full h-full max-w-5xl flex flex-col justify-center">
-              <VideoPlayer
-                ref={videoPlayerRef}
-                src={videoSrc}
-                onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={() => setIsVideoReady(true)}
-                currentSubtitle={currentSubtitleText}
-              />
-            </div>
-          </div>
-        </main>
-
-        {/* COL 3: SUBTITLE LINES (Right) */}
-        <SubtitleColumn
-          className={`${isVideoOnly ? 'hidden' : ''}`}
-          subtitleLines={subtitleLines}
-          activeSubtitleLineId={activeSubtitleLineId}
-          subtitleFileName={subtitleFileName}
-          canSave={fileHandle !== null}
-          onSetSubtitles={setSubtitles}
-          onSubtitleLineClicked={handleSubtitleLineClicked}
-          onToggleLock={toggleSubtitleLineStatus}
-          onCreateCard={handleCreateCard}
-          onBulkCreateCards={handleBulkCreateCards}
-          onSave={handleSaveSubtitles}
-          onDownload={handleDownloadSubtitles}
-          onShiftSubtitles={shiftSubtitles}
-          showBulkCreateButton={showBulkCreateButton}
-          bulkCreateLimit={bulkCreateLimit}
-          onBulkCreateLimitChange={setBulkCreateLimit}
-        />
-      </div>
-
-      {/* Control Bar - Full Width with Auto Height for Editor */}
-      {!isVideoOnly && (
-        <div
-          className="min-h-20 h-auto py-2 border-t border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl z-30 px-4 gap-4 transition-all w-full">
-          <AppControlBar
-            tempSubtitleLine={tempSubtitleLine}
-            activeSubtitleLineId={activeSubtitleLineId}
-            videoName={videoName}
-            currentTime={currentTime}
-            onTempCommit={handleCommitTempSubtitleLine}
-            onVideoUpload={handleVideoUpload}
-            onCaptureFrame={handleCaptureFrame}
-            onDownloadAudio={handleDownloadAudio}
-            onUpdateSubtitleText={updateSubtitleText}
-          />
-        </div>
-      )}
-
-      {/* Bottom Part: Full-width Waveform */}
-      <div
-        className={`h-40 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10 w-full relative ${isVideoOnly ? 'hidden' : ''}`}>
-        <WaveformDisplay
-          videoElement={videoPlayerRef.current?.getVideoElement() || null}
-          videoSrc={videoSrc}
-          currentTime={currentTime}
-          onSeek={handleSeek}
-          regionsHidden={regionsHidden}
-          tempSubtitleLine={tempSubtitleLine}
-          onTempSubtitleLineCreated={handleTempSubtitleLineCreated}
-          onTempSubtitleLineUpdated={handleTempSubtitleLineUpdated}
-          onTempSubtitleLineClicked={handleTempSubtitleLineClicked}
-          onTempSubtitleLineRemoved={handleTempSubtitleLineRemoved}
-          onSubtitleLineClicked={handleSubtitleLineClicked}
-          onSubtitleLineShiftClicked={handleSubtitleLineShiftClicked}
-          onSubtitleLineUpdated={handleSubtitleLineUpdated}
-          onSubtitleLineRemoved={removeSubtitle}
-          numOfNormalRegionsToHighlight={showBulkCreateButton ? bulkCreateLimit : 0}
-        />
-      </div>
-
-      {/* Modals */}
-      <TemplateEditorModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)}
-                           config={ankiConfig} onSave={setAnkiConfig}/>
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
+      <AppModals
+        isTemplateModalOpen={isTemplateModalOpen}
+        onCloseTemplate={() => setIsTemplateModalOpen(false)}
+        ankiConfig={ankiConfig}
+        onSaveAnkiConfig={setAnkiConfig}
+        isSettingsModalOpen={isSettingsModalOpen}
+        onCloseSettings={() => setIsSettingsModalOpen(false)}
         ankiConnectUrl={ankiConnectUrl}
         onSaveAnkiConnectUrl={setAnkiConnectUrl}
         autoDeleteSynced={autoDeleteSynced}
@@ -749,25 +479,18 @@ const App: React.FC = () => {
         audioVolume={audioVolume}
         onAudioVolumeChange={setAudioVolume}
         onTestSuccess={refreshDecks}
-      />
-      <CardPreviewModal
-        isOpen={!!previewCard}
-        card={previewCard ? ankiCards.find(c => c.id === previewCard.id) || previewCard : null}
-        onClose={() => setPreviewCard(null)}
-      />
-      <ShortcutsCheatSheetModal
-        isOpen={isShortcutsModalOpen}
-        onClose={() => setIsShortcutsModalOpen(false)}
+        ankiCards={ankiCards}
+        previewCard={previewCard}
+        onClosePreview={() => setPreviewCard(null)}
+        isShortcutsModalOpen={isShortcutsModalOpen}
+        onCloseShortcuts={() => setIsShortcutsModalOpen(false)}
       />
 
-      {notification.visible && (
-        <div
-          className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-50 bg-slate-700/80 text-slate-200 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 border border-slate-600">
+      {notification.visible && (<div
+        className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-50 bg-slate-700/80 text-slate-200 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 border border-slate-600">
           {notification.text.substring(0, 30)}{notification.text.length > 30 ? '...' : ''}
-        </div>
-      )}
-    </div>
-  );
+        </div>)}
+    </div>;
 };
 
 export default App;
