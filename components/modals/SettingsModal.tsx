@@ -16,24 +16,28 @@ interface SettingsModalProps {
   onShowBulkCreateButtonChange: (checked: boolean) => void;
   audioVolume: number;
   onAudioVolumeChange: (volume: number) => void;
+  screenshotTimingPercent: number;
+  onScreenshotTimingPercentChange: (percent: number) => void;
   onTestSuccess?: () => void; // 回调函数，在测试连接成功时调用
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
-                                                       isOpen,
-                                                       onClose,
-                                                       ankiConnectUrl,
-                                                       onSaveAnkiConnectUrl,
-                                                       autoDeleteSynced,
-                                                       onAutoDeleteSyncedChange,
-                                                       bulkCreateLimit,
-                                                       onBulkCreateLimitChange,
-                                                       showBulkCreateButton,
-                                                       onShowBulkCreateButtonChange,
+  isOpen,
+  onClose,
+  ankiConnectUrl,
+  onSaveAnkiConnectUrl,
+  autoDeleteSynced,
+  onAutoDeleteSyncedChange,
+  bulkCreateLimit,
+  onBulkCreateLimitChange,
+  showBulkCreateButton,
+  onShowBulkCreateButtonChange,
   audioVolume,
   onAudioVolumeChange,
-                                                       onTestSuccess
-                                                     }) => {
+  screenshotTimingPercent,
+  onScreenshotTimingPercentChange,
+  onTestSuccess,
+}) => {
   const { t, i18n } = useTranslation();
   const [localUrl, setLocalUrl] = useState(ankiConnectUrl);
   const [status, setStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle');
@@ -42,6 +46,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [localAutoDeleteSynced, setLocalAutoDeleteSynced] = useState(autoDeleteSynced);
   const [localShowBulkCreateButton, setLocalShowBulkCreateButton] = useState(showBulkCreateButton);
   const [localAudioVolume, setLocalAudioVolume] = useState(audioVolume);
+  const [localScreenshotTimingPercent, setLocalScreenshotTimingPercent] = useState(screenshotTimingPercent);
   const [localLanguage, setLocalLanguage] = useState(i18n.language);
 
   const handleCheckConnection = async (targetUrl: string) => {
@@ -74,10 +79,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onBulkCreateLimitChange(localBulkCreateLimit);
     onShowBulkCreateButtonChange(localShowBulkCreateButton);
     onAudioVolumeChange(localAudioVolume);
+    onScreenshotTimingPercentChange(localScreenshotTimingPercent);
 
     // 切换语言
     if (localLanguage !== i18n.language) {
-      i18n.changeLanguage(localLanguage);
+      i18n.changeLanguage(localLanguage).then();
       localStorage.setItem('language', localLanguage);
     }
 
@@ -248,7 +254,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <p className="text-xs text-slate-500">{t("modals.adjustVolume", { defaultValue: "Adjust volume of generated audio clips (1.0 = normal)" })}</p>
                 </div>
               </div>
-              
+
+              <div className="space-y-4">
+                <h3 className="text-md font-bold flex items-center gap-2 text-slate-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                    <line x1="9" y1="21" x2="9" y2="9"></line>
+                  </svg>
+                  {t("modals.screenshotTiming", { defaultValue: "Screenshot Timing" })}
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="25"
+                      value={localScreenshotTimingPercent}
+                      onChange={(e) => setLocalScreenshotTimingPercent(parseInt(e.target.value))}
+                      className="w-full bg-slate-700 accent-indigo-500 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <span className="text-sm text-slate-400 w-12">{localScreenshotTimingPercent}%</span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {t("modals.screenshotTimingHelp", {
+                      defaultValue: "When creating a card, capture frame at this position within subtitle duration (0% start, 50% middle, 100% end)",
+                    })}
+                  </p>
+                </div>
+              </div>
+
               {/* Language Settings Section */}
               <div className="space-y-4">
                 <h3 className="text-md font-bold flex items-center gap-2 text-slate-300">

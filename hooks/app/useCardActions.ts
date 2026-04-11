@@ -8,6 +8,7 @@ interface UseCardActionsParams {
   projectName: string;
   globalTags: string[];
   bulkCreateLimit: number;
+  screenshotTimingPercent?: number;
   subtitleLines: SubtitleLine[];
   getSubtitleLine: (id: number) => SubtitleLine | null;
   addCard: (card: AnkiCard) => void;
@@ -26,6 +27,7 @@ export const useCardActions = ({
   projectName,
   globalTags,
   bulkCreateLimit,
+  screenshotTimingPercent = 50,
   subtitleLines,
   getSubtitleLine,
   addCard,
@@ -47,7 +49,15 @@ export const useCardActions = ({
     if (sub.status !== 'normal') return;
 
     const furigana = convertToFurigana(sub.text);
-    const screenshot = await videoPlayerRef.current.captureFrameAt(sub.startTime);
+    const subtitleStart = Math.min(sub.startTime, sub.endTime);
+    const subtitleEnd = Math.max(sub.startTime, sub.endTime);
+    const duration = subtitleEnd - subtitleStart;
+    const normalizedPercent = Math.min(100, Math.max(0, screenshotTimingPercent));
+    const captureTime = Math.min(
+      subtitleEnd,
+      Math.max(subtitleStart, subtitleStart + duration * (normalizedPercent / 100))
+    );
+    const screenshot = await videoPlayerRef.current.captureFrameAt(captureTime);
 
     let screenshotRef = null;
     if (screenshot) {
@@ -135,5 +145,3 @@ export const useCardActions = ({
     handleDeleteCard,
   };
 };
-
-

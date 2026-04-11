@@ -15,6 +15,7 @@ interface UseProjectActionsParams {
   autoDeleteSynced: boolean;
   showBulkCreateButton: boolean;
   audioVolume: number;
+  screenshotTimingPercent: number;
 
   setProjectName: (name: string) => void;
   setSubtitles: (lines: SubtitleLine[], fileName: string) => void;
@@ -25,6 +26,7 @@ interface UseProjectActionsParams {
   setBulkCreateLimit: (limit: number) => void;
   setAutoDeleteSynced: (enabled: boolean) => void;
   setShowBulkCreateButton: (show: boolean) => void;
+  setScreenshotTimingPercent: (percent: number) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
 
   showNotification: (text: string) => void;
@@ -50,6 +52,7 @@ export const useProjectActions = ({
   autoDeleteSynced,
   showBulkCreateButton,
   audioVolume,
+  screenshotTimingPercent,
   setProjectName,
   setSubtitles,
   setAnkiConfig,
@@ -59,6 +62,7 @@ export const useProjectActions = ({
   setBulkCreateLimit,
   setAutoDeleteSynced,
   setShowBulkCreateButton,
+  setScreenshotTimingPercent,
   setHasUnsavedChanges,
   showNotification,
   t,
@@ -86,6 +90,7 @@ export const useProjectActions = ({
         autoDeleteSynced,
         showBulkCreateButton,
         audioVolume,
+        screenshotTimingPercent,
       );
       await saveProjectRecordFn(record);
       showNotification(t('notifications.projectSaved', {defaultValue: 'Project saved successfully!'}));
@@ -132,6 +137,12 @@ export const useProjectActions = ({
         setShowBulkCreateButton(record.showBulkCreateButton);
       }
 
+      if (record.screenshotTimingPercent !== undefined) {
+        setScreenshotTimingPercent(record.screenshotTimingPercent);
+      } else {
+        setScreenshotTimingPercent(50);
+      }
+
       showNotification(t('notifications.projectLoaded', {
         defaultValue: 'Project loaded successfully!',
       }));
@@ -156,4 +167,5 @@ export const useProjectActions = ({
     handleResetProject,
   };
 };
+
 

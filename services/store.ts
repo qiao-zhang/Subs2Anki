@@ -88,6 +88,8 @@ interface AppState {
   setShowBulkCreateButton: (show: boolean) => void;
   audioVolume: number;
   setAudioVolume: (volume: number) => void;
+  screenshotTimingPercent: number;
+  setScreenshotTimingPercent: (percent: number) => void;
 }
 
 // 创建全局的 undo/redo 管理器实例
@@ -492,5 +494,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAudioVolume: (volume) => {
     localStorage.setItem('subs2anki_audio_volume', volume.toString());
     set({audioVolume: volume});
-  }
+  },
+  screenshotTimingPercent: parseFloat(localStorage.getItem('subs2anki_screenshot_timing_percent') || '50'),
+  setScreenshotTimingPercent: (percent) => {
+    const clampedPercent = Math.min(100, Math.max(0, percent));
+    localStorage.setItem('subs2anki_screenshot_timing_percent', clampedPercent.toString());
+    set({screenshotTimingPercent: clampedPercent});
+  },
 }));

@@ -84,6 +84,8 @@
     "invalid": "无效",
     "limitMemoryIssues": "限制以防止内存问题",
     "adjustVolume": "调整生成音频片段的音量（1.0 = 正常）",
+    "screenshotTiming": "截图时刻",
+    "screenshotTimingHelp": "创建卡片时，在该字幕时长内按此位置截图（0%开头，50%中间，100%结尾）",
     "noteTypeSettings": "笔记类型设置",
     "fields": "字段",
     "cardTypes": "卡片类型",

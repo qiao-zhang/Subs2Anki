@@ -87,6 +87,8 @@
     "invalid": "Invalid",
     "limitMemoryIssues": "Limit to prevent memory issues",
     "adjustVolume": "Adjust volume of generated audio clips (1.0 = normal)",
+    "screenshotTiming": "Screenshot Timing",
+    "screenshotTimingHelp": "When creating a card, capture frame at this position within subtitle duration (0% start, 50% middle, 100% end)",
     "noteTypeSettings": "Note Type Settings",
     "fields": "Fields",
     "cardTypes": "Card Types",

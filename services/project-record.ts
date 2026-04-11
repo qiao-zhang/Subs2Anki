@@ -16,6 +16,7 @@ export interface ProjectRecord {
   bulkCreateLimit?: number;           // 批量创建限制
   showBulkCreateButton?: boolean;     // 是否显示批量创建按钮
   audioVolume?: number;               // 音频音量
+  screenshotTimingPercent?: number;   // 截图时刻百分比
 }
 
 // 默认版本号
@@ -30,6 +31,7 @@ const PROJECT_RECORD_VERSION = "1.2.0";
  * @param bulkCreateLimit 批量创建限制
  * @param showBulkCreateButton 是否显示批量创建按钮
  * @param audioVolume 音频音量
+ * @param screenshotTimingPercent 截图时刻百分比
  * @returns 项目记录对象
  */
 export const createProjectRecord = (appState: {
@@ -39,7 +41,7 @@ export const createProjectRecord = (appState: {
   subtitleLines: SubtitleLine[];
   ankiConfig: AnkiNoteType;
   ankiConnectUrl: string;
-}, selectedDeck?: string, globalTags?: string[], bulkCreateLimit?: number, autoDeleteSynced?: boolean, showBulkCreateButton?: boolean, audioVolume?: number): ProjectRecord => {
+}, selectedDeck?: string, globalTags?: string[], bulkCreateLimit?: number, autoDeleteSynced?: boolean, showBulkCreateButton?: boolean, audioVolume?: number, screenshotTimingPercent?: number): ProjectRecord => {
   return {
     version: PROJECT_RECORD_VERSION,
     projectName: appState.projectName,
@@ -54,6 +56,7 @@ export const createProjectRecord = (appState: {
     bulkCreateLimit,
     showBulkCreateButton,
     audioVolume,
+    screenshotTimingPercent,
     timestamp: new Date().toISOString()
   };
 };
@@ -195,6 +198,11 @@ const isValidProjectRecord = (record: any): record is ProjectRecord => {
 
   // 验证 audioVolume（如果存在）
   if (record.audioVolume !== undefined && (typeof record.audioVolume !== 'number' || record.audioVolume < 0.1 || record.audioVolume > 5)) {
+    return false;
+  }
+
+  // 验证 screenshotTimingPercent（如果存在）
+  if (record.screenshotTimingPercent !== undefined && (typeof record.screenshotTimingPercent !== 'number' || record.screenshotTimingPercent < 0 || record.screenshotTimingPercent > 100)) {
     return false;
   }
 

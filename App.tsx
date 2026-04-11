@@ -43,6 +43,7 @@ const App: React.FC = () => {
     autoDeleteSynced, setAutoDeleteSynced,
     showBulkCreateButton, setShowBulkCreateButton,
     audioVolume, setAudioVolume,
+    screenshotTimingPercent, setScreenshotTimingPercent,
     setHasUnsavedChanges
   } = useAppStore();
 
@@ -133,6 +134,7 @@ const App: React.FC = () => {
     projectName,
     globalTags,
     bulkCreateLimit,
+    screenshotTimingPercent,
     subtitleLines,
     getSubtitleLine,
     addCard,
@@ -364,6 +366,7 @@ const App: React.FC = () => {
     autoDeleteSynced,
     showBulkCreateButton,
     audioVolume,
+    screenshotTimingPercent,
     setProjectName,
     setSubtitles,
     setAnkiConfig,
@@ -373,6 +376,7 @@ const App: React.FC = () => {
     setBulkCreateLimit,
     setAutoDeleteSynced,
     setShowBulkCreateButton,
+    setScreenshotTimingPercent,
     setHasUnsavedChanges,
     showNotification,
     t,
@@ -478,6 +482,8 @@ const App: React.FC = () => {
         onShowBulkCreateButtonChange={setShowBulkCreateButton}
         audioVolume={audioVolume}
         onAudioVolumeChange={setAudioVolume}
+        screenshotTimingPercent={screenshotTimingPercent}
+        onScreenshotTimingPercentChange={setScreenshotTimingPercent}
         onTestSuccess={refreshDecks}
         ankiCards={ankiCards}
         previewCard={previewCard}

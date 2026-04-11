@@ -23,6 +23,8 @@ interface AppModalsProps {
   onShowBulkCreateButtonChange: (show: boolean) => void;
   audioVolume: number;
   onAudioVolumeChange: (volume: number) => void;
+  screenshotTimingPercent: number;
+  onScreenshotTimingPercentChange: (percent: number) => void;
   onTestSuccess: () => Promise<void>;
 
   ankiCards: AnkiCard[];
@@ -50,6 +52,8 @@ const AppModals: React.FC<AppModalsProps> = ({
   onShowBulkCreateButtonChange,
   audioVolume,
   onAudioVolumeChange,
+  screenshotTimingPercent,
+  onScreenshotTimingPercentChange,
   onTestSuccess,
   ankiCards,
   previewCard,
@@ -78,6 +82,8 @@ const AppModals: React.FC<AppModalsProps> = ({
         onShowBulkCreateButtonChange={onShowBulkCreateButtonChange}
         audioVolume={audioVolume}
         onAudioVolumeChange={onAudioVolumeChange}
+        screenshotTimingPercent={screenshotTimingPercent}
+        onScreenshotTimingPercentChange={onScreenshotTimingPercentChange}
         onTestSuccess={onTestSuccess}
       />
       <CardPreviewModal
@@ -94,4 +100,5 @@ const AppModals: React.FC<AppModalsProps> = ({
 };
 
 export default AppModals;
+
 
