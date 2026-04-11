@@ -1,4 +1,5 @@
 import {SubtitleLine, AnkiNoteType} from './types.ts';
+import {isTauriRuntime} from './tauri-runtime.ts';
 
 // 定义项目记录的数据结构
 export interface ProjectRecord {
@@ -108,6 +109,31 @@ export const saveProjectRecord = async (record: ProjectRecord, fileName?: string
   }
 };
 
+export const saveProjectRecordViaTauri = async (record: ProjectRecord, fileName?: string): Promise<boolean> => {
+  if (!isTauriRuntime()) return false;
+
+  const suggestedFileName = fileName || `${record.projectName.replace(/[\p{P}\s]/gu, '_')}.subs2anki`;
+  const jsonString = JSON.stringify(record, null, 2);
+
+  const {save} = await import('@tauri-apps/plugin-dialog');
+  const {writeTextFile} = await import('@tauri-apps/plugin-fs');
+
+  const selectedPath = await save({
+    defaultPath: suggestedFileName,
+    filters: [{
+      name: 'Subs2Anki Project File',
+      extensions: ['subs2anki', 'json'],
+    }],
+  });
+
+  if (!selectedPath) {
+    return false;
+  }
+
+  await writeTextFile(selectedPath, jsonString);
+  return true;
+};
+
 /**
  * 从文件加载项目记录
  * @param file 文件对象
@@ -120,21 +146,7 @@ export const loadProjectRecord = (file: File): Promise<ProjectRecord> => {
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        const record: ProjectRecord = JSON.parse(content);
-
-        // 验证记录格式
-        if (!isValidProjectRecord(record)) {
-          reject(new Error('无效的项目记录文件格式'));
-          return;
-        }
-
-        // 转换字幕行格式（如果需要）
-        const convertedRecord = {
-          ...record,
-          subtitleLines: convertSubtitleLinesFromLegacyFormat(record.subtitleLines)
-        };
-
-        resolve(convertedRecord);
+        resolve(parseProjectRecordContent(content));
       } catch (error) {
         reject(new Error('解析项目记录文件失败: ' + (error as Error).message));
       }
@@ -146,6 +158,41 @@ export const loadProjectRecord = (file: File): Promise<ProjectRecord> => {
     
     reader.readAsText(file);
   });
+};
+
+export const loadProjectRecordViaTauri = async (): Promise<ProjectRecord | null> => {
+  if (!isTauriRuntime()) return null;
+
+  const {open} = await import('@tauri-apps/plugin-dialog');
+  const {readTextFile} = await import('@tauri-apps/plugin-fs');
+
+  const selectedPath = await open({
+    multiple: false,
+    filters: [{
+      name: 'Subs2Anki Project File',
+      extensions: ['subs2anki', 'json'],
+    }],
+  });
+
+  if (!selectedPath || Array.isArray(selectedPath)) {
+    return null;
+  }
+
+  const content = await readTextFile(selectedPath);
+  return parseProjectRecordContent(content);
+};
+
+const parseProjectRecordContent = (content: string): ProjectRecord => {
+  const record: ProjectRecord = JSON.parse(content);
+
+  if (!isValidProjectRecord(record)) {
+    throw new Error('无效的项目记录文件格式');
+  }
+
+  return {
+    ...record,
+    subtitleLines: convertSubtitleLinesFromLegacyFormat(record.subtitleLines),
+  };
 };
 
 /**

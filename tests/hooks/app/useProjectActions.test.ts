@@ -7,7 +7,9 @@ describe('useProjectActions', () => {
     const setSelectedDeck = vi.fn();
     const setScreenshotTimingPercent = vi.fn();
     const loadProjectRecordFn = vi.fn(async () => ({
+      version: '1.2.0',
       projectName: 'Proj',
+      videoName: 'v.mp4',
       subtitleLines: [],
       subtitleFileName: 'a.srt',
       ankiConfig: {id: 1, name: 'n', css: '', fields: [], templates: []},
@@ -15,6 +17,7 @@ describe('useProjectActions', () => {
       selectedDeck: 'DeckX',
       globalTags: ['tag1'],
       screenshotTimingPercent: 75,
+      timestamp: new Date().toISOString(),
     }));
 
     const {result} = renderHook(() =>
@@ -63,13 +66,16 @@ describe('useProjectActions', () => {
   it('defaults screenshot timing percent to 50 when missing in project file', async () => {
     const setScreenshotTimingPercent = vi.fn();
     const loadProjectRecordFn = vi.fn(async () => ({
+      version: '1.2.0',
       projectName: 'Proj',
+      videoName: 'v.mp4',
       subtitleLines: [],
       subtitleFileName: 'a.srt',
       ankiConfig: {id: 1, name: 'n', css: '', fields: [], templates: []},
       ankiConnectUrl: 'http://localhost:8765',
       selectedDeck: 'DeckX',
       globalTags: ['tag1'],
+      timestamp: new Date().toISOString(),
     }));
 
     const {result} = renderHook(() =>
@@ -168,7 +174,124 @@ describe('useProjectActions', () => {
       25,
     );
   });
+
+  it('uses tauri save path when running in tauri runtime', async () => {
+    (window as any).__TAURI_INTERNALS__ = {};
+
+    const saveProjectRecordViaTauriFn = vi.fn(async () => true);
+    const saveProjectRecordFn = vi.fn(async () => {});
+
+    const {result} = renderHook(() =>
+      useProjectActions({
+        projectName: 'Proj',
+        videoName: 'v.mp4',
+        subtitleFileName: 'a.srt',
+        subtitleLines: [],
+        ankiConfig: {id: 1, name: 'n', css: '', fields: [], templates: []},
+        ankiConnectUrl: 'http://localhost:8765',
+        selectedDeck: 'DeckX',
+        globalTags: ['tag1'],
+        bulkCreateLimit: 10,
+        autoDeleteSynced: false,
+        showBulkCreateButton: false,
+        audioVolume: 1,
+        screenshotTimingPercent: 50,
+        setProjectName: vi.fn(),
+        setSubtitles: vi.fn(),
+        setAnkiConfig: vi.fn(),
+        setAnkiConnectUrl: vi.fn(),
+        setSelectedDeck: vi.fn(),
+        setGlobalTags: vi.fn(),
+        setBulkCreateLimit: vi.fn(),
+        setAutoDeleteSynced: vi.fn(),
+        setShowBulkCreateButton: vi.fn(),
+        setScreenshotTimingPercent: vi.fn(),
+        setHasUnsavedChanges: vi.fn(),
+        showNotification: vi.fn(),
+        t: (k) => k,
+        saveProjectRecordFn,
+        saveProjectRecordViaTauriFn,
+        loadProjectRecordFn: vi.fn(),
+        createProjectRecordFn: vi.fn(() => ({} as any)),
+        resetStoreState: vi.fn(),
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleSaveProject();
+    });
+
+    expect(saveProjectRecordViaTauriFn).toHaveBeenCalled();
+    expect(saveProjectRecordFn).not.toHaveBeenCalled();
+    delete (window as any).__TAURI_INTERNALS__;
+  });
+
+  it('uses tauri load path when running in tauri runtime', async () => {
+    (window as any).__TAURI_INTERNALS__ = {};
+
+    const loadProjectRecordViaTauriFn = vi.fn(async () => ({
+      version: '1.2.0',
+      projectName: 'Proj',
+      videoName: 'v.mp4',
+      subtitleLines: [],
+      subtitleFileName: 'a.srt',
+      ankiConfig: {id: 1, name: 'n', css: '', fields: [], templates: []},
+      ankiConnectUrl: 'http://localhost:8765',
+      selectedDeck: 'DeckX',
+      globalTags: ['tag1'],
+      timestamp: new Date().toISOString(),
+    }));
+    const loadProjectRecordFn = vi.fn();
+    const setProjectName = vi.fn();
+
+    const {result} = renderHook(() =>
+      useProjectActions({
+        projectName: 'Proj',
+        videoName: 'v.mp4',
+        subtitleFileName: 'a.srt',
+        subtitleLines: [],
+        ankiConfig: {id: 1, name: 'n', css: '', fields: [], templates: []},
+        ankiConnectUrl: 'http://localhost:8765',
+        selectedDeck: '',
+        globalTags: [],
+        bulkCreateLimit: 10,
+        autoDeleteSynced: false,
+        showBulkCreateButton: false,
+        audioVolume: 1,
+        screenshotTimingPercent: 50,
+        setProjectName,
+        setSubtitles: vi.fn(),
+        setAnkiConfig: vi.fn(),
+        setAnkiConnectUrl: vi.fn(),
+        setSelectedDeck: vi.fn(),
+        setGlobalTags: vi.fn(),
+        setBulkCreateLimit: vi.fn(),
+        setAutoDeleteSynced: vi.fn(),
+        setShowBulkCreateButton: vi.fn(),
+        setScreenshotTimingPercent: vi.fn(),
+        setHasUnsavedChanges: vi.fn(),
+        showNotification: vi.fn(),
+        t: (k) => k,
+        saveProjectRecordFn: vi.fn(async () => {}),
+        loadProjectRecordFn,
+        loadProjectRecordViaTauriFn,
+        createProjectRecordFn: vi.fn(),
+        resetStoreState: vi.fn(),
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleLoadProject();
+    });
+
+    expect(loadProjectRecordViaTauriFn).toHaveBeenCalled();
+    expect(loadProjectRecordFn).not.toHaveBeenCalled();
+    expect(setProjectName).toHaveBeenCalledWith('Proj');
+    delete (window as any).__TAURI_INTERNALS__;
+  });
 });
+
+
 
 
 

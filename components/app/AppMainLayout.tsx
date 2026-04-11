@@ -34,7 +34,7 @@ interface AppMainLayoutProps {
 
   onProjectNameChange: (name: string) => void;
   onSaveProject: () => Promise<void>;
-  onLoadProject: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  onLoadProject: (event?: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   onOpenSettings: () => void;
   onResetProject: () => void;
   hasProjectData: boolean;
@@ -264,4 +264,5 @@ const AppMainLayout: React.FC<AppMainLayoutProps> = ({
 };
 
 export default AppMainLayout;
+
 

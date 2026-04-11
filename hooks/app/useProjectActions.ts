@@ -1,6 +1,13 @@
 import React from 'react';
 import {AnkiNoteType, SubtitleLine} from '@/services/types.ts';
-import {createProjectRecord, loadProjectRecord, saveProjectRecord} from '@/services/project-record.ts';
+import {
+  createProjectRecord,
+  loadProjectRecord,
+  loadProjectRecordViaTauri,
+  saveProjectRecord,
+  saveProjectRecordViaTauri,
+} from '@/services/project-record.ts';
+import {isTauriRuntime} from '@/services/tauri-runtime.ts';
 
 interface UseProjectActionsParams {
   projectName: string;
@@ -35,6 +42,8 @@ interface UseProjectActionsParams {
   createProjectRecordFn?: typeof createProjectRecord;
   saveProjectRecordFn?: typeof saveProjectRecord;
   loadProjectRecordFn?: typeof loadProjectRecord;
+  saveProjectRecordViaTauriFn?: typeof saveProjectRecordViaTauri;
+  loadProjectRecordViaTauriFn?: typeof loadProjectRecordViaTauri;
 
   resetStoreState: () => void;
 }
@@ -69,6 +78,8 @@ export const useProjectActions = ({
   createProjectRecordFn = createProjectRecord,
   saveProjectRecordFn = saveProjectRecord,
   loadProjectRecordFn = loadProjectRecord,
+  saveProjectRecordViaTauriFn = saveProjectRecordViaTauri,
+  loadProjectRecordViaTauriFn = loadProjectRecordViaTauri,
   resetStoreState,
 }: UseProjectActionsParams) => {
   const handleSaveProject = async () => {
@@ -92,7 +103,14 @@ export const useProjectActions = ({
         audioVolume,
         screenshotTimingPercent,
       );
-      await saveProjectRecordFn(record);
+
+      if (isTauriRuntime()) {
+        const saved = await saveProjectRecordViaTauriFn(record);
+        if (!saved) return;
+      } else {
+        await saveProjectRecordFn(record);
+      }
+
       showNotification(t('notifications.projectSaved', {defaultValue: 'Project saved successfully!'}));
     } catch (error) {
       console.error('Failed to save project:', error);
@@ -100,12 +118,19 @@ export const useProjectActions = ({
     }
   };
 
-  const handleLoadProject = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleLoadProject = async (event?: React.ChangeEvent<HTMLInputElement>) => {
+    let record;
 
     try {
-      const record = await loadProjectRecordFn(file);
+      if (isTauriRuntime()) {
+        const selectedRecord = await loadProjectRecordViaTauriFn();
+        if (!selectedRecord) return;
+        record = selectedRecord;
+      } else {
+        const file = event?.target.files?.[0];
+        if (!file) return;
+        record = await loadProjectRecordFn(file);
+      }
 
       setProjectName(record.projectName);
       setSubtitles(record.subtitleLines, record.subtitleFileName);
@@ -167,5 +192,6 @@ export const useProjectActions = ({
     handleResetProject,
   };
 };
+
 
 

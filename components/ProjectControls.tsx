@@ -1,10 +1,11 @@
 import React, {useState} from 'react';
 import { Save, FolderOpen, Settings, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import {isTauriRuntime} from '@/services/tauri-runtime.ts';
 
 interface ProjectControlsProps {
   onSaveProject: () => void;
-  onLoadProject: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onLoadProject: (event?: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenSettings: () => void;
   onResetProject: () => void;
   hasProjectData: boolean;
@@ -18,6 +19,7 @@ const ProjectControls: React.FC<ProjectControlsProps> = ({
   hasProjectData
 }) => {
   const { t } = useTranslation();
+  const isTauri = isTauriRuntime();
 
   const [inputKey, setInputKey] = useState<number>(Date.now());
 
@@ -36,13 +38,23 @@ const ProjectControls: React.FC<ProjectControlsProps> = ({
         accept=".json,.subs2anki"
         onChange={onLoadProject}
       />
-      <label
-        htmlFor="load-project-input"
-        className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition cursor-pointer"
-        title={t("loadProject")}
-      >
-        <FolderOpen size={14} />
-      </label>
+      {isTauri ? (
+        <button
+          onClick={() => onLoadProject()}
+          className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition"
+          title={t("loadProject")}
+        >
+          <FolderOpen size={14} />
+        </button>
+      ) : (
+        <label
+          htmlFor="load-project-input"
+          className="p-1.5 hover:bg-slate-700 rounded text-slate-400 transition cursor-pointer"
+          title={t("loadProject")}
+        >
+          <FolderOpen size={14} />
+        </label>
+      )}
       <button
         onClick={onSaveProject}
         disabled={!hasProjectData}
