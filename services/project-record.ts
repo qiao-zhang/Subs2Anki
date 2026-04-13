@@ -206,6 +206,10 @@ interface LegacySubtitleLine {
   locked?: boolean;
 }
 
+const isSubtitleStatus = (value: unknown): value is LegacySubtitleLine['status'] => {
+  return value === 'normal' || value === 'locked' || value === 'ignored';
+};
+
 const isRecordObject = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
 };
@@ -277,7 +281,7 @@ const isValidProjectRecord = (record: unknown): record is ProjectRecord => {
       typeof sub.endTime !== 'number' ||
       typeof sub.text !== 'string' ||
       // 检查新格式 (status) 或旧格式 (locked)
-      (sub.status !== undefined && !['normal', 'locked', 'ignored'].includes(sub.status)) ||
+      (sub.status !== undefined && !isSubtitleStatus(sub.status)) ||
       (sub.locked !== undefined && typeof sub.locked !== 'boolean')
     ) {
       return false;

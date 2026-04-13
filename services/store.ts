@@ -2,6 +2,30 @@ import {create} from 'zustand';
 import {AnkiCard, AnkiNoteType, ProcessingState, SubtitleLine} from './types.ts';
 import {UndoRedoManager} from './undo-redo-service.ts';
 
+const safeLocalStorageGet = (key: string): string | null => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeLocalStorageSet = (key: string, value: string): void => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Ignore persistence errors in unsupported environments.
+  }
+};
+
 // Default constants
 const DEFAULT_NOTE_TYPE: AnkiNoteType = {
   id: 123456789,
@@ -27,7 +51,7 @@ const DEFAULT_NOTE_TYPE: AnkiNoteType = {
   }]
 };
 
-interface AppState {
+export interface AppState {
   // Project Name
   projectName: string; // 新增：项目名称
   setProjectName: (name: string) => void; // 新增：设置项目名称
@@ -468,37 +492,37 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAnkiConfig: (config) => set({ankiConfig: config}),
 
   // Anki Connect
-  ankiConnectUrl: localStorage.getItem('subs2anki_anki_url') || 'http://127.0.0.1:8765',
+  ankiConnectUrl: safeLocalStorageGet('subs2anki_anki_url') || 'http://127.0.0.1:8765',
   setAnkiConnectUrl: (url) => {
-    localStorage.setItem('subs2anki_anki_url', url);
+    safeLocalStorageSet('subs2anki_anki_url', url);
     set({ankiConnectUrl: url});
   },
 
   // Settings
-  bulkCreateLimit: parseInt(localStorage.getItem('subs2anki_bulk_create_limit') || '10'),
+  bulkCreateLimit: parseInt(safeLocalStorageGet('subs2anki_bulk_create_limit') || '10'),
   setBulkCreateLimit: (limit) => {
-    localStorage.setItem('subs2anki_bulk_create_limit', limit.toString());
+    safeLocalStorageSet('subs2anki_bulk_create_limit', limit.toString());
     set({bulkCreateLimit: limit});
   },
-  autoDeleteSynced: localStorage.getItem('subs2anki_auto_delete_synced') === 'true',
+  autoDeleteSynced: safeLocalStorageGet('subs2anki_auto_delete_synced') === 'true',
   setAutoDeleteSynced: (enabled) => {
-    localStorage.setItem('subs2anki_auto_delete_synced', enabled.toString());
+    safeLocalStorageSet('subs2anki_auto_delete_synced', enabled.toString());
     set({autoDeleteSynced: enabled});
   },
-  showBulkCreateButton: localStorage.getItem('subs2anki_show_bulk_create_button') !== 'false', // 默认为true
+  showBulkCreateButton: safeLocalStorageGet('subs2anki_show_bulk_create_button') !== 'false', // 默认为true
   setShowBulkCreateButton: (show) => {
-    localStorage.setItem('subs2anki_show_bulk_create_button', show.toString());
+    safeLocalStorageSet('subs2anki_show_bulk_create_button', show.toString());
     set({showBulkCreateButton: show});
   },
-  audioVolume: parseFloat(localStorage.getItem('subs2anki_audio_volume') || '1.5'),
+  audioVolume: parseFloat(safeLocalStorageGet('subs2anki_audio_volume') || '1.5'),
   setAudioVolume: (volume) => {
-    localStorage.setItem('subs2anki_audio_volume', volume.toString());
+    safeLocalStorageSet('subs2anki_audio_volume', volume.toString());
     set({audioVolume: volume});
   },
-  screenshotTimingPercent: parseFloat(localStorage.getItem('subs2anki_screenshot_timing_percent') || '50'),
+  screenshotTimingPercent: parseFloat(safeLocalStorageGet('subs2anki_screenshot_timing_percent') || '50'),
   setScreenshotTimingPercent: (percent) => {
     const clampedPercent = Math.min(100, Math.max(0, percent));
-    localStorage.setItem('subs2anki_screenshot_timing_percent', clampedPercent.toString());
+    safeLocalStorageSet('subs2anki_screenshot_timing_percent', clampedPercent.toString());
     set({screenshotTimingPercent: clampedPercent});
   },
 }));

@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
     "preview": "vite preview",
     "sync-version": "node scripts/sync-version.js",
     "tauri:build": "npm run sync-version && npx tauri build",
@@ -33,6 +37,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
     "@tauri-apps/cli": "^2.9.6",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^22.14.0",

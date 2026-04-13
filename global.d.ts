@@ -29,4 +29,6 @@ interface Window {
   showOpenFilePicker?: (options?: OpenFilePickerOptions) => Promise<FileSystemFileHandle[]>;
   showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
   __TAURI_INTERNALS__?: unknown;
+  __TAURI__?: unknown;
 }
+

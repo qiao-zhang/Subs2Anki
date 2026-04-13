@@ -1,12 +1,10 @@
-
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import CardItem from '../../ui/components/CardItem';
-import { AnkiCard } from '../../services/types.ts';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {describe, expect, it, vi} from 'vitest';
+import CardItem from '../../components/CardItem.tsx';
+import {AnkiCard} from '../../services/types.ts';
 
-// Mock getMedia from db to handle async image loading
-vi.mock('../../core/db', () => ({
+vi.mock('../../services/db.ts', () => ({
   getMedia: vi.fn().mockImplementation((id) => {
     if (id === 'mock-screenshot-id') {
       return Promise.resolve('data:image/png;base64,fake');
@@ -40,6 +38,7 @@ describe('CardItem Component', () => {
   // Mock callback functions
   const mockDelete = vi.fn();
   const mockPreview = vi.fn();
+  const mockSync = vi.fn();
 
   it('renders card content correctly', async () => {
     render(
@@ -47,62 +46,65 @@ describe('CardItem Component', () => {
         card={mockCard}
         onDelete={mockDelete}
         onPreview={mockPreview}
+        onSyncCard={mockSync}
+        isConnected
       />
     );
 
-    // Verify all key information is visible to the user
     expect(screen.getByText('Hello World')).toBeInTheDocument();
     expect(screen.getByText('Hola Mundo')).toBeInTheDocument();
     expect(screen.getByText('A greeting')).toBeInTheDocument();
     expect(screen.getByText('00:05')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByAltText('Snapshot')).toBeInTheDocument();
+    });
   });
 
   it('renders placeholder when translation is missing', () => {
-    // Create a card with no AI analysis data
-    const emptyCard: AnkiCard = { ...mockCard, translation: '', notes: '' };
+    const emptyCard: AnkiCard = { ...mockCard, translation: '', notes: '', screenshotRef: null };
     render(
       <CardItem
         card={emptyCard}
         onDelete={mockDelete}
         onPreview={mockPreview}
+        onSyncCard={mockSync}
       />
     );
 
-    // Verify the placeholder text appears
     expect(screen.getByText('Double-click to preview')).toBeInTheDocument();
   });
 
   it('calls onDelete when delete button is clicked', () => {
+    const cardWithoutScreenshot: AnkiCard = {...mockCard, screenshotRef: null};
     render(
       <CardItem
-        card={mockCard}
+        card={cardWithoutScreenshot}
         onDelete={mockDelete}
         onPreview={mockPreview}
+        onSyncCard={mockSync}
       />
     );
 
-    // Find button by title attribute (accessibility practice)
-    const deleteBtn = screen.getByTitle('Delete Card');
+    const deleteBtn = screen.getByTitle('deleteCard');
     fireEvent.click(deleteBtn);
 
-    // Verify callback was fired with correct ID
     expect(mockDelete).toHaveBeenCalledWith('123');
   });
 
   it('calls onPreview when double clicked', () => {
+    const cardWithoutScreenshot: AnkiCard = {...mockCard, screenshotRef: null};
     render(
       <CardItem
-        card={mockCard}
+        card={cardWithoutScreenshot}
         onDelete={mockDelete}
         onPreview={mockPreview}
+        onSyncCard={mockSync}
       />
     );
 
-    const card = screen.getByText('Hello World').closest('div')?.parentElement?.parentElement;
-    if (card) {
-      fireEvent.doubleClick(card);
-      expect(mockPreview).toHaveBeenCalledWith(mockCard);
-    }
+    fireEvent.doubleClick(screen.getByText('Hello World'));
+    expect(mockPreview).toHaveBeenCalledWith(cardWithoutScreenshot);
   });
 
 });

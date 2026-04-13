@@ -2,17 +2,18 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createAnkiDatabase } from '../../services/anki-db.ts';
 import { AnkiCard, AnkiNoteType } from '../../services/types.ts';
 
-// Mock sql.js
+class MockDatabase {
+  run = vi.fn();
+  prepare = vi.fn(() => ({
+    run: vi.fn(),
+    free: vi.fn(),
+  }));
+  export = vi.fn(() => new Uint8Array([1, 2, 3]));
+}
+
 vi.mock('sql.js', () => ({
-  default: vi.fn(() => ({
-    Database: vi.fn(() => ({
-      run: vi.fn(),
-      prepare: vi.fn(() => ({
-        run: vi.fn(),
-        free: vi.fn(),
-      })),
-      export: vi.fn(() => new Uint8Array()),
-    })),
+  default: vi.fn(async () => ({
+    Database: MockDatabase,
   })),
 }));
 
@@ -65,19 +66,11 @@ describe('Anki Database Creation with Group Fields', () => {
 
   it('should correctly map group-related fields to card values', async () => {
     const creationTime = Date.now();
-    
-    // Spy on the database operations to verify field mapping
-    const originalCreateAnkiDatabase = await import('../../services/anki-db.ts');
-    const spy = vi.spyOn(originalCreateAnkiDatabase, 'createAnkiDatabase');
-    
-    try {
-      await createAnkiDatabase(mockCards, 'Test Deck', mockNoteType, creationTime);
-      
-      // Verify that the function was called
-      expect(createAnkiDatabase).toBeDefined();
-    } finally {
-      spy.mockRestore();
-    }
+
+    const result = await createAnkiDatabase(mockCards, ['tag1', 'tag2'], 'Test Deck', mockNoteType, creationTime);
+
+    expect(result).toBeInstanceOf(Uint8Array);
+    expect(Array.from(result)).toEqual([1, 2, 3]);
   });
 
   it('should handle cards with group fields correctly', () => {

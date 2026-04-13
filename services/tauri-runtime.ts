@@ -1,5 +1,6 @@
 export const isTauriRuntime = (): boolean => {
   if (typeof window === 'undefined') return false;
-  return '__TAURI_INTERNALS__' in window || '__TAURI__' in window;
+  return window.__TAURI_INTERNALS__ !== undefined || window.__TAURI__ !== undefined;
 };
+
 

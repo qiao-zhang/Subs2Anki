@@ -1,100 +1,114 @@
 # Subs2Anki
 
-Subs2Anki is a video subtitle processing tool that provides subtitle processing and flashcard creation solutions, designed to help language learners extract useful language materials from video content and automatically generate Anki flashcards.
+Subs2Anki is a subtitle-driven video study tool for creating Anki flashcards from video segments. It combines subtitle editing, media extraction, note template mapping, and Anki sync/export workflows in a single React + Vite application, with optional Tauri desktop support.
 
-## Features
+## Highlights
 
-### 🎥 Video Player
-- Built-in HTML5 video player with basic playback controls
-- Video frame capture functionality to capture screenshots at any moment
-- Timeline navigation based on subtitle lines, supporting quick jumps between subtitles
-- Volume control
-- Waveform visualization of audio tracks for precise time positioning
+- Load a video and subtitle file, then navigate by subtitle line.
+- Edit, split, merge, lock, ignore, and regroup subtitle segments.
+- Generate audio clips and screenshots for each note.
+- Customize Anki note fields, templates, CSS, deck, and tags.
+- Sync directly to Anki through AnkiConnect or export as `.apkg`.
+- Save and reopen `.subs2anki` project files.
+- Use the built-in waveform and keyboard shortcuts for fast review.
 
-### 📄 Subtitle Processing
-- Supports SRT and VTT subtitle file formats
-- Subtitle editing functionality to modify subtitle line text
-- Subtitle timeline offset adjustment to synchronize with video playback
-- Subtitle line locking to prevent accidental modifications
-- Subtitle line split and merge functionality
+## Current Feature Set
 
-### 📺 Subtitle Display
-- Real-time display of current subtitles on the video player
-- Automatic synchronization of video playback time with subtitle display
-- Waveform visualization of audio tracks
+### Media and playback
+- Built-in HTML5 video playback
+- Subtitle-synchronized seeking and replay
+- Waveform display for precise region selection
+- Manual frame capture and audio clip download
+- Audio gain setting for generated clips
 
-### 🃏 Anki Card Generation
-- Support for custom card templates
-- Automatic audio clip generation
-- One-click Anki flashcard creation
-- Batch card creation functionality
-- Card preview functionality
+### Subtitle editing
+- SRT and VTT import/export
+- Inline subtitle editing
+- Split / merge / delete subtitle lines
+- Lock / ignore status management
+- Temporary subtitle region creation
+- Undo / redo support through the shared undo-redo service
 
-### 🔤 Furigana Processing
-- Integration with Kuroshiro library for Japanese furigana annotation
-- Automatic hiragana/katakana annotation for kanji characters
+### Card generation
+- Per-line card creation and batch creation
+- Card preview and deletion
+- Custom Anki note type fields / templates / CSS
+- Optional furigana generation for Japanese content
+- Screenshot timing setting with 5 positions: `0% / 25% / 50% / 75% / 100%` (default `50%`)
 
-### 🔄 Anki Connection
-- Support for direct synchronization to Anki desktop application via AnkiConnect
-- Support for exporting as .apkg files
-- Automatic detection of Anki connection status
-- Support for custom deck names
+### Anki integration
+- AnkiConnect connection test
+- Deck list loading and refresh
+- Automatic deck fallback/default selection after successful deck refresh
+- Global tag support
+- `.apkg` export support
 
-### ⌨️ Keyboard Shortcut Support
-- Rich keyboard shortcuts to improve operational efficiency (see below)
-- Press / key to display shortcut reference table
+### Project persistence
+- Save and reopen `.subs2anki` project files
+- Browser file picker flow for web builds
+- Tauri-backed open/save flow when running in the desktop runtime
 
-## Installation and Setup
+## Quick Start
 
-### System Requirements
+### Requirements
 - Node.js 18+
-- npm or yarn
+- npm
+- Optional for desktop builds: Rust + Tauri prerequisites
 
-### Installation Steps
+### Install
 
-1. Clone the project repository:
-```bash
-git clone <this-repo>
-cd Subs2Anki
-```
-
-2. Install dependencies:
 ```bash
 npm install
 ```
 
-3. Start the development server:
+### Run the web app in development
+
 ```bash
 npm run dev
 ```
 
-4. Build production version:
+### Build the web app
+
 ```bash
 npm run build
 ```
 
-## Usage Guide
+### Run quality checks
 
-### Basic Workflow
+```bash
+npm run typecheck
+npm test
+```
 
-1. **Load Video**: Click on the video area or use the control bar to upload a video file
-2. **Load Subtitles**: Click the folder icon in the right panel to load subtitle files
-3. **Preview and Edit**: View and edit subtitles in the right subtitle panel
-4. **Create Cards**: Click the "+" button on subtitle lines or use the shortcut C to create Anki cards
-5. **Export or Sync**: Click the export or sync button in the left panel
+### Run the Tauri app
 
-### Keyboard Shortcuts Reference
+```bash
+npm run tauri:dev
+npm run tauri:build
+```
+
+## Basic Workflow
+
+1. Load a video.
+2. Load a subtitle file.
+3. Review and edit subtitle lines.
+4. Configure deck, tags, template, and settings.
+5. Create one or more cards.
+6. Sync to Anki or export as `.apkg`.
+7. Save the project as `.subs2anki` if you want to continue later.
+
+## Keyboard Shortcuts
 
 | Shortcut   | Function                                            |
 |------------|-----------------------------------------------------|
-| / / Tab    | Show/Hide shortcut hints                            |
+| / / Tab    | Show / hide shortcut hints                          |
 | Space      | Replay current segment                              |
-| P / Q      | Play/Pause                                          |
+| P / Q      | Play / pause                                        |
 | H          | Play the head part of current region                |
 | T          | Play the tail part of current region                |
 | J / D      | Previous subtitle line                              |
 | K / F      | Next subtitle line                                  |
-| S / L      | Hide/Unhide subtitle regions                        |
+| S / L      | Hide / unhide subtitle regions                      |
 | V          | Toggle video-only mode                              |
 | C / N      | Create card for current subtitle line               |
 | I / E      | Toggle current subtitle line status (forward)       |
@@ -104,22 +118,83 @@ npm run build
 | X / ,      | Delete current subtitle line                        |
 | U / Z      | Undo operation                                      |
 | R / Y      | Redo operation                                      |
-| . / Escape | Open/close settings modal                           |
+| . / Escape | Open / close settings modal                         |
 
-## Tech Stack
+## Project Structure
 
-- **Frontend Framework**: React 19
-- **UI Library**: Tailwind CSS, Lucide React
-- **State Management**: Zustand
-- **Audio Processing**: FFmpeg.wasm
-- **Database**: IndexedDB
-- **Build Tool**: Vite
-- **Type Checking**: TypeScript
+```text
+App.tsx                     App composition entry
+components/                 UI components and modals
+hooks/                      UI and app-domain hooks
+services/                   Core business logic and persistence
+src-tauri/                  Optional Tauri desktop backend
+tests/                      Component, hook, and core tests
+```
+
+Notable areas:
+- `services/store.ts`: global Zustand store
+- `hooks/app/`: app-level orchestration hooks split out from `App.tsx`
+- `services/project-record.ts`: project file read/write and validation
+- `services/anki-connect.ts`: AnkiConnect communication
+- `services/anki-db.ts`: `.apkg` database generation
+
+## Audit Snapshot (2026-04-13)
+
+The repository was fully scanned and baseline checks were run.
+
+### Verified status
+- `npm run build`: passes
+- `npm run typecheck`: passes
+- `npm test`: passes (`19` test files / `60` tests)
+- `App.tsx`: currently `471` lines
+
+### P5 test coverage completed
+- Core services now covered: `services/ffmpeg.ts`, `services/furigana.ts`, `services/anki-connect.ts`, `services/project-record.ts`
+- Key hooks now covered: `hooks/useMediaProcessing.ts`, `hooks/app/useSyncActions.ts`, `hooks/app/useProjectActions.ts`, `hooks/app/useDeckSelection.ts`
+- Regression scenarios covered:
+  - missing screenshot timing in legacy project files falls back to `50%`
+  - deck refresh default selection / fallback behavior
+  - screenshot timing clamping boundaries
+  - Tauri vs Web project save/load paths
+
+### Verified issues
+- Build output still shows `sql.js` browser externalization warnings (`fs`, `crypto`)
+- Several flows still rely on `alert` / `confirm`, which makes UX and testing harder
+- Some user-controlled HTML is interpolated into Anki fields / template help output without a sanitization boundary
+
+See `TODOS.md` for the prioritized remediation list.
+
+## Known Limitations
+
+- Build output still shows `sql.js` browser externalization warnings.
+- Settings persistence is split between project files and `localStorage`.
+- Some UI text and dialogs are still not fully unified under the notification/i18n path.
 
 ## Contributing
 
-Contributions are welcome! Feel free to submit issues and pull requests on the GitHub repository.
+Contributions are welcome. Before sending a PR, please at least run:
+
+```bash
+npm run build
+npm run typecheck
+npm test
+```
+
+If you change persistence, sync, or subtitle editing logic, also update `TODOS.md` or related docs where appropriate.
+
+## Tech Stack
+
+- React 19
+- TypeScript 5.8
+- Vite 6
+- Zustand 5
+- Tailwind CSS 3
+- Vitest 4
+- FFmpeg.wasm
+- IndexedDB (`idb`)
+- `sql.js`
+- Tauri 2
 
 ## License
 
-MIT License. See the LICENSE file for more information.
+MIT License. See `LICENSE` for details.

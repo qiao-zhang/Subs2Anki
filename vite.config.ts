@@ -1,5 +1,6 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
+import pkg from './package.json' with {type: 'json'};
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -23,7 +24,7 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      '__APP_VERSION__': JSON.stringify(require('./package.json').version)
+      '__APP_VERSION__': JSON.stringify(pkg.version)
     },
     resolve: {
       alias: {
@@ -45,6 +46,12 @@ export default defineConfig(({ mode }) => {
         },
       },
       chunkSizeWarningLimit: 1000, // Increase limit to suppress warning (actual optimization is more important)
+    },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./tests/setup.ts'],
+      globals: true,
+      css: false,
     },
   };
 });

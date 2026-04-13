@@ -129,7 +129,13 @@ export const useAppUtilityActions = ({
       if (window.showSaveFilePicker) {
         const handle = await window.showSaveFilePicker({
           suggestedName: fileName,
-          types: [{description: 'Snapshot'}],
+          types: [{
+            description: 'Snapshot',
+            accept: {
+              'image/jpeg': ['.jpg', '.jpeg'],
+              'image/png': ['.png'],
+            },
+          }],
         });
         const writable = await handle.createWritable();
         await writable.write(blob);
@@ -185,7 +191,12 @@ export const useAppUtilityActions = ({
       if (window.showSaveFilePicker) {
         const handle = await window.showSaveFilePicker({
           suggestedName: filename,
-          types: [{description: 'Audio File'}],
+          types: [{
+            description: 'Audio File',
+            accept: {
+              'audio/wav': ['.wav'],
+            },
+          }],
         });
         const writable = await handle.createWritable();
         await writable.write(blob);
@@ -207,4 +218,5 @@ export const useAppUtilityActions = ({
     handleDownloadAudio,
   };
 };
+
 

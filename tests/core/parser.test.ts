@@ -33,7 +33,8 @@ This is a <b>test</b>
       id: 1,
       startTime: 1,
       endTime: 4,
-      text: 'Hello World'
+      text: 'Hello World',
+      status: 'normal',
     });
 
     // Validate HTML tag stripping (<b>test</b> -> test) and timestamp parsing

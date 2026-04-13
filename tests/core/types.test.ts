@@ -2,18 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { SubtitleLine, AnkiCard } from '../../services/types.ts';
 
 describe('Type Definitions', () => {
-  it('should include group-related fields in SubtitleLine', () => {
+  it('should define the current SubtitleLine shape', () => {
     const subtitleLine: SubtitleLine = {
       id: 1,
       startTime: 0,
       endTime: 2,
       text: 'Test subtitle',
       status: 'normal',
-      groupId: 'test-group',
-      prevText: 'Previous text',
-      prevAudio: 'Previous audio',
-      nextText: 'Next text',
-      nextAudio: 'Next audio',
     };
 
     expect(subtitleLine.id).toBe(1);
@@ -21,11 +16,6 @@ describe('Type Definitions', () => {
     expect(subtitleLine.endTime).toBe(2);
     expect(subtitleLine.text).toBe('Test subtitle');
     expect(subtitleLine.status).toBe('normal');
-    expect(subtitleLine.groupId).toBe('test-group');
-    expect(subtitleLine.prevText).toBe('Previous text');
-    expect(subtitleLine.prevAudio).toBe('Previous audio');
-    expect(subtitleLine.nextText).toBe('Next text');
-    expect(subtitleLine.nextAudio).toBe('Next audio');
   });
 
   it('should include group-related fields in AnkiCard', () => {
@@ -66,7 +56,7 @@ describe('Type Definitions', () => {
     expect(ankiCard.nextAudio).toBe('Next audio');
   });
 
-  it('should allow optional group-related fields in SubtitleLine', () => {
+  it('should allow a minimal SubtitleLine', () => {
     const subtitleLine: SubtitleLine = {
       id: 1,
       startTime: 0,
@@ -80,11 +70,6 @@ describe('Type Definitions', () => {
     expect(subtitleLine.endTime).toBe(2);
     expect(subtitleLine.text).toBe('Test subtitle');
     expect(subtitleLine.status).toBe('normal');
-    expect(subtitleLine.groupId).toBeUndefined();
-    expect(subtitleLine.prevText).toBeUndefined();
-    expect(subtitleLine.prevAudio).toBeUndefined();
-    expect(subtitleLine.nextText).toBeUndefined();
-    expect(subtitleLine.nextAudio).toBeUndefined();
   });
 
   it('should allow optional group-related fields in AnkiCard', () => {

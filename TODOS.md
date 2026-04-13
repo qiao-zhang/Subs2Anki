@@ -1,305 +1,216 @@
-# Subs2Anki 项目改进计划
+# Subs2Anki 当前问题与改进清单
 
-> 最后更新时间：2026-03-06
-> 本次审查范围：全面代码分析
-
----
-
-## 0. 新增问题与建议 (2026-03-06 代码审查)
-
-### 严重问题 (Critical)
-- [ ] **类型安全**: `services/store.ts` 中 `fileHandle: any | null` 应使用 `FileSystemFileHandle | null` 或定义专门接口
-- [ ] **测试覆盖率不足**: 虽然有测试文件，但关键服务（FFmpeg、AnkiConnect、furigana）缺乏测试
-
-### 高优先级 (High)
-- [ ] **代码重复**: `App.tsx` 过于臃肿（1100+ 行），应拆分为更小的容器组件
-- [ ] **错误处理不完善**: 多处 `catch` 块只打印日志或简单 alert，缺乏统一的错误处理机制
-- [ ] **XSS 风险**: `services/anki-connect.ts` 和 `services/anki-db.ts` 中直接将用户输入插入 HTML/SQL，应使用 DOMPurify 和参数化查询
-- [ ] **@ts-ignore 滥用**: 代码中多处使用 `@ts-ignore` 绕过类型检查，应修复根本问题
-- [ ] **状态管理混乱**: Zustand store 中混合了太多业务逻辑，应分离到服务层
-
-### 中优先级 (Medium)
-- [ ] **国际化不完整**: 部分硬编码字符串未使用 i18n，如 `App.tsx` 中的 alert 消息
-- [ ] **可访问性缺失**: 大部分按钮缺少 aria-label 属性
-- [ ] **配置管理分散**: 配置项分散在 localStorage 和 Zustand 中，应统一管理
-
-### 低优先级 (Low)
-- [ ] **代码风格不一致**: 部分函数使用箭头函数，部分使用普通函数
-- [ ] **注释不足**: 关键算法（如字幕分割逻辑）缺少注释说明
-- [ ] **依赖版本过旧**: 部分依赖版本锁定较旧，可考虑升级
+> 最后更新时间：2026-04-13（P0、P5 已完成）
+> 本次结论来源：全量代码扫描 + 构建 / 类型检查 / 测试基线执行
 
 ---
 
-## 1. 代码质量改进
+## 0. 本次审查结论摘要
 
-### 高优先级
-- [ ] 修复 `services/store.ts` 中的 `fileHandle: any | null` 类型定义，替换为具体类型
-- [ ] 消除所有 `@ts-ignore` 注释并解决相应的类型问题
-- [ ] 为 `services/types.ts` 中的所有接口添加 JSDoc 注释
-- [ ] 修复 `services/anki-connect.ts` 中的潜在 XSS 风险
-- [ ] 为所有函数添加明确的返回类型注解
+### 已验证通过
+- [x] `npm run build` 可通过
+- [x] `npm run typecheck` 可通过
+- [x] `npm test` 可通过（`19` 个测试文件，`60` 个测试用例）
+- [x] `App.tsx` 已拆分至 `471` 行，旧的“1100+ 行”结论已不再适用
+- [x] 代码库中已不存在 `MutableRefObject` 文本引用
+- [x] 项目文件已包含 `screenshotTimingPercent`，缺失时按 `50%` 回退
+- [x] Tauri 路径下已存在项目文件打开 / 保存实现（`services/project-record.ts`）
 
-### 中优先级
-- [ ] 重构 `App.tsx` 组件，将其拆分为更小的子组件
-- [ ] 创建专门的容器组件来管理状态（VideoContainer、SubtitleContainer、CardContainer）
-- [ ] 将复杂的事件处理逻辑提取到自定义 Hook 中
-- [ ] 实现统一的错误处理机制
-- [ ] 为第三方库创建更准确的类型声明
-- [ ] 将所有硬编码的 alert 消息替换为 i18n 翻译
-- [ ] 为所有交互按钮添加 aria-label 属性
-- [ ] 创建统一的配置管理器，整合 localStorage 和 Zustand 中的配置
-
-### 低优先级
-- [ ] 为所有组件添加 PropTypes 或更详细的 TypeScript 类型
-- [ ] 实现代码风格指南并配置 ESLint 和 Prettier
-- [ ] 添加代码审查流程
+### 已验证失败 / 风险
+- [x] `npx tsc --noEmit` 已修复
+- [x] `npx vitest run` 已修复
+- [x] 测试环境 DOM / `localStorage` / `window` / `document` 基线已统一
+- [x] 测试路径与依赖漂移问题已修复
+- [ ] 仍存在 `alert` / `confirm` 驱动的交互，影响 UX、一致性与可测试性
+- [ ] 存在用户可控 HTML 直接进入渲染或导出链路的风险边界，需统一净化
 
 ---
 
-## 2. 性能优化
+## P0：先恢复工程健康度（必须优先完成）
 
-### 高优先级
-- [ ] 实现 FFmpeg 操作的并发控制，避免资源竞争
-- [ ] 实现 IndexedDB 媒体文件的定期清理机制
-- [ ] 修复 `useMediaProcessing.ts` 中的依赖数组问题，避免不必要的重渲染
+### P0-1 测试基线修复
+- [x] 为 Vitest 增加统一测试环境配置（`jsdom`、setup file、matcher 扩展）
+  - 现象：大量 hook 测试报 `document is not defined` / `window is not defined`
+  - 目标：`renderHook`、组件测试、store 测试都在统一环境下运行
+  - 涉及：`vite.config.ts` 或新增 vitest config、`tests/**`
 
-### 中优先级
-- [ ] 优化 `react-virtuoso` 配置以提高大量字幕行时的性能
-- [ ] 实现音频提取的批处理和进度指示
-- [ ] 优化图像压缩算法，根据屏幕尺寸动态调整质量
-- [ ] 实现视频帧捕获的节流机制
-- [ ] 优化 `SubtitleColumn.tsx` 中的搜索功能，添加防抖处理
-- [ ] 缓存 furigana 转换结果，避免重复计算
+- [x] 修复测试中的错误 import 与漂移依赖
+  - 已观测问题：
+	- `tests/components/CardItem.test.tsx` 仍引用 `../../ui/components/CardItem`
+	- `tests/components/WaveformDisplay.test.tsx` 引用了未安装的 `jotai/react`
+  - 目标：测试引用与当前代码结构一致
 
-### 低优先级
-- [ ] 实现大文件的分块处理机制
-- [ ] 添加上传/下载进度指示器
-- [ ] 优化文件解析算法性能
-- [ ] 实现更智能的缓存策略
+- [x] 接入 Testing Library 断言扩展
+  - 已观测问题：`toBeInTheDocument`、`toHaveFocus` 未被识别
+  - 目标：统一在测试 setup 中注册 matcher
 
----
+- [x] 修复测试与业务 API 漂移
+  - 已观测问题：
+	- `services/time.ts` 已不再导出 `formatTime` / `parseVTTTime`，但测试仍在依赖
+	- `services/types.ts` 与测试对 `SubtitleLine` 的字段认知不一致
+	- `services/anki-db.ts` 的 `createAnkiDatabase` 签名与测试调用不一致
+  - 目标：要么更新测试，要么补充兼容层，但必须统一
 
-## 3. 安全增强
+### P0-2 让业务代码对测试 / 非浏览器环境更稳健
+- [x] 为 `services/store.ts` 的 `localStorage` 访问增加安全封装
+  - 现象：`tests/core/store.test.ts` 因 `localStorage is not defined` 直接崩溃
+  - 目标：抽出 `safeLocalStorageGet/Set` 或设置持久化适配器
 
-### 高优先级
-- [ ] 实现对用户上传文件的严格验证（类型、大小、内容）
-- [ ] 使用 DOMPurify 库净化所有 HTML 内容
-- [ ] 为 AnkiConnect API 调用添加请求验证和超时机制
-- [ ] 实现对 AnkiConnect 返回数据的验证
-- [ ] 修复 `services/anki-connect.ts` 和 `services/anki-db.ts` 中的 XSS 风险，对用户输入进行转义
+- [x] 修复 `hooks/app/useAppUtilityActions.ts` 中文件选择器类型错误
+  - 已观测问题：`showSaveFilePicker.types[]` 缺失 `accept`
+  - 目标：`npx tsc --noEmit` 不再在该文件报错
 
-### 中优先级
-- [ ] 实现敏感数据的加密存储
-- [ ] 添加数据传输加密机制
-- [ ] 实现安全的本地存储方案
-- [ ] 添加恶意内容检测机制
+- [x] 修复 `services/project-record.ts` 中 `subtitle status` 校验的类型收窄问题
+  - 已观测问题：`includes(sub.status)` 处 `unknown -> string` 未完成收窄
+  - 目标：校验逻辑既严格又通过 TS 检查
 
-### 低优先级
-- [ ] 实现访问控制机制
-- [ ] 实现安全的文件访问权限管理
-- [ ] 添加安全审计日志
-
----
-
-## 4. 用户体验改进
-
-### 高优先级
-- [ ] 添加加载状态指示器（特别是在 FFmpeg 加载和音频提取时）
-- [ ] 改进错误消息的用户友好性
-- [ ] 为长时间操作添加进度条
-- [ ] 添加操作确认对话框（如删除卡片）
-- [ ] 将硬编码的 alert 消息替换为友好的 i18n 提示
-
-### 中优先级
-- [ ] 实现快捷键自定义功能
-- [ ] 改进键盘导航的可用性
-- [ ] 添加项目自动保存功能
-- [ ] 优化字幕编辑的用户体验
-
-### 低优先级
-- [ ] 实现更灵活的模板系统
-- [ ] 添加项目备份和恢复功能
-- [ ] 支持高对比度模式和屏幕阅读器
-- [ ] 添加用户引导教程
+### P0-3 补齐基础工程脚本
+- [x] 在 `package.json` 中补充标准脚本
+  - 建议至少加入：`typecheck`、`test`、`test:watch`、`lint`
+  - 当前问题：README 已需写成 `npx ...`，说明工程脚本不完整
 
 ---
 
-## 5. 测试覆盖
+## P1：安全、一致性、可维护性
 
-### 高优先级
-- [ ] 为核心业务逻辑编写单元测试（字幕解析、时间戳处理等）
-- [ ] 为 FFmpeg 服务编写单元测试
-- [ ] 为状态管理逻辑编写测试
-- [ ] 实现基本的组件渲染测试
-- [ ] 为 `services/furigana.ts` 编写单元测试
-- [ ] 为 `services/anki-connect.ts` 编写单元测试
+### P1-1 统一错误提示与确认交互
+- [ ] 替换业务路径中的 `alert` / `confirm`
+  - 已观测文件：
+	- `services/export.ts`
+	- `hooks/app/useSyncActions.ts`
+	- `hooks/app/useProjectActions.ts`
+	- `hooks/app/useAppUtilityActions.ts`
+  - 目标：统一到通知系统 / 模态确认框 / i18n 文案
 
-### 中优先级
-- [ ] 实现组件交互的集成测试
-- [ ] 编写 AnkiConnect 服务的集成测试
-- [ ] 实现端到端测试（主要工作流程）
-- [ ] 添加错误处理场景的测试
-- [ ] 为 `hooks/useMediaProcessing.ts` 编写测试
+### P1-2 建立 HTML 安全边界
+- [ ] 审查并净化所有用户可控 HTML 注入点
+  - 已观测点：
+	- `components/modals/TemplateEditorModal.tsx` 中 `dangerouslySetInnerHTML`
+	- `services/anki-connect.ts` 中图片 HTML 拼接
+	- `services/anki-db.ts` 中导出字段 HTML 拼接
+  - 目标：明确哪些字段允许 HTML，哪些需要转义 / 净化
 
-### 低优先级
-- [ ] 实现性能基准测试
-- [ ] 添加压力测试和负载测试
-- [ ] 建立持续测试流水线
-- [ ] 实现测试覆盖率监控
+### P1-3 整理配置持久化边界
+- [ ] 收敛 `localStorage`、project file、Tauri 后端之间的设置来源
+  - 当前分散项：Anki URL、批量创建限制、自动删除、音量、截图时刻、语言
+  - 目标：形成一套清晰的“运行时设置 vs 项目级设置”规则
 
----
-
-## 6. 架构改进
-
-### 高优先级
-- [ ] 实现更清晰的服务层来处理业务逻辑
-- [ ] 创建配置管理器统一管理应用设置
-- [ ] 实现依赖注入以提高可测试性
-- [ ] 为外部服务（如 AnkiConnect）创建适配器
-- [ ] 将 Zustand store 中的业务逻辑分离到独立的服务层
-
-### 中优先级
-- [ ] 将全局状态按功能域拆分
-- [ ] 实现状态持久化机制
-- [ ] 创建错误边界组件
-- [ ] 实现更灵活的国际化支持
-- [ ] 创建统一的错误处理服务
-
-### 低优先级
-- [ ] 实现插件系统以支持功能扩展
-- [ ] 创建主题系统以支持外观定制
-- [ ] 实现微前端架构以支持模块化开发
+### P1-4 文档与架构注释补强
+- [ ] 为 `services/types.ts`、`services/project-record.ts`、`services/anki-connect.ts` 增加关键 JSDoc
+- [ ] 补一份开发者导向文档：测试架构、持久化边界、同步链路
 
 ---
 
-## 7. 文档和维护
+## P2：状态管理与架构继续收敛
 
-### 高优先级
-- [ ] 为公共 API 添加 JSDoc 注释
-- [ ] 更新 README.md 以反映最新功能和改进
-- [ ] 添加架构图和数据流图
-- [ ] 为关键算法（如字幕分割逻辑）添加详细注释
+### P2-1 Store slice 拆分（在不破坏现有 API 的前提下）
+- [ ] 将 `services/store.ts` 按领域拆分为 slice
+  - 候选拆分：
+	- `project slice`
+	- `subtitle slice`
+	- `anki slice`
+	- `settings slice`
+	- `history slice`
+  - 目标：降低单文件复杂度，减少跨域耦合
 
-### 中优先级
-- [ ] 创建开发者文档
-- [ ] 添加部署指南
-- [ ] 创建常见问题解答（FAQ）
-- [ ] 编写代码风格指南
+### P2-2 将可局部化状态从全局 store 下沉
+- [ ] 逐项审查哪些状态可从全局 store 下沉到 hook / 组件 `useState`
+  - 候选：瞬时 UI 状态、模态开关、局部输入态
+  - 注意：项目级持久化状态与全局快捷键依赖状态不要盲目下沉
 
-### 低优先级
-- [ ] 创建用户手册
-- [ ] 添加 API 参考文档
-- [ ] 创建贡献指南
-
----
-
-## 8. 构建和配置改进
-
-### 高优先级
-- [ ] 修复 `vite.config.ts` 中的类型定义问题，消除 `@ts-ignore`
-- [ ] 配置 ESLint 和 Prettier 以统一代码风格
-
-### 中优先级
-- [ ] 升级过时的依赖包版本
-- [ ] 配置 TypeScript 严格模式，修复所有类型错误
-- [ ] 添加 Husky pre-commit hooks 进行代码检查
-
-### 低优先级
-- [ ] 优化 Vite 构建配置以减小包体积
-- [ ] 实现代码分割以提高加载性能
+### P2-3 强化依赖注入与服务边界
+- [ ] 为外部依赖建立适配器边界
+  - AnkiConnect
+  - FFmpeg
+  - File System / Tauri 文件能力
+  - 剪贴板 / 浏览器文件选择器
 
 ---
 
-## 9. 可访问性和国际化
+## P3：性能与稳定性
 
-### 高优先级
-- [ ] 为所有按钮和交互元素添加 aria-label 属性
-- [ ] 确保所有图片都有适当的 alt 文本
-- [ ] 完成所有硬编码字符串的 i18n 改造
+### P3-1 媒体处理稳定性
+- [ ] 继续跟踪批量生成卡片后的累计内存问题
+  - 重点确认音频 blob / 截图 data URL / IndexedDB 引用 / FFmpeg 中间文件是否及时释放
 
-### 中优先级
-- [ ] 实现焦点管理，确保键盘导航可用
-- [ ] 添加颜色对比度检查
-- [ ] 支持屏幕阅读器
+- [ ] 为 FFmpeg 路径补充并发控制与资源回收测试
 
-### 低优先级
-- [ ] 实现跳过导航链接
-- [ ] 添加字体大小调整功能
+### P3-2 大数据量字幕性能
+- [ ] 优化 `react-virtuoso` 使用策略
+- [ ] 为字幕搜索、波形刷新、截图捕获增加节流 / 防抖
+- [ ] 评估 furigana 结果缓存
 
----
-
-## 10. 技术债务清理
-
-### 高优先级
-- [ ] 移除所有 `@ts-ignore` 注释并修复类型问题
-- [ ] 修复 `App.tsx` 中 `fileHandle` 的 `any` 类型
-- [ ] 修复 `useKeyboardShortcuts.tsx` 中的快捷键冲突
-
-### 中优先级
-- [ ] 重构 `App.tsx` 中超过 200 行的组件
-- [ ] 统一错误处理模式
-- [ ] 清理未使用的导入和变量
-
-### 低优先级
-- [ ] 统一代码风格（箭头函数 vs 普通函数）
-- [ ] 添加代码注释说明复杂逻辑
+### P3-3 构建体验
+- [ ] 处理 `sql.js` browser externalization 警告
+- [ ] 增加 chunk 分析与包体积跟踪
 
 ---
 
-## 11. 特定功能改进
+## P4：可访问性与用户体验
 
-### 字幕处理功能
-- [ ] 优化字幕解析算法以支持更多格式变体
-- [ ] 添加字幕搜索和过滤功能
-
-### 音频处理功能
-- [ ] 优化音频提取性能
-- [ ] 添加音频质量调节选项
-- [ ] 实现音频格式转换功能
-- [ ] 添加音频预览功能
-
-### 视频处理功能
-- [ ] 优化视频帧捕获性能
-- [ ] 添加视频质量调节选项
-- [ ] 实现视频格式转换功能
-- [ ] 添加视频预览功能
-
-### Anki 集成功能
-- [ ] 优化 AnkiConnect 同步性能
-- [ ] 添加同步进度指示
-- [ ] 实现批量同步功能
-- [ ] 添加同步错误重试机制
+- [ ] 为关键按钮补 `aria-label`
+- [ ] 检查图片 / 图标替代文本策略
+- [ ] 为高风险操作增加统一确认框
+- [ ] 增加长任务进度反馈（特别是 FFmpeg 与批量同步）
+- [ ] 清理剩余硬编码英文提示，统一进入 i18n
 
 ---
 
-## 12. 部署和运维
+## P5：测试覆盖补强
 
-### 高优先级
-- [ ] 添加错误监控和报告机制
-- [ ] 实现性能监控
+### 核心服务
+- [x] `services/ffmpeg.ts`
+- [x] `services/furigana.ts`
+- [x] `services/anki-connect.ts`
+- [x] `services/project-record.ts`
 
-### 中优先级
-- [ ] 优化构建配置以减小包体积
-- [ ] 实现代码分割以提高加载性能
+### 关键 hooks
+- [x] `hooks/useMediaProcessing.ts`
+- [x] `hooks/app/useSyncActions.ts`
+- [x] `hooks/app/useProjectActions.ts`
+- [x] `hooks/app/useDeckSelection.ts`
 
-### 低优先级
-- [ ] 建立 CI/CD 流水线
-- [ ] 实现自动化部署
+### 回归场景
+- [x] 项目文件缺失新字段时的向后兼容
+- [x] deck 刷新后默认选择 / 回退逻辑
+- [x] 截图时刻百分比边界 clamp
+- [x] Tauri 与 Web 双路径项目读写
 
 ---
 
-## 13. 未来功能规划
+## 已完成但需要保持的事项
 
-- [ ] 集成 AI 翻译和注释功能
+- [x] `App.tsx` 已降到 `< 500` 行
+- [x] 截图时刻设置已进入 Settings 与项目文件
+- [x] deck 刷新后的默认选择 / 回退逻辑已实现
+- [x] `MutableRefObject` 文本引用已清理
+- [x] Tauri 路径下项目打开 / 保存已落地
+
+> 注：这些事项不应再以“未完成问题”的方式出现在后续审查中，除非发生回归。
+
+---
+
+## 低优先级 / 未来规划
+
 - [ ] 支持更多字幕格式（ASS/SSA）
-- [ ] 实现视频播放速度控制
-- [ ] 添加字幕时间轴可视化编辑器
-- [ ] 支持多轨道字幕处理
-- [ ] 实现与 AnkiWeb 的直接同步
+- [ ] 视频播放速度控制
+- [ ] 字幕时间轴可视化编辑器
+- [ ] 多轨字幕处理
+- [ ] 更灵活的模板系统
+- [ ] 项目自动保存 / 备份恢复
+- [ ] 与 AnkiWeb 的更深层集成
 
 ---
 
-## 附录：技术栈概览
+## 附录：本次基线命令
+
+```bash
+npm run build
+npm run typecheck
+npm test
+```
+
+## 附录：当前技术栈概览
 
 | 类别 | 技术 | 版本 |
 |------|------|------|

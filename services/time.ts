@@ -36,6 +36,19 @@ export const formatTimeDifference = (start: number, end: number): string => {
   return (end - start).toFixed(2) + 's';
 };
 
+export const formatTime = (seconds: number): string => {
+  const totalSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
 /**
  * Parses a VTT/SRT timestamp string into seconds.
  * Supports formats like "00:00:10.500" or "01:30.000".
@@ -51,3 +64,5 @@ export const parseTimestamp = (timeString: string): number => {
   }
   return seconds;
 };
+
+export const parseVTTTime = (timeString: string): number => parseTimestamp(timeString);
